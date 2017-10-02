@@ -20,6 +20,11 @@ type
     wtCivilopedia
     );
 
+  TListOfUnits = packed record
+    Start: Integer;
+    Length: Integer;
+  end;
+
 const
   OP_NOP: Byte = $90;
   OP_CALL: Byte = $E8;

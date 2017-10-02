@@ -27,6 +27,7 @@ var
   SavedReturnAddress1: Cardinal;
   SavedReturnAddress2: Cardinal;
   SavedThis: Cardinal;
+  ListOfUnits: TListOfUnits;
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -210,6 +211,25 @@ begin
     end;
   end;
 
+  CurrPopupInfo := Pointer(Pointer(AThisCurrPopupInfo)^);
+  if (CurrPopupInfo <> nil) and (CurrPopupInfo^.WayToWindowInfo = Pointer(GetWindowLongA(HWindow, $0C))) then
+  begin
+    if (CurrPopupInfo^.NumberOfItems > 0) and (CurrPopupInfo^.NumberOfLines = 0) then
+    begin
+      if (Delta > 0) and (ListOfUnits.Start > 0) then
+        CurrPopupInfo^.SelectedItem := $FFFFFFFD
+      else if (Delta < 0) and (ListOfUnits.Start < ListOfUnits.Length - 9) then
+        CurrPopupInfo^.SelectedItem := $FFFFFFFE;
+      if CurrPopupInfo^.SelectedItem > $FFFFFFF0 then
+        asm
+          mov eax, $005A3C58  //ClearPopupActive
+          call eax
+        end;
+      Result := False;
+      goto EndOfFunction;
+    end;
+  end;
+
   if (HWndScrollBar > 0) and IsWindowVisible(HWndScrollBar) then
   begin
     ScrollLines := 3;
@@ -241,23 +261,6 @@ begin
       call eax           // CallReadrawAfterScroll
     end;
     Result := False;
-  end;
-
-  CurrPopupInfo := Pointer(Pointer(AThisCurrPopupInfo)^);
-  if (CurrPopupInfo <> nil) and (CurrPopupInfo^.WayToWindowInfo = Pointer(GetWindowLongA(HWindow, $0C))) then
-  begin
-    if (CurrPopupInfo^.NumberOfItems > 0) and (CurrPopupInfo^.NumberOfLines = 0) then
-    begin
-      asm
-        mov eax, $005A3C58  //ClearPopupActive
-        call eax
-      end;
-      if Delta > 0 then
-        CurrPopupInfo^.SelectedItem := $FFFFFFFD
-      else
-        CurrPopupInfo^.SelectedItem := $FFFFFFFE;
-      Result := False;
-    end;
   end;
 
   EndOfFunction:
@@ -339,25 +342,29 @@ asm
   push SavedReturnAddress1
 end;
 
-var
-  ListOfUnitsStart: Integer;
-
 function PatchChangeListOfUnitsStart(PopupResult: Cardinal): Cardinal; stdcall;
 begin
-  if PopupResult = $FFFFFFFE then Inc(ListOfUnitsStart, 3);
-  if PopupResult = $FFFFFFFD then Dec(ListOfUnitsStart, 3);
-  if ListOfUnitsStart < 0 then ListOfUnitsStart := 0;
+  if PopupResult = $FFFFFFFE then Inc(ListOfUnits.Start, 3);
+  if PopupResult = $FFFFFFFD then Dec(ListOfUnits.Start, 3);
+  if ListOfUnits.Start > (ListOfUnits.Length - 9) then ListOfUnits.Start := ListOfUnits.Length - 9;
+  if ListOfUnits.Start < 0 then ListOfUnits.Start := 0;
   Result := PopupResult;
 end;
 
 procedure PatchCallPopupListOfUnits(); register;
 asm
-  mov ListOfUnitsStart, 0
+  mov ListOfUnits.Start, 0
+  push 2
+  push [ebp-$1C]      // UnitIndex
+  mov eax, $004029E1
+  call eax            // Call j_Q_GetNumberOfUnitsInStack_sub_5B50AD
+  add esp, 8
+  mov ListOfUnits.Length, eax
 @@LABEL_POPUP:
-  push [esp+$0C]
-  push [esp+$0C]
-  push [esp+$0C]
-  mov eax, $005B6AEA
+  push [ebp-$14]
+  push [ebp-$18]
+  push [ebp-$1C]      // UnitIndex
+  mov eax, $005B6AEA  // Call Q_PopupListOfUnits_sub_5B6AEA
   call eax
   add esp, $0C
   push eax
@@ -372,7 +379,7 @@ end;
 procedure PatchPopupListOfUnits(); register;
 asm
   mov eax, [ebp-$340]
-  sub eax, ListOfUnitsStart
+  sub eax, ListOfUnits.Start
   cmp eax, 1
   jl @@LABEL1
   cmp eax, 9
@@ -404,7 +411,7 @@ var
   CurrPopupInfo: PCurrPopupInfo;
 begin
   CurrPopupInfo := Pointer(Pointer(AThisCurrPopupInfo)^);
-  if CurrPopupInfo.NumberOfItems >= 9 then
+  if (CurrPopupInfo.NumberOfItems >= 9) and (ListOfUnits.Length > 9) then
   begin
     ZeroMemory(@ScrollBarControlInfo, SizeOf(ScrollBarControlInfo));
     ScrollBarControlInfo.Rect.Left := CurrPopupInfo.Width - 25;
@@ -417,6 +424,8 @@ begin
       $0B,
       @ScrollBarControlInfo.Rect,
       1);
+    SetScrollRange(ScrollBarControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
+    SetScrollPos(ScrollBarControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
   end;
 end;
 

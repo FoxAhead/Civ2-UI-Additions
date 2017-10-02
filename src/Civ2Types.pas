@@ -51,7 +51,7 @@ type
     UnknownA: Integer;                    // + 0x28
     UnknownB: Integer;                    // + 0x2C
     UnknownC: Integer;                    // + 0x30
-    UnknownD: Integer;                    // + 0x34
+    ScrollPageSize: Integer;              // + 0x34
     UnknownE: Integer;                    // + 0x38
     Proc_WM_LBUTTONDBLCLK: Pointer;       // + 0x3C
   end;
@@ -127,7 +127,7 @@ type
     NumberOfItems: Integer;               // + 0x2C [B]
     NumberOfButtons: Integer;             // + 0x30 [C]
     NumberOfButtons2: Integer;            // + 0x34 [D]
-    Unknown3: Integer;                    // + 0x38
+    ScrollPageSize: Integer;              // + 0x38 [E]
     Flags: Integer;                       // + 0x3C : 0x400-ClearPopup, 0x2000-Choose
     Width: Integer;                       // + 0x40
     Height: Integer;                      // + 0x44
@@ -153,11 +153,30 @@ type
     HWindow: HWND;                        // + 0x04
   end;
 
+  TUnitType = packed record
+    dword_64B1B8: Cardinal;
+    dword_64B1BC: Cardinal;
+    byte_64B1C0: Byte;
+    byte_64B1C1: Byte;
+    byte_64B1C2: Byte;
+    byte_64B1C3: Byte;
+    byte_64B1C4: Byte;
+    byte_64B1C5: Byte;
+    byte_64B1C6: Byte;
+    byte_64B1C7: Byte;
+    byte_64B1C8: Byte;
+    byte_64B1C9: Byte;
+    byte_64B1CA: Byte;                    //Role
+    byte_64B1CB: Byte;
+  end;
+
+  TUnitTypes = array[0..$3D] of TUnitType; // 64B1B8
+
   TUnit = packed record
     word_6560F0: Word;
     word_6560F2: Word;
     word_6560F4: Word;                    //00V0 0000 0000 0000 - V-Veteran
-    byte_6560F6: Byte;                    // UnitType
+    byte_6560F6: Byte;                    // UnitType Index
     byte_6560F7: Byte;                    // CivIndex
     byte_6560F8: Byte;
     byte_6560F9: Byte;
