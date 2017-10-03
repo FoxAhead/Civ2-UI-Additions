@@ -134,8 +134,13 @@ type
     Unknown4: array[$48..$D7] of Byte;    // + 0x48
     SelectedItem: Cardinal;               // + 0xD8 : 0xFFFFFFFF - None
 
+    Unknown2: Integer;                    // + 0xC8 [0x32]
+    Unknown3: Integer;                    // + 0xCC [0x33]
+
     Left: Integer;                        // + 0xE8
     Top: Integer;                         // + 0xEC
+
+    DialogItemList: Pointer;              // + 0x234 [8D]
 
     ProcReturn1: Pointer;                 // + 0x240 (Is DblClk => OK?)
 
@@ -144,8 +149,28 @@ type
 
   TWayToWindowInfo = packed record        // GetWindowLongA(hWnd, 0x0C)
 
+    Rectangle: Pointer;                   // + 0x14
+
+    SpriteArea: Pointer;                  // + 0x34
+
+    DrawInfo: Pointer;                    // + 0x40
+
     WindowInfo: PWindowInfo;              // + 0x48
 
+  end;
+
+  TDrawInfo = packed record
+    Unknown0: Integer;
+    DeviceContext: HDC;                   // + 0x04
+  end;
+
+  TDialogItem = packed record
+    Code: Integer;
+    Unknown1: Integer;                    // + 0x04
+    Text: Pointer;                        // + 0x08
+    Rect: Pointer;                        // + 0x0C
+    NextItem: Pointer;                    // + 0x10
+    ItemText: array of Char;
   end;
 
   TWindowStructure = packed record
@@ -153,7 +178,7 @@ type
     HWindow: HWND;                        // + 0x04
   end;
 
-  TUnitType = packed record
+  TUnitType = packed record               // Size = 0x14
     dword_64B1B8: Cardinal;
     dword_64B1BC: Cardinal;
     byte_64B1C0: Byte;
@@ -166,26 +191,26 @@ type
     byte_64B1C7: Byte;
     byte_64B1C8: Byte;
     byte_64B1C9: Byte;
-    byte_64B1CA: Byte;                    //Role
+    Role: Byte;                           // 0x64B1CA
     byte_64B1CB: Byte;
   end;
 
   TUnitTypes = array[0..$3D] of TUnitType; // 64B1B8
 
   TUnit = packed record
-    word_6560F0: Word;
-    word_6560F2: Word;
-    word_6560F4: Word;                    //00V0 0000 0000 0000 - V-Veteran
-    byte_6560F6: Byte;                    // UnitType Index
-    byte_6560F7: Byte;                    // CivIndex
+    word_6560F0: Word;                    // X
+    word_6560F2: Word;                    // Y
+    word_6560F4: Word;                    // 00V0 0000 0000 0000 - V-Veteran
+    UnitType: Byte;                       // 0x6560F6
+    CivIndex: Byte;                       // 0x6560F7
     byte_6560F8: Byte;
     byte_6560F9: Byte;
     byte_6560FA: Byte;
     byte_6560FB: Byte;
     byte_6560FC: Byte;
-    byte_6560FD: Byte;
+    Counter: Byte;                        // 0x6560FD
     byte_6560FE: Byte;
-    byte_6560FF: Byte;
+    Orders: Byte;                         // 0x6560FF
     byte_656100: Byte;                    // Home city
     align2: Byte;
     word_656102: Word;
@@ -197,6 +222,9 @@ type
   end;
 
   TUnits = array[0..$800] of TUnit;       // 6560F0
+
+  TShieldLeft = array[0..$3E] of Integer; // 642C48
+  TShieldTop = array[0..$3E] of Integer;  // 642B48
 
 const
   AThisCitySprites: Cardinal = $006A9490;

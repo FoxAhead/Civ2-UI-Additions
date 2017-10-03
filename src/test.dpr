@@ -15,6 +15,7 @@ uses
   Windows,
   Messages,
   Graphics,
+  Classes,
   Math,
   Civ2Types in 'Civ2Types.pas',
   MyTypes in 'MyTypes.pas';
@@ -28,6 +29,10 @@ var
   SavedReturnAddress2: Cardinal;
   SavedThis: Cardinal;
   ListOfUnits: TListOfUnits;
+  ShieldLeft: ^TShieldLeft = Pointer($642C48);
+  ShieldTop: ^TShieldTop = Pointer($642B48);
+  AllUnits: ^TUnits = Pointer($006560F0);
+  UnitTypes: ^TUnitTypes = Pointer($0064B1B8);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -75,6 +80,11 @@ begin
     end;
   end;
   //if (v27 = $0063EB58) and (Result = wtUnknown) then Result := wtCityStatus;
+end;
+
+function ScaleByZoom(Value, Zoom: Integer): Integer;
+begin
+  Result := Value * (Zoom + 8) div 8;
 end;
 
 //
@@ -222,7 +232,7 @@ begin
         CurrPopupInfo^.SelectedItem := $FFFFFFFE;
       if CurrPopupInfo^.SelectedItem > $FFFFFFF0 then
         asm
-          mov eax, $005A3C58  //ClearPopupActive
+          mov eax, $005A3C58  // Call ClearPopupActive
           call eax
         end;
       Result := False;
@@ -257,8 +267,8 @@ begin
       mov eax, nPos
       push eax
       mov ecx, ScrollBarData
-      mov eax, $005CD640
-      call eax           // CallReadrawAfterScroll
+      mov eax, $005CD640    // Call CallRedrawAfterScroll
+      call eax
     end;
     Result := False;
   end;
@@ -394,7 +404,7 @@ end;
 var
   ScrollBarControlInfo: TControlInfo;
 
-procedure j_Q_CreateScrollbar_sub_40FC50(This, a1: Pointer; a2: Integer; a3: Pointer; A4: Integer); stdcall;
+procedure j_Q_CreateScrollbar_sub_40FC50(This, A1: Pointer; A2: Integer; A3: Pointer; A4: Integer); stdcall;
 asm
   mov ecx, [esp+8]
   push [esp+$18]
@@ -437,6 +447,95 @@ asm
   ret
 end;
 
+function PatchDrawUnit(thisWayToWindowInfo: Pointer; UnitIndex, A3, Left, Top, Zoom, A7: Integer): Integer; stdcall;
+var
+  DC: HDC;
+  h: HGDIOBJ;
+  Canvas: TCanvas;
+  SavedDC: Integer;
+  VUnits: ^TUnits;
+  UnitType: Byte;
+  TextOut: string;
+  R: TRect;
+  R2: TRect;
+  TextSize: TSize;
+begin
+  Result := 0;
+  asm
+    push A7
+    push Zoom
+    push Top
+    push Left
+    push A3
+    push UnitIndex
+    push thisWayToWindowInfo
+    mov eax, $0056BAFF   // Call Q_DrawUnit_sub_56BAFF
+    call eax
+    add esp, $1C
+    mov Result, eax
+  end;
+
+  UnitType := AllUnits^[UnitIndex].UnitType;
+  if AllUnits^[UnitIndex].CivIndex = PInteger($006D1DA0)^ then
+  begin
+    if (UnitTypes^[UnitType].Role = 5) then // and
+    begin
+      if AllUnits^[UnitIndex].Counter > 0 then
+      begin
+        TextOut := IntToStr(AllUnits^[UnitIndex].Counter);
+        DC := PCardinal(PCardinal(Cardinal(thisWayToWindowInfo) + $40)^ + $4)^;
+        SavedDC := SaveDC(DC);
+        Canvas := TCanvas.Create();
+        Canvas.Handle := DC;
+        Canvas.Brush.Color := RGB(255, 255, 0);
+        Canvas.Font.Name := 'ARIAL';
+        //Canvas.Font.Style := [fsBold];
+        Canvas.Font.Height := ScaleByZoom(16, Zoom);
+        Canvas.Font.Color := clBlack;
+        TextSize := Canvas.TextExtent(TextOut);
+        R := Rect(0, 0, TextSize.cx, TextSize.cy);
+        OffsetRect(R, Left, Top);
+        OffsetRect(R, ScaleByZoom(32, Zoom) - TextSize.cx div 2, ScaleByZoom(32, Zoom) - TextSize.cy div 2);
+        InflateRect(R, 2, 0);
+        //Canvas.Rectangle(R);
+        OffsetRect(R, 2, 0);
+        Canvas.Brush.Style := bsClear;
+
+        R2 := R;
+        Canvas.Font.Color := clBlack;
+        OffsetRect(R2, 0, -1);
+        Canvas.TextOut(R2.Left, R2.Top, TextOut);
+        OffsetRect(R2, 1, 1);
+        Canvas.TextOut(R2.Left, R2.Top, TextOut);
+        //Canvas.Font.Color := clOlive;
+        OffsetRect(R2, -1, 1);
+        Canvas.TextOut(R2.Left, R2.Top, TextOut);
+        OffsetRect(R2, -1, -1);
+        Canvas.TextOut(R2.Left, R2.Top, TextOut);
+
+        Canvas.Font.Color := clYellow;
+        Canvas.TextOut(R.Left, R.Top, TextOut);
+
+        Canvas.Handle := 0;
+        Canvas.Free;
+        RestoreDC(DC, SavedDC);
+      end;
+    end;
+  end;
+end;
+
+procedure PatchCallDrawUnit(); register;
+asm
+  push [esp+$1C]
+  push [esp+$1C]
+  push [esp+$1C]
+  push [esp+$1C]
+  push [esp+$1C]
+  push [esp+$1C]
+  push [esp+$1C]
+  call PatchDrawUnit
+end;
+
 {$O+}
 
 //
@@ -466,6 +565,8 @@ begin
   WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
   WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
   WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
+  WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchCallDrawUnit);
+
 end;
 
 procedure DllMain(Reason: Integer);
