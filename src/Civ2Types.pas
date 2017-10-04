@@ -39,6 +39,7 @@ type
   PWindowStructure = ^TWindowStructure;
   PCurrPopupInfo = ^TCurrPopupInfo;
   PPCurrPopupInfo = ^PCurrPopupInfo;
+  PDrawInfo = ^TDrawInfo;
 
   TControlInfo = packed record            // Size = $40
     ControlType: Integer;                 //  8-Scrollbar, 7-ListBox, 6-Button, 4-EditBox, 3-RadioButton(Group), 2-CheckBox, 1-ListItem
@@ -148,15 +149,14 @@ type
   end;
 
   TWayToWindowInfo = packed record        // GetWindowLongA(hWnd, 0x0C)
-
+    Unknown1: array[$00..$13] of Byte;
     Rectangle: Pointer;                   // + 0x14
-
+    Unknown2: array[$18..$33] of Byte;
     SpriteArea: Pointer;                  // + 0x34
-
-    DrawInfo: Pointer;                    // + 0x40
-
+    Unknown3: array[$35..$3C] of Byte;
+    DrawInfo: PDrawInfo;                  // + 0x40
+    Unknown4: array[$44..$47] of Byte;
     WindowInfo: PWindowInfo;              // + 0x48
-
   end;
 
   TDrawInfo = packed record
@@ -225,6 +225,13 @@ type
 
   TShieldLeft = array[0..$3E] of Integer; // 642C48
   TShieldTop = array[0..$3E] of Integer;  // 642B48
+
+  PHFONT = ^HFONT;
+  PPHFONT = ^PHFONT;
+  TLogFontContainer = packed record
+    H: PPHFONT;
+    LogFont: LOGFONT;
+  end;
 
 const
   AThisCitySprites: Cardinal = $006A9490;

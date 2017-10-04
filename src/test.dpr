@@ -33,6 +33,10 @@ var
   ShieldTop: ^TShieldTop = Pointer($642B48);
   AllUnits: ^TUnits = Pointer($006560F0);
   UnitTypes: ^TUnitTypes = Pointer($0064B1B8);
+  SideBarWayToWindowInfo: PWayToWindowInfo = Pointer($006ABC68);
+  GameTurn: PWord = Pointer($00655AF8);
+  LogFontContainer: ^TLogFontContainer = Pointer($006ABF98);
+  SideBarClientRect: PRect = Pointer($006ABC28);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -85,6 +89,14 @@ end;
 function ScaleByZoom(Value, Zoom: Integer): Integer;
 begin
   Result := Value * (Zoom + 8) div 8;
+end;
+
+procedure TextOutWithShadow(var Canvas: TCanvas; var TextOut: string; var Left: Integer; var Top: Integer; const Color1: TColor; const Color2: TColor);
+begin
+  Canvas.Font.Color := Color1;
+  Canvas.TextOut(Left + 1, Top + 1, TextOut);
+  Canvas.Font.Color := Color2;
+  Canvas.TextOut(Left, Top, TextOut);
 end;
 
 //
@@ -536,6 +548,52 @@ asm
   call PatchDrawUnit
 end;
 
+procedure PatchDrawSideBar(Arg0: Integer); stdcall;
+var
+  DC: HDC;
+  Canvas: TCanvas;
+  SavedDC: Integer;
+  TextOut: string;
+  Top: Integer;
+  LFont: LogFont;
+  Left: Integer;
+begin
+  asm
+    push Arg0
+    mov eax, $00569363 // Call Q_DrawSideBar_sub_569363
+    call eax
+    add esp, $04
+  end;
+  DC := SideBarWayToWindowInfo^.DrawInfo^.DeviceContext;
+  SavedDC := SaveDC(DC);
+  Canvas := TCanvas.Create();
+  Canvas.Handle := DC;
+
+  ZeroMemory(@LFont, SizeOf(LFont));
+  GetObject(LogFontContainer^.h^^, SizeOf(LFont), @LFont);
+  Canvas.Font.Handle := CreateFontIndirect(LFont);
+
+  Canvas.Brush.Style := bsClear;
+  Top := SideBarClientRect^.Top + LogFontContainer^.LogFont.lfHeight;
+  TextOut := 'Oedo -' + IntToStr((4 - GameTurn^ and 3) and 3);
+  Left := SideBarClientRect^.Right - Canvas.TextExtent(TextOut).cx - 1;
+  {if (GameTurn^ and 3) = 3 then
+    TextOutWithShadow(Canvas, TextOut, Left, Top, TColor($000000), clYellow)
+  else}
+    TextOutWithShadow(Canvas, TextOut, Left, Top, TColor($CCCCCC), TColor($444444));
+
+  Canvas.Font.Handle := 0;
+  Canvas.Handle := 0;
+  Canvas.Free;
+  RestoreDC(DC, SavedDC);
+end;
+
+procedure PatchCallDrawSideBar(); register;
+asm
+  push [esp+$04]
+  call PatchDrawSideBar
+end;
+
 {$O+}
 
 //
@@ -566,7 +624,7 @@ begin
   WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
   WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
   WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchCallDrawUnit);
-
+  WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchCallDrawSideBar);
 end;
 
 procedure DllMain(Reason: Integer);
