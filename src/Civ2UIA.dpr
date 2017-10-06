@@ -1,4 +1,4 @@
-library test;
+library Civ2UIA;
 
 { Important note about DLL memory management: ShareMem must be the
   first unit in your library's USES clause AND your project's (select
@@ -19,7 +19,7 @@ uses
   Math,
   StrUtils,
   Civ2Types in 'Civ2Types.pas',
-  MyTypes in 'MyTypes.pas';
+  Civ2UIATypes in 'Civ2UIATypes.pas';
 
 {$R *.res}
 

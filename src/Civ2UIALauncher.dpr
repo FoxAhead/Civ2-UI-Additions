@@ -1,8 +1,8 @@
-program Project1;
+program Civ2UIALauncher;
 
 uses
   Forms,
-  Unit1 in 'Unit1.pas' {Form1};
+  Civ2UIAMain in 'Civ2UIAMain.pas' {Form1};
 
 {$R *.res}
 

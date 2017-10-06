@@ -1,4 +1,4 @@
-unit MyTypes;
+unit Civ2UIATypes;
 
 interface
 

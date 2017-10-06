@@ -1,4 +1,4 @@
-unit Unit1;
+unit Civ2UIAMain;
 
 interface
 
@@ -61,8 +61,6 @@ var
   StartupInfo: TStartupInfo;
   ProcessInformation: TProcessInformation;
   Context: TContext;
-  //SavedContext: TContext;
-  //Address: Pointer;
   Inject: packed record
     PushCommand: Byte;
     PushArgument: DWord;
@@ -87,10 +85,6 @@ begin
   begin
     ZeroMemory(@Context, SizeOf(Context));
     Context.ContextFlags := CONTEXT_FULL;
-    //GetThreadContext(ProcessInformation.hThread, Context);
-    //SavedContext := Context;
-    //Address := VirtualAllocEx(ProcessInformation.hProcess, nil, 4096, MEM_COMMIT or MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-    //Log(IntToHex(Cardinal(Address), 4));
     EntryPointAddress := $005F6E90;
     ZeroMemory(@Inject, SizeOf(Inject));
     Inject.PushCommand := $68;
@@ -110,7 +104,6 @@ begin
       if Context.Eip = EntryPointAddress + $0B then
         break;
       Sleep(100);
-      //Log('EIP: ' + IntToHex(Context.Eip, 4));
     end;
 
     SuspendThread(ProcessInformation.hThread);
@@ -159,7 +152,7 @@ begin
   MyPath := ExtractFilePath(Application.ExeName);
   FileName := MyPath + 'civ2.exe';
   if FileExists(FileName) then Edit1.Text := FileName;
-  FileName := MyPath + 'test.dll';
+  FileName := MyPath + 'Civ2UIA.dll';
   if FileExists(FileName) then Edit2.Text := FileName;
 end;
 
