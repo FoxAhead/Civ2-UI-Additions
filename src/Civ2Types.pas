@@ -148,7 +148,7 @@ type
     ListItems: array of TControlInfo;     // + 0x280
   end;
 
-  TGraphicsInfo = packed record        // GetWindowLongA(hWnd, 0x0C)
+  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C)
     Unknown1: array[$00..$13] of Byte;
     Rectangle: Pointer;                   // + 0x14
     Unknown2: array[$18..$33] of Byte;
@@ -181,8 +181,8 @@ type
   PHFONT = ^HFONT;
   PPHFONT = ^PHFONT;
   TFontInfo = packed record
-    H: PPHFONT;
-    LogFont: LOGFONT;
+    Handle: PPHFONT;
+    Height: Longint;
   end;
 
   TUnitType = packed record               // Size = 0x14
@@ -230,9 +230,15 @@ type
 
   TUnits = array[0..$800] of TUnit;       // 6560F0
 
+  TCiv = packed record                    // Size = 0x594
+    Unknown1: array[0..$7] of Byte;       //          64C6A0
+    Beakers: Word;                        // + 0x08 = 64C6A8
+    Unknown2: array[$A..$593] of Byte;
+  end;
+  TCivs = array[1..8] of TCiv;            // 64C6A0
+
   TShieldLeft = array[0..$3E] of Integer; // 642C48
   TShieldTop = array[0..$3E] of Integer;  // 642B48
-
 
 const
   AThisCitySprites: Cardinal = $006A9490;

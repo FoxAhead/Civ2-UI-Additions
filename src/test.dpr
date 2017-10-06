@@ -29,17 +29,27 @@ var
   SavedReturnAddress1: Cardinal;
   SavedReturnAddress2: Cardinal;
   SavedThis: Cardinal;
+
   ListOfUnits: TListOfUnits;
   ShieldLeft: ^TShieldLeft = Pointer($642C48);
   ShieldTop: ^TShieldTop = Pointer($642B48);
   ShieldFontInfo: ^TFontInfo = Pointer($006AC090);
   AllUnits: ^TUnits = Pointer($006560F0);
   UnitTypes: ^TUnitTypes = Pointer($0064B1B8);
-  SideBarGraphicsInfo: PGraphicsInfo = Pointer($006ABC68);
   GameTurn: PWord = Pointer($00655AF8);
-  SideBarFontInfo: ^TFontInfo = Pointer($006ABF98);
-  SideBarClientRect: PRect = Pointer($006ABC28);
   HumanCivIndex: PInteger = Pointer($006D1DA0);
+  CurrCivIndex: PInteger = Pointer($0063EF6C);
+  Civs: ^TCivs = Pointer($0064C6A0);
+
+  SideBarGraphicsInfo: PGraphicsInfo = Pointer($006ABC68);
+  ScienceAdvisorGraphicsInfo: PGraphicsInfo = Pointer($0063EB10);
+
+  SideBarClientRect: PRect = Pointer($006ABC28);
+  ScienceAdvisorClientRect: PRect = Pointer($0063EC34);
+
+  SideBarFontInfo: ^TFontInfo = Pointer($006ABF98);
+  TimesFontInfo: ^TFontInfo = Pointer($0063EAB8);
+  TimesBigFontInfo: ^TFontInfo = Pointer($0063EAC0);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -93,15 +103,7 @@ begin
   Result := Value * (Zoom + 8) div 8;
 end;
 
-procedure TextOutWithShadow(var Canvas: TCanvas; var TextOut: string; var Left: Integer; var Top: Integer; const Color1: TColor; const Color2: TColor);
-begin
-  Canvas.Font.Color := Color1;
-  Canvas.TextOut(Left + 1, Top + 1, TextOut);
-  Canvas.Font.Color := Color2;
-  Canvas.TextOut(Left, Top, TextOut);
-end;
-
-procedure TextOutWithShadows(var Canvas: TCanvas; var TextOut: string; var Left, Top: Integer;
+procedure TextOutWithShadows(var Canvas: TCanvas; var TextOut: string; Left, Top: Integer;
   const MainColor, ShadowColor: TColor; Shadows: Cardinal);
 var
   dX: Integer;
@@ -132,10 +134,19 @@ begin
 end;
 
 //
+//
 // Patches Section
+//
 //
 
 {$O-}
+
+function GetFontHeightWithExLeading(thisFont: Pointer): Integer;
+asm
+  mov ecx, thisFont
+  mov eax, $00403819 // CallQ_GetFontHeightWithExLeading_sub_403819
+  call eax
+end;
 
 function Patch1(X: Integer; Y: Integer; var A4: Integer; var A5: Integer): Integer; stdcall;
 var
@@ -526,17 +537,17 @@ begin
     Canvas := TCanvas.Create();
     Canvas.Handle := DC;
     Canvas.Brush.Style := bsClear;
-    Canvas.Font.Name := 'Small Fonts';
     Canvas.Font.Style := [];
-    Canvas.Font.Height := ScaleByZoom(14, Zoom);
-    if Canvas.Font.Height > 14 then Canvas.Font.Name := 'Arial';
+    Canvas.Font.Size := ScaleByZoom(8, Zoom);
+    if Canvas.Font.Size > 7 then
+      Canvas.Font.Name := 'Arial'
+    else
+      Canvas.Font.Name := 'Small Fonts';
     TextSize := Canvas.TextExtent(TextOut);
     R := Rect(0, 0, TextSize.cx, TextSize.cy);
     OffsetRect(R, Left, Top);
     OffsetRect(R, ScaleByZoom(32, Zoom) - TextSize.cx div 2, ScaleByZoom(32, Zoom) - TextSize.cy div 2);
-    TextOut := IntToStr(Canvas.Font.Size);
     TextOutWithShadows(Canvas, TextOut, R.Left, R.Top, clYellow, clBlack, SHADOW_ALL);
-
     Canvas.Handle := 0;
     Canvas.Free;
     RestoreDC(DC, SavedDC);
@@ -563,9 +574,9 @@ begin
   SavedDC := SaveDC(DC);
   Canvas := TCanvas.Create();
   Canvas.Handle := DC;
-  Canvas.Font.Handle := CopyFont(SideBarFontInfo^.h^^);
+  Canvas.Font.Handle := CopyFont(SideBarFontInfo^.Handle^^);
   Canvas.Brush.Style := bsClear;
-  Top := SideBarClientRect^.Top + (SideBarFontInfo^.LogFont.lfHeight - 1) * 2;
+  Top := SideBarClientRect^.Top + (SideBarFontInfo^.Height - 1) * 2;
   TurnsRotation := ((GameTurn^ - 1) and 3) + 1;
   TextOut := 'Oedo';
   Left := SideBarClientRect^.Right - Canvas.TextExtent(TextOut).cx - 1;
@@ -576,10 +587,54 @@ begin
   RestoreDC(DC, SavedDC);
 end;
 
+function PatchDrawProgressBar(GraphicsInfo: PGraphicsInfo; A2: Pointer; Left, Top, Current, Total, Height, Width, A9: Integer): Integer; cdecl;
+var
+  DC: HDC;
+  Canvas: TCanvas;
+  SavedDC: Integer;
+  TextOut: string;
+  vLeft: Integer;
+  vTop: Integer;
+  R: TRect;
+begin
+  asm
+    push A9
+    push Width
+    push Height
+    push Total
+    push Current
+    push Top
+    push Left
+    push A2
+    push GraphicsInfo
+    mov eax, $00548C78 // Call Q_DrawProgressBar_sub_548C78
+    call eax
+    add esp, $24
+    mov Result, eax
+  end;
+  if GraphicsInfo = ScienceAdvisorGraphicsInfo then
+  begin
+    TextOut := IntToStr(Current) + ' / ' + IntToStr(Total);
+    DC := GraphicsInfo^.DrawInfo^.DeviceContext;
+    SavedDC := SaveDC(DC);
+    Canvas := TCanvas.Create();
+    Canvas.Handle := DC;
+    Canvas.Font.Handle := CopyFont(TimesFontInfo^.Handle^^);
+    Canvas.Brush.Style := bsClear;
+    vLeft := Left + 8;
+    vTop := Top - GetFontHeightWithExLeading(TimesFontInfo) - 1;
+    TextOutWithShadows(Canvas, TextOut, vLeft, vTop, TColor($E7E7E7), TColor($565656), SHADOW_BR);
+    Canvas.Free;
+    RestoreDC(DC, SavedDC);
+  end;
+end;
+
 {$O+}
 
 //
+//
 // Initialization Section
+//
 //
 
 procedure WriteMemory(HProcess: Cardinal; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer);
@@ -607,6 +662,7 @@ begin
   WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
   WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
   WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
+  WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
 end;
 
 procedure DllMain(Reason: Integer);
