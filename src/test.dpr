@@ -17,6 +17,7 @@ uses
   Graphics,
   Classes,
   Math,
+  StrUtils,
   Civ2Types in 'Civ2Types.pas',
   MyTypes in 'MyTypes.pas';
 
@@ -31,12 +32,14 @@ var
   ListOfUnits: TListOfUnits;
   ShieldLeft: ^TShieldLeft = Pointer($642C48);
   ShieldTop: ^TShieldTop = Pointer($642B48);
+  ShieldFontInfo: ^TFontInfo = Pointer($006AC090);
   AllUnits: ^TUnits = Pointer($006560F0);
   UnitTypes: ^TUnitTypes = Pointer($0064B1B8);
-  SideBarWayToWindowInfo: PWayToWindowInfo = Pointer($006ABC68);
+  SideBarGraphicsInfo: PGraphicsInfo = Pointer($006ABC68);
   GameTurn: PWord = Pointer($00655AF8);
-  LogFontContainer: ^TLogFontContainer = Pointer($006ABF98);
+  SideBarFontInfo: ^TFontInfo = Pointer($006ABF98);
   SideBarClientRect: PRect = Pointer($006ABC28);
+  HumanCivIndex: PInteger = Pointer($006D1DA0);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -53,7 +56,6 @@ function FindScrolBar(HWindow: HWND): HWND; stdcall;
 var
   ClassName: array[0..31] of char;
 begin
-  Result := 0;
   if GetClassName(HWindow, ClassName, 32) > 0 then
     if ClassName = 'MSScrollBarClass' then
     begin
@@ -79,7 +81,7 @@ begin
       if RegisteredHWND[i] = HWindow then
       begin
         Result := i;
-        break;
+        Break;
       end;
     end;
   end;
@@ -99,6 +101,36 @@ begin
   Canvas.TextOut(Left, Top, TextOut);
 end;
 
+procedure TextOutWithShadows(var Canvas: TCanvas; var TextOut: string; var Left, Top: Integer;
+  const MainColor, ShadowColor: TColor; Shadows: Cardinal);
+var
+  dX: Integer;
+  dY: Integer;
+begin
+  Canvas.Font.Color := ShadowColor;
+  for dY := -1 to 1 do
+  begin
+    for dX := -1 to 1 do
+    begin
+      if (dX = 0) and (dY = 0) then Continue;
+      if (Shadows and 1) = 1 then Canvas.TextOut(Left + dX, Top + dY, TextOut);
+      Shadows := Shadows shr 1;
+      if Shadows = 0 then Break;
+    end;
+  end;
+  Canvas.Font.Color := MainColor;
+  Canvas.TextOut(Left, Top, TextOut);
+end;
+
+function CopyFont(SourceFont: HFONT): HFONT;
+var
+  LFont: LogFont;
+begin
+  ZeroMemory(@LFont, SizeOf(LFont));
+  GetObject(SourceFont, SizeOf(LFont), @LFont);
+  Result := CreateFontIndirect(LFont);
+end;
+
 //
 // Patches Section
 //
@@ -113,22 +145,22 @@ var
   PCitySprites: ^TCitySprites;
   PCityWindow: ^TCityWindow;
   DeltaX: Integer;
-  Canvas: TBitMap;
-  CursorPoint: TPoint;
-  HandleWindow: HWND;
+  //  Canvas: TBitMap;
+  //  CursorPoint: TPoint;
+  //  HandleWindow: HWND;
 begin
   asm
     mov This, ecx;
   end;
 
-  if GetCursorPos(CursorPoint) then
-    HandleWindow := WindowFromPoint(CursorPoint)
-  else
-    HandleWindow := 0;
-  //Canvas := TBitMap.Create();               // In VM Windows 10 disables city window redraw
-  //Canvas.Canvas.Handle := GetDC(HandleWindow);
-  //Canvas.Canvas.Pen.Color := RGB(255, 0, 255);
-  //Canvas.Canvas.Brush.Style := bsClear;
+  {  if GetCursorPos(CursorPoint) then
+      HandleWindow := WindowFromPoint(CursorPoint)
+    else
+      HandleWindow := 0;}
+    //Canvas := TBitMap.Create();               // In VM Windows 10 disables city window redraw
+    //Canvas.Canvas.Handle := GetDC(HandleWindow);
+    //Canvas.Canvas.Pen.Color := RGB(255, 0, 255);
+    //Canvas.Canvas.Brush.Style := bsClear;
 
   v6 := -1;
   PCitySprites := Pointer(This);
@@ -185,7 +217,6 @@ var
   HWndScrollBar: HWND;
   SIndex: Integer;
   SType: Integer;
-  KeyCode: Integer;
   ScrollBarData: PScrollBarData;
   nPrevPos: Integer;
   nPos: Integer;
@@ -234,7 +265,7 @@ begin
   end;
 
   CurrPopupInfo := Pointer(Pointer(AThisCurrPopupInfo)^);
-  if (CurrPopupInfo <> nil) and (CurrPopupInfo^.WayToWindowInfo = Pointer(GetWindowLongA(HWindow, $0C))) then
+  if (CurrPopupInfo <> nil) and (CurrPopupInfo^.GraphicsInfo = Pointer(GetWindowLongA(HWindow, $0C))) then
   begin
     if (CurrPopupInfo^.NumberOfItems > 0) and (CurrPopupInfo^.NumberOfLines = 0) then
     begin
@@ -429,7 +460,6 @@ end;
 
 procedure PatchCallCreateScollBar(); stdcall;
 var
-  WindowInfo: PWindowInfo;
   CurrPopupInfo: PCurrPopupInfo;
 begin
   CurrPopupInfo := Pointer(Pointer(AThisCurrPopupInfo)^);
@@ -459,17 +489,14 @@ asm
   ret
 end;
 
-function PatchDrawUnit(thisWayToWindowInfo: Pointer; UnitIndex, A3, Left, Top, Zoom, A7: Integer): Integer; stdcall;
+function PatchDrawUnit(thisWayToWindowInfo: Pointer; UnitIndex, A3, Left, Top, Zoom, A7: Integer): Integer; cdecl;
 var
   DC: HDC;
-  h: HGDIOBJ;
   Canvas: TCanvas;
   SavedDC: Integer;
-  VUnits: ^TUnits;
   UnitType: Byte;
   TextOut: string;
   R: TRect;
-  R2: TRect;
   TextSize: TSize;
 begin
   Result := 0;
@@ -488,75 +515,43 @@ begin
   end;
 
   UnitType := AllUnits^[UnitIndex].UnitType;
-  if AllUnits^[UnitIndex].CivIndex = PInteger($006D1DA0)^ then
+  if
+    (UnitTypes^[UnitType].Role = 5) and
+    (AllUnits^[UnitIndex].CivIndex = HumanCivIndex^) and
+    (AllUnits^[UnitIndex].Counter > 0) then
   begin
-    if (UnitTypes^[UnitType].Role = 5) then // and
-    begin
-      if AllUnits^[UnitIndex].Counter > 0 then
-      begin
-        TextOut := IntToStr(AllUnits^[UnitIndex].Counter);
-        DC := PCardinal(PCardinal(Cardinal(thisWayToWindowInfo) + $40)^ + $4)^;
-        SavedDC := SaveDC(DC);
-        Canvas := TCanvas.Create();
-        Canvas.Handle := DC;
-        Canvas.Brush.Color := RGB(255, 255, 0);
-        Canvas.Font.Name := 'ARIAL';
-        //Canvas.Font.Style := [fsBold];
-        Canvas.Font.Height := ScaleByZoom(16, Zoom);
-        Canvas.Font.Color := clBlack;
-        TextSize := Canvas.TextExtent(TextOut);
-        R := Rect(0, 0, TextSize.cx, TextSize.cy);
-        OffsetRect(R, Left, Top);
-        OffsetRect(R, ScaleByZoom(32, Zoom) - TextSize.cx div 2, ScaleByZoom(32, Zoom) - TextSize.cy div 2);
-        InflateRect(R, 2, 0);
-        //Canvas.Rectangle(R);
-        OffsetRect(R, 2, 0);
-        Canvas.Brush.Style := bsClear;
+    TextOut := IntToStr(AllUnits^[UnitIndex].Counter);
+    DC := PCardinal(PCardinal(Cardinal(thisWayToWindowInfo) + $40)^ + $4)^;
+    SavedDC := SaveDC(DC);
+    Canvas := TCanvas.Create();
+    Canvas.Handle := DC;
+    Canvas.Brush.Style := bsClear;
+    Canvas.Font.Name := 'Small Fonts';
+    Canvas.Font.Style := [];
+    Canvas.Font.Height := ScaleByZoom(14, Zoom);
+    if Canvas.Font.Height > 14 then Canvas.Font.Name := 'Arial';
+    TextSize := Canvas.TextExtent(TextOut);
+    R := Rect(0, 0, TextSize.cx, TextSize.cy);
+    OffsetRect(R, Left, Top);
+    OffsetRect(R, ScaleByZoom(32, Zoom) - TextSize.cx div 2, ScaleByZoom(32, Zoom) - TextSize.cy div 2);
+    TextOut := IntToStr(Canvas.Font.Size);
+    TextOutWithShadows(Canvas, TextOut, R.Left, R.Top, clYellow, clBlack, SHADOW_ALL);
 
-        R2 := R;
-        Canvas.Font.Color := clBlack;
-        OffsetRect(R2, 0, -1);
-        Canvas.TextOut(R2.Left, R2.Top, TextOut);
-        OffsetRect(R2, 1, 1);
-        Canvas.TextOut(R2.Left, R2.Top, TextOut);
-        //Canvas.Font.Color := clOlive;
-        OffsetRect(R2, -1, 1);
-        Canvas.TextOut(R2.Left, R2.Top, TextOut);
-        OffsetRect(R2, -1, -1);
-        Canvas.TextOut(R2.Left, R2.Top, TextOut);
-
-        Canvas.Font.Color := clYellow;
-        Canvas.TextOut(R.Left, R.Top, TextOut);
-
-        Canvas.Handle := 0;
-        Canvas.Free;
-        RestoreDC(DC, SavedDC);
-      end;
-    end;
+    Canvas.Handle := 0;
+    Canvas.Free;
+    RestoreDC(DC, SavedDC);
   end;
 end;
 
-procedure PatchCallDrawUnit(); register;
-asm
-  push [esp+$1C]
-  push [esp+$1C]
-  push [esp+$1C]
-  push [esp+$1C]
-  push [esp+$1C]
-  push [esp+$1C]
-  push [esp+$1C]
-  call PatchDrawUnit
-end;
-
-procedure PatchDrawSideBar(Arg0: Integer); stdcall;
+procedure PatchDrawSideBar(Arg0: Integer); cdecl;
 var
   DC: HDC;
   Canvas: TCanvas;
   SavedDC: Integer;
   TextOut: string;
   Top: Integer;
-  LFont: LogFont;
   Left: Integer;
+  TurnsRotation: Integer;
 begin
   asm
     push Arg0
@@ -564,34 +559,21 @@ begin
     call eax
     add esp, $04
   end;
-  DC := SideBarWayToWindowInfo^.DrawInfo^.DeviceContext;
+  DC := SideBarGraphicsInfo^.DrawInfo^.DeviceContext;
   SavedDC := SaveDC(DC);
   Canvas := TCanvas.Create();
   Canvas.Handle := DC;
-
-  ZeroMemory(@LFont, SizeOf(LFont));
-  GetObject(LogFontContainer^.h^^, SizeOf(LFont), @LFont);
-  Canvas.Font.Handle := CreateFontIndirect(LFont);
-
+  Canvas.Font.Handle := CopyFont(SideBarFontInfo^.h^^);
   Canvas.Brush.Style := bsClear;
-  Top := SideBarClientRect^.Top + LogFontContainer^.LogFont.lfHeight;
-  TextOut := 'Oedo -' + IntToStr((4 - GameTurn^ and 3) and 3);
+  Top := SideBarClientRect^.Top + (SideBarFontInfo^.LogFont.lfHeight - 1) * 2;
+  TurnsRotation := ((GameTurn^ - 1) and 3) + 1;
+  TextOut := 'Oedo';
   Left := SideBarClientRect^.Right - Canvas.TextExtent(TextOut).cx - 1;
-  {if (GameTurn^ and 3) = 3 then
-    TextOutWithShadow(Canvas, TextOut, Left, Top, TColor($000000), clYellow)
-  else}
-    TextOutWithShadow(Canvas, TextOut, Left, Top, TColor($CCCCCC), TColor($444444));
-
-  Canvas.Font.Handle := 0;
-  Canvas.Handle := 0;
+  TextOutWithShadows(Canvas, TextOut, Left, Top, clOlive, clBlack, SHADOW_BR);
+  TextOut := LeftStr(TextOut, TurnsRotation);
+  TextOutWithShadows(Canvas, TextOut, Left, Top, clYellow, clBlack, SHADOW_NONE);
   Canvas.Free;
   RestoreDC(DC, SavedDC);
-end;
-
-procedure PatchCallDrawSideBar(); register;
-asm
-  push [esp+$04]
-  call PatchDrawSideBar
 end;
 
 {$O+}
@@ -623,8 +605,8 @@ begin
   WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
   WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
   WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
-  WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchCallDrawUnit);
-  WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchCallDrawSideBar);
+  WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
+  WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
 end;
 
 procedure DllMain(Reason: Integer);

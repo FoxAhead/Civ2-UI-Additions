@@ -35,7 +35,7 @@ type
   PWindowInfo = ^TWindowInfo;
   PButtonInfo = ^TButtonInfo;
   PScrollBarData = ^TScrollBarData;
-  PWayToWindowInfo = ^TWayToWindowInfo;
+  PGraphicsInfo = ^TGraphicsInfo;
   PWindowStructure = ^TWindowStructure;
   PCurrPopupInfo = ^TCurrPopupInfo;
   PPCurrPopupInfo = ^PCurrPopupInfo;
@@ -122,7 +122,7 @@ type
   end;
 
   TCurrPopupInfo = packed record
-    WayToWindowInfo: PWayToWindowInfo;
+    GraphicsInfo: PGraphicsInfo;
     Unknown1: array[$04..$27] of Byte;    // + 0x04
     NumberOfLines: Integer;               // + 0x28 [A]
     NumberOfItems: Integer;               // + 0x2C [B]
@@ -148,7 +148,7 @@ type
     ListItems: array of TControlInfo;     // + 0x280
   end;
 
-  TWayToWindowInfo = packed record        // GetWindowLongA(hWnd, 0x0C)
+  TGraphicsInfo = packed record        // GetWindowLongA(hWnd, 0x0C)
     Unknown1: array[$00..$13] of Byte;
     Rectangle: Pointer;                   // + 0x14
     Unknown2: array[$18..$33] of Byte;
@@ -176,6 +176,13 @@ type
   TWindowStructure = packed record
     Unknown1: Integer;
     HWindow: HWND;                        // + 0x04
+  end;
+
+  PHFONT = ^HFONT;
+  PPHFONT = ^PHFONT;
+  TFontInfo = packed record
+    H: PPHFONT;
+    LogFont: LOGFONT;
   end;
 
   TUnitType = packed record               // Size = 0x14
@@ -226,12 +233,6 @@ type
   TShieldLeft = array[0..$3E] of Integer; // 642C48
   TShieldTop = array[0..$3E] of Integer;  // 642B48
 
-  PHFONT = ^HFONT;
-  PPHFONT = ^PHFONT;
-  TLogFontContainer = packed record
-    H: PPHFONT;
-    LogFont: LOGFONT;
-  end;
 
 const
   AThisCitySprites: Cardinal = $006A9490;
