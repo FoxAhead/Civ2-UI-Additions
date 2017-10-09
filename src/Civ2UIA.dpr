@@ -11,13 +11,12 @@ library Civ2UIA;
   using PChar or ShortString parameters. }
 
 uses
-  SysUtils,
-  Windows,
-  Messages,
-  Graphics,
   Classes,
-  Math,
+  Graphics,
+  Messages,
+  SysUtils,
   StrUtils,
+  Windows,
   Civ2Types in 'Civ2Types.pas',
   Civ2UIATypes in 'Civ2UIATypes.pas';
 
@@ -55,7 +54,7 @@ procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
   HWindow: HWND;
 begin
-  HWindow := FindWindow(nil, 'Form1');
+  HWindow := FindWindow(nil, 'Civilization II UI Additions Launcher');
   if HWindow > 0 then
   begin
     PostMessage(HWindow, WM_APP + 1, WParam, LParam);
@@ -582,6 +581,7 @@ begin
   Left := SideBarClientRect^.Right - Canvas.TextExtent(TextOut).cx - 1;
   TextOutWithShadows(Canvas, TextOut, Left, Top, clOlive, clBlack, SHADOW_BR);
   TextOut := LeftStr(TextOut, TurnsRotation);
+  //TextOut := Copy(WideString(TextOut), 1, TurnsRotation);
   TextOutWithShadows(Canvas, TextOut, Left, Top, clYellow, clBlack, SHADOW_NONE);
   Canvas.Free;
   RestoreDC(DC, SavedDC);
@@ -652,17 +652,17 @@ end;
 
 procedure Attach(HProcess: Cardinal);
 begin
-  WriteMemory(HProcess, $00403D00, [OP_JMP], @Patch1);
-  WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
-  WriteMemory(HProcess, $005EB465, [], @PatchCallMouseWheelHandler);
-  WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
-  WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
-  WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
-  WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
-  WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
-  WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
-  WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
-  WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
+  //WriteMemory(HProcess, $00403D00, [OP_JMP], @Patch1);
+  //WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
+  //WriteMemory(HProcess, $005EB465, [], @PatchCallMouseWheelHandler);
+  //WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
+  //WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
+  //WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
+  //WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
+  //WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
+  //WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
+  //WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
+  //WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
 end;
 
 procedure DllMain(Reason: Integer);

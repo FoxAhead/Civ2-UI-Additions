@@ -1,135 +1,151 @@
 object Form1: TForm1
-  Left = 526
-  Top = 340
-  AutoScroll = False
+  Left = 731
+  Top = 413
   BorderIcons = [biSystemMenu, biMinimize]
-  Caption = 'Form1'
-  ClientHeight = 129
-  ClientWidth = 385
+  BorderStyle = bsSingle
+  Caption = 'Civilization II UI Additions Launcher'
+  ClientHeight = 299
+  ClientWidth = 497
   Color = clBtnFace
-  Constraints.MinHeight = 156
-  Constraints.MinWidth = 229
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
   Font.Name = 'MS Sans Serif'
   Font.Style = []
-  FormStyle = fsStayOnTop
   OldCreateOrder = False
-  Position = poDefaultPosOnly
+  Position = poDesktopCenter
   OnCreate = FormCreate
-  DesignSize = (
-    385
-    129)
   PixelsPerInch = 96
   TextHeight = 13
-  object Memo1: TMemo
-    Left = 0
+  object Label1: TLabel
+    Left = 8
+    Top = 12
+    Width = 48
+    Height = 13
+    Caption = 'Game exe'
+  end
+  object Label2: TLabel
+    Left = 8
     Top = 40
-    Width = 385
-    Height = 69
-    Anchors = [akLeft, akTop, akRight, akBottom]
-    Font.Charset = RUSSIAN_CHARSET
+    Width = 56
+    Height = 13
+    Caption = 'Additions dll'
+  end
+  object Memo1: TMemo
+    Left = 4
+    Top = 60
+    Width = 445
+    Height = 153
+    Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
-    Font.Height = -9
-    Font.Name = 'MS Serif'
+    Font.Height = -11
+    Font.Name = 'MS Sans Serif'
     Font.Style = []
     ParentFont = False
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 0
   end
-  object Button2: TButton
-    Left = 364
-    Top = 0
-    Width = 21
-    Height = 17
-    Anchors = [akTop, akRight]
-    Caption = '...'
+  object ButtonBrowseExe: TButton
+    Left = 388
+    Top = 2
+    Width = 65
+    Height = 25
+    Caption = 'Browse...'
     TabOrder = 1
-    OnClick = Button2Click
+    OnClick = ButtonBrowseExeClick
   end
-  object Edit1: TEdit
-    Left = 0
-    Top = 0
-    Width = 361
-    Height = 17
-    Anchors = [akLeft, akTop, akRight]
+  object EditExe: TEdit
+    Left = 72
+    Top = 4
+    Width = 313
+    Height = 21
     AutoSize = False
+    Color = clBtnFace
     Font.Charset = RUSSIAN_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
     Font.Name = 'MS Sans Serif'
     Font.Style = []
     ParentFont = False
+    ReadOnly = True
     TabOrder = 2
     Text = 'D:\GAMES\Civilization II Multiplayer Gold Edition\civ2.exe'
   end
-  object Button3: TButton
-    Left = 304
-    Top = 112
-    Width = 81
-    Height = 17
-    Anchors = [akRight, akBottom]
-    Caption = 'CreateProcess'
+  object ButtonStart: TButton
+    Left = 368
+    Top = 220
+    Width = 85
+    Height = 25
+    Caption = 'Launch'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'MS Sans Serif'
+    Font.Style = [fsBold]
+    ParentFont = False
     TabOrder = 3
-    OnClick = Button3Click
+    OnClick = ButtonStartClick
   end
-  object CheckBox1: TCheckBox
-    Left = 48
-    Top = 112
+  object CheckBoxOnTop: TCheckBox
+    Left = 84
+    Top = 220
     Width = 89
     Height = 17
-    Anchors = [akLeft, akBottom]
     Caption = 'Always on top'
-    Checked = True
-    State = cbChecked
     TabOrder = 4
-    OnClick = CheckBox1Click
+    OnClick = CheckBoxOnTopClick
   end
-  object Edit2: TEdit
-    Left = 0
-    Top = 20
-    Width = 361
-    Height = 17
-    Anchors = [akLeft, akTop, akRight]
+  object EditDll: TEdit
+    Left = 72
+    Top = 32
+    Width = 313
+    Height = 21
     AutoSize = False
+    Color = clBtnFace
     Font.Charset = RUSSIAN_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
     Font.Name = 'MS Sans Serif'
     Font.Style = []
     ParentFont = False
+    ReadOnly = True
     TabOrder = 5
   end
-  object Button4: TButton
-    Left = 364
-    Top = 20
-    Width = 21
-    Height = 17
-    Anchors = [akTop, akRight]
-    Caption = '...'
+  object ButtonBrowseDll: TButton
+    Left = 388
+    Top = 30
+    Width = 65
+    Height = 25
+    Caption = 'Browse...'
     TabOrder = 6
-    OnClick = Button4Click
+    OnClick = ButtonBrowseDllClick
   end
-  object Button1: TButton
-    Left = 0
-    Top = 112
-    Width = 45
-    Height = 17
-    Anchors = [akLeft, akBottom]
+  object ButtonClear: TButton
+    Left = 4
+    Top = 220
+    Width = 73
+    Height = 21
     Caption = 'Clear'
     TabOrder = 7
-    OnClick = Button1Click
+    OnClick = ButtonClearClick
   end
-  object OpenDialog1: TOpenDialog
+  object Button1: TButton
+    Left = 264
+    Top = 220
+    Width = 95
+    Height = 25
+    Caption = 'Create shortcut'
+    TabOrder = 8
+  end
+  object OpenDialogExe: TOpenDialog
     Filter = '*.exe|*.exe'
-    Left = 176
-    Top = 8
+    Left = 248
+    Top = 160
   end
-  object OpenDialog2: TOpenDialog
+  object OpenDialogDll: TOpenDialog
     Filter = '*.dll|*.dll'
-    Left = 220
-    Top = 72
+    Left = 52
+    Top = 136
   end
 end
