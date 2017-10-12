@@ -1,11 +1,11 @@
 object Form1: TForm1
-  Left = 731
-  Top = 413
+  Left = 503
+  Top = 292
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'Civilization II UI Additions Launcher'
-  ClientHeight = 299
-  ClientWidth = 497
+  ClientHeight = 257
+  ClientWidth = 513
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -14,28 +14,30 @@ object Form1: TForm1
   Font.Style = []
   OldCreateOrder = False
   Position = poDesktopCenter
+  ShowHint = True
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
   object Label1: TLabel
     Left = 8
-    Top = 12
-    Width = 48
+    Top = 8
+    Width = 28
     Height = 13
-    Caption = 'Game exe'
+    Caption = 'Game'
   end
   object Label2: TLabel
     Left = 8
-    Top = 40
-    Width = 56
+    Top = 36
+    Width = 12
     Height = 13
-    Caption = 'Additions dll'
+    Caption = 'Dll'
   end
   object Memo1: TMemo
     Left = 4
     Top = 60
-    Width = 445
-    Height = 153
+    Width = 505
+    Height = 161
+    TabStop = False
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
@@ -47,19 +49,20 @@ object Form1: TForm1
     TabOrder = 0
   end
   object ButtonBrowseExe: TButton
-    Left = 388
+    Left = 444
     Top = 2
     Width = 65
     Height = 25
     Caption = 'Browse...'
-    TabOrder = 1
+    TabOrder = 2
     OnClick = ButtonBrowseExeClick
   end
   object EditExe: TEdit
-    Left = 72
+    Left = 44
     Top = 4
-    Width = 313
+    Width = 393
     Height = 21
+    TabStop = False
     AutoSize = False
     Color = clBtnFace
     Font.Charset = RUSSIAN_CHARSET
@@ -69,14 +72,14 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     ReadOnly = True
-    TabOrder = 2
-    Text = 'D:\GAMES\Civilization II Multiplayer Gold Edition\civ2.exe'
+    TabOrder = 7
   end
   object ButtonStart: TButton
-    Left = 368
-    Top = 220
-    Width = 85
+    Left = 408
+    Top = 228
+    Width = 101
     Height = 25
+    Hint = 'Close and launch game'
     Caption = 'Launch'
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -84,23 +87,24 @@ object Form1: TForm1
     Font.Name = 'MS Sans Serif'
     Font.Style = [fsBold]
     ParentFont = False
-    TabOrder = 3
+    TabOrder = 1
     OnClick = ButtonStartClick
   end
   object CheckBoxOnTop: TCheckBox
-    Left = 84
-    Top = 220
+    Left = 52
+    Top = 232
     Width = 89
     Height = 17
     Caption = 'Always on top'
-    TabOrder = 4
+    TabOrder = 5
     OnClick = CheckBoxOnTopClick
   end
   object EditDll: TEdit
-    Left = 72
+    Left = 44
     Top = 32
-    Width = 313
+    Width = 393
     Height = 21
+    TabStop = False
     AutoSize = False
     Color = clBtnFace
     Font.Charset = RUSSIAN_CHARSET
@@ -110,42 +114,43 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     ReadOnly = True
-    TabOrder = 5
+    TabOrder = 8
   end
   object ButtonBrowseDll: TButton
-    Left = 388
+    Left = 444
     Top = 30
     Width = 65
     Height = 25
     Caption = 'Browse...'
-    TabOrder = 6
+    TabOrder = 3
     OnClick = ButtonBrowseDllClick
   end
   object ButtonClear: TButton
     Left = 4
-    Top = 220
-    Width = 73
-    Height = 21
+    Top = 228
+    Width = 45
+    Height = 25
     Caption = 'Clear'
-    TabOrder = 7
+    TabOrder = 4
     OnClick = ButtonClearClick
   end
   object Button1: TButton
-    Left = 264
-    Top = 220
-    Width = 95
+    Left = 192
+    Top = 228
+    Width = 109
     Height = 25
     Caption = 'Create shortcut'
-    TabOrder = 8
+    TabOrder = 6
   end
   object OpenDialogExe: TOpenDialog
     Filter = '*.exe|*.exe'
-    Left = 248
-    Top = 160
+    Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]
+    Left = 404
+    Top = 28
   end
   object OpenDialogDll: TOpenDialog
     Filter = '*.dll|*.dll'
-    Left = 52
-    Top = 136
+    Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]
+    Left = 404
   end
 end

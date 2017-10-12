@@ -11,11 +11,10 @@ library Civ2UIA;
   using PChar or ShortString parameters. }
 
 uses
-  Classes,
   Graphics,
-  Messages,
   SysUtils,
-  StrUtils,
+  Classes,
+  Messages,
   Windows,
   Civ2Types in 'Civ2Types.pas',
   Civ2UIATypes in 'Civ2UIATypes.pas';
@@ -28,7 +27,6 @@ var
   SavedReturnAddress1: Cardinal;
   SavedReturnAddress2: Cardinal;
   SavedThis: Cardinal;
-
   ListOfUnits: TListOfUnits;
   ShieldLeft: ^TShieldLeft = Pointer($642C48);
   ShieldTop: ^TShieldTop = Pointer($642B48);
@@ -39,13 +37,10 @@ var
   HumanCivIndex: PInteger = Pointer($006D1DA0);
   CurrCivIndex: PInteger = Pointer($0063EF6C);
   Civs: ^TCivs = Pointer($0064C6A0);
-
   SideBarGraphicsInfo: PGraphicsInfo = Pointer($006ABC68);
   ScienceAdvisorGraphicsInfo: PGraphicsInfo = Pointer($0063EB10);
-
   SideBarClientRect: PRect = Pointer($006ABC28);
   ScienceAdvisorClientRect: PRect = Pointer($0063EC34);
-
   SideBarFontInfo: ^TFontInfo = Pointer($006ABF98);
   TimesFontInfo: ^TFontInfo = Pointer($0063EAB8);
   TimesBigFontInfo: ^TFontInfo = Pointer($0063EAC0);
@@ -63,7 +58,7 @@ end;
 
 function FindScrolBar(HWindow: HWND): HWND; stdcall;
 var
-  ClassName: array[0..31] of char;
+  ClassName: array[0..31] of Char;
 begin
   if GetClassName(HWindow, ClassName, 32) > 0 then
     if ClassName = 'MSScrollBarClass' then
@@ -81,8 +76,10 @@ var
 begin
   Result := wtUnknown;
   v27 := GetWindowLongA(HWindow, 4);
-  if v27 = $006A9200 then Result := wtCityWindow;
-  if v27 = $006A66B0 then Result := wtCivilopedia;
+  if v27 = $006A9200 then
+    Result := wtCityWindow;
+  if v27 = $006A66B0 then
+    Result := wtCivilopedia;
   if Result = wtUnknown then
   begin
     for i := Low(TWindowType) to High(TWindowType) do
@@ -102,8 +99,7 @@ begin
   Result := Value * (Zoom + 8) div 8;
 end;
 
-procedure TextOutWithShadows(var Canvas: TCanvas; var TextOut: string; Left, Top: Integer;
-  const MainColor, ShadowColor: TColor; Shadows: Cardinal);
+procedure TextOutWithShadows(var Canvas: TCanvas; var TextOut: string; Left, Top: Integer; const MainColor, ShadowColor: TColor; Shadows: Cardinal);
 var
   dX: Integer;
   dY: Integer;
@@ -113,10 +109,13 @@ begin
   begin
     for dX := -1 to 1 do
     begin
-      if (dX = 0) and (dY = 0) then Continue;
-      if (Shadows and 1) = 1 then Canvas.TextOut(Left + dX, Top + dY, TextOut);
+      if (dX = 0) and (dY = 0) then
+        Continue;
+      if (Shadows and 1) = 1 then
+        Canvas.TextOut(Left + dX, Top + dY, TextOut);
       Shadows := Shadows shr 1;
-      if Shadows = 0 then Break;
+      if Shadows = 0 then
+        Break;
     end;
   end;
   Canvas.Font.Color := MainColor;
@@ -125,7 +124,7 @@ end;
 
 function CopyFont(SourceFont: HFONT): HFONT;
 var
-  LFont: LogFont;
+  LFont: LOGFONT;
 begin
   ZeroMemory(@LFont, SizeOf(LFont));
   GetObject(SourceFont, SizeOf(LFont), @LFont);
@@ -142,9 +141,9 @@ end;
 
 function GetFontHeightWithExLeading(thisFont: Pointer): Integer;
 asm
-  mov ecx, thisFont
-  mov eax, $00403819 // CallQ_GetFontHeightWithExLeading_sub_403819
-  call eax
+    mov   ecx, thisFont
+    mov   eax, $00403819 // CallQ_GetFontHeightWithExLeading_sub_403819
+    call  eax
 end;
 
 function Patch1(X: Integer; Y: Integer; var A4: Integer; var A5: Integer): Integer; stdcall;
@@ -160,7 +159,7 @@ var
   //  HandleWindow: HWND;
 begin
   asm
-    mov This, ecx;
+    mov   This, ecx;
   end;
 
   {  if GetCursorPos(CursorPoint) then
@@ -181,10 +180,7 @@ begin
     //Canvas.Canvas.Font.Color := RGB(255, 0, 255);
     //Canvas.Canvas.TextOut(PCitySprites^[i].X1, PCitySprites^[i].Y1, IntToStr(PCitySprites^[i].SType));
     DeltaX := 0;
-    if (PCitySprites^[i].X1 + DeltaX <= X)
-      and (PCitySprites^[i].X2 + DeltaX > X)
-      and (PCitySprites^[i].Y1 <= Y)
-      and (PCitySprites^[i].Y2 > Y) then
+    if (PCitySprites^[i].X1 + DeltaX <= X) and (PCitySprites^[i].X2 + DeltaX > X) and (PCitySprites^[i].Y1 <= Y) and (PCitySprites^[i].Y2 > Y) then
     begin
       v6 := i;
       //break;
@@ -213,9 +209,9 @@ var
   ClickWidth: Integer;
 begin
   asm
-    mov PCityWindow, ecx;
-    mov eax, [ebp+$28];
-    mov ClickWidth, eax;
+    mov   PCityWindow, ecx;
+    mov   eax, [ebp + $28];
+    mov   ClickWidth, eax;
   end;
   Result := (PCityWindow^.WindowSize * (Size + $E) - ClickWidth) div 2 - 1;
 end;
@@ -240,33 +236,37 @@ label
 begin
   Result := True;
 
-  if Msg <> WM_MOUSEWHEEL then goto EndOfFunction;
-  if not GetCursorPos(CursorPoint) then goto EndOfFunction;
+  if Msg <> WM_MOUSEWHEEL then
+    goto EndOfFunction;
+  if not GetCursorPos(CursorPoint) then
+    goto EndOfFunction;
   HWndCursor := WindowFromPoint(CursorPoint);
-  if HWndCursor = 0 then goto EndOfFunction;
+  if HWndCursor = 0 then
+    goto EndOfFunction;
   HWndScrollBar := FindScrolBar(HWndCursor);
   if HWndScrollBar = 0 then
     HWndScrollBar := FindScrolBar(HWindow);
   Delta := Smallint(HiWord(WParam)) div WHEEL_DELTA;
-  if Abs(Delta) > 10 then goto EndOfFunction; // Filtering
+  if Abs(Delta) > 10 then
+    goto EndOfFunction;                   // Filtering
   WindowType := GuessWindowType(HWndCursor);
 
   if WindowType = wtCityWindow then
   begin
     ScreenToClient(HWndCursor, CursorPoint);
     asm
-      mov ecx, AThisCitySprites // $006A9490
+    mov   ecx, AThisCitySprites // $006A9490
     end;
     Patch1(CursorPoint.X, CursorPoint.Y, SIndex, SType);
     if SType = 2 then
     begin
       ChangeSpecialistDown := (Delta = -1);
       asm
-        mov eax, SIndex
-        push eax
-        mov eax, $00501819 // Set_Specialist
-        call eax
-        add esp, 4
+    mov   eax, SIndex
+    push  eax
+    mov   eax, $00501819 // Set_Specialist
+    call  eax
+    add   esp, 4
       end;
       ChangeSpecialistDown := False;
       Result := False;
@@ -285,8 +285,8 @@ begin
         CurrPopupInfo^.SelectedItem := $FFFFFFFE;
       if CurrPopupInfo^.SelectedItem > $FFFFFFF0 then
         asm
-          mov eax, $005A3C58  // Call ClearPopupActive
-          call eax
+    mov   eax, $005A3C58  // Call ClearPopupActive
+    call  eax
         end;
       Result := False;
       goto EndOfFunction;
@@ -301,7 +301,8 @@ begin
         ScrollLines := 1;
       wtTaxRate:
         begin
-          if HWndScrollBar <> HWndCursor then goto EndOfFunction;
+          if HWndScrollBar <> HWndCursor then
+            goto EndOfFunction;
           ScrollLines := 1;
           Delta := -Delta;
         end;
@@ -315,35 +316,39 @@ begin
     ScrollBarData^.CurrentPosition := nPos;
     WindowInfo := ScrollBarData^.WindowInfo;
     asm
-      mov eax, WindowInfo
-      mov [$00637EA4], eax
-      mov eax, nPos
-      push eax
-      mov ecx, ScrollBarData
-      mov eax, $005CD640    // Call CallRedrawAfterScroll
-      call eax
+    mov   eax, WindowInfo
+    mov   [$00637EA4], eax
+    mov   eax, nPos
+    push  eax
+    mov   ecx, ScrollBarData
+    mov   eax, $005CD640    // Call CallRedrawAfterScroll
+    call  eax
     end;
     Result := False;
   end;
 
-  EndOfFunction:
+EndOfFunction:
+
+
 end;
 
 procedure PatchCallMouseWheelHandler; register;
 asm
-  push [ebp+$14]
-  push [ebp+$10]
-  push [ebp+$0C]
-  push [ebp+$08]
-  call PatchMouseWheelHandler
-  cmp eax, 0
-  jz @@LABEL2
+    push  [ebp + $14]
+    push  [ebp + $10]
+    push  [ebp + $0C]
+    push  [ebp + $08]
+    call  PatchMouseWheelHandler
+    cmp   eax, 0
+    jz    @@LABEL2
+
 @@LABEL1:
-  push $005EB483
-  ret
+    push  $005EB483
+    ret
+
 @@LABEL2:
-  push $005EC193
-  ret
+    push  $005EC193
+    ret
 end;
 
 procedure PatchChangeSpecialistUpOrDown(var SpecialistType: Integer); stdcall;
@@ -352,17 +357,19 @@ begin
     Dec(SpecialistType)
   else
     Inc(SpecialistType);
-  if SpecialistType > 3 then SpecialistType := 1;
-  if SpecialistType < 1 then SpecialistType := 3;
+  if SpecialistType > 3 then
+    SpecialistType := 1;
+  if SpecialistType < 1 then
+    SpecialistType := 3;
 end;
 
 procedure PatchCallChangeSpecialist; register;
 asm
-  lea eax, [ebp-$0C]
-  push eax
-  call PatchChangeSpecialistUpOrDown
-  push $00501990
-  ret
+    lea   eax, [ebp - $0C]
+    push  eax
+    call  PatchChangeSpecialistUpOrDown
+    push  $00501990
+    ret
 end;
 
 procedure PatchRegisterWindowByAddress(This, ReturnAddress1, ReturnAddress2: Cardinal); stdcall;
@@ -371,15 +378,22 @@ var
 begin
   WindowType := wtUnknown;
   case ReturnAddress1 of
-    $0040D35C: WindowType := wtTaxRate;
+    $0040D35C:
+      WindowType := wtTaxRate;
     $0042AB8A:
       case ReturnAddress2 of
-        $0042D742: WindowType := wtCityStatus; // F1
-        $0042F0A0: WindowType := wtDefenceMinister; // F2
-        $00430632: WindowType := wtIntelligenceReport; // F3
-        $0042E1A9: WindowType := wtAttitudeAdvisor; // F4
-        $0042CD56: WindowType := wtTradeAdvisor; // F5
-        $0042B6A4: WindowType := wtScienceAdvisor; // F6
+        $0042D742:
+          WindowType := wtCityStatus;     // F1
+        $0042F0A0:
+          WindowType := wtDefenceMinister; // F2
+        $00430632:
+          WindowType := wtIntelligenceReport; // F3
+        $0042E1A9:
+          WindowType := wtAttitudeAdvisor; // F4
+        $0042CD56:
+          WindowType := wtTradeAdvisor;   // F5
+        $0042B6A4:
+          WindowType := wtScienceAdvisor; // F6
       end;
   end;
   if WindowType <> wtUnknown then
@@ -390,68 +404,74 @@ end;
 
 procedure PatchRegisterWindow(); register;
 asm
-  pop SavedReturnAddress1
-  mov SavedThis, ecx
-  mov eax, [ebp+4]
-  mov SavedReturnAddress2, eax
-  mov eax, $005534BC
-  call eax
-  push eax
-  push SavedReturnAddress2
-  push SavedReturnAddress1
-  push SavedThis
-  call PatchRegisterWindowByAddress
-  pop eax
-  push SavedReturnAddress1
+    pop   SavedReturnAddress1
+    mov   SavedThis, ecx
+    mov   eax, [ebp + 4]
+    mov   SavedReturnAddress2, eax
+    mov   eax, $005534BC
+    call  eax
+    push  eax
+    push  SavedReturnAddress2
+    push  SavedReturnAddress1
+    push  SavedThis
+    call  PatchRegisterWindowByAddress
+    pop   eax
+    push  SavedReturnAddress1
 end;
 
 function PatchChangeListOfUnitsStart(PopupResult: Cardinal): Cardinal; stdcall;
 begin
-  if PopupResult = $FFFFFFFE then Inc(ListOfUnits.Start, 3);
-  if PopupResult = $FFFFFFFD then Dec(ListOfUnits.Start, 3);
-  if ListOfUnits.Start > (ListOfUnits.Length - 9) then ListOfUnits.Start := ListOfUnits.Length - 9;
-  if ListOfUnits.Start < 0 then ListOfUnits.Start := 0;
+  if PopupResult = $FFFFFFFE then
+    Inc(ListOfUnits.Start, 3);
+  if PopupResult = $FFFFFFFD then
+    Dec(ListOfUnits.Start, 3);
+  if ListOfUnits.Start > (ListOfUnits.Length - 9) then
+    ListOfUnits.Start := ListOfUnits.Length - 9;
+  if ListOfUnits.Start < 0 then
+    ListOfUnits.Start := 0;
   Result := PopupResult;
 end;
 
 procedure PatchCallPopupListOfUnits(); register;
 asm
-  mov ListOfUnits.Start, 0
-  push 2
-  push [ebp-$1C]      // UnitIndex
-  mov eax, $004029E1
-  call eax            // Call j_Q_GetNumberOfUnitsInStack_sub_5B50AD
-  add esp, 8
-  mov ListOfUnits.Length, eax
+    mov   ListOfUnits.Start, 0
+    push  2
+    push  [ebp - $1C]      // UnitIndex
+    mov   eax, $004029E1
+    call  eax            // Call j_Q_GetNumberOfUnitsInStack_sub_5B50AD
+    add   esp, 8
+    mov   ListOfUnits.Length, eax
+
 @@LABEL_POPUP:
-  push [ebp-$14]
-  push [ebp-$18]
-  push [ebp-$1C]      // UnitIndex
-  mov eax, $005B6AEA  // Call Q_PopupListOfUnits_sub_5B6AEA
-  call eax
-  add esp, $0C
-  push eax
-  call PatchChangeListOfUnitsStart
-  cmp eax, $FFFFFFFE
-  je @@LABEL_POPUP
-  cmp eax, $FFFFFFFD
-  je @@LABEL_POPUP
-  ret
+    push  [ebp - $14]
+    push  [ebp - $18]
+    push  [ebp - $1C]      // UnitIndex
+    mov   eax, $005B6AEA  // Call Q_PopupListOfUnits_sub_5B6AEA
+    call  eax
+    add   esp, $0C
+    push  eax
+    call  PatchChangeListOfUnitsStart
+    cmp   eax, $FFFFFFFE
+    je    @@LABEL_POPUP
+    cmp   eax, $FFFFFFFD
+    je    @@LABEL_POPUP
+    ret
 end;
 
 procedure PatchPopupListOfUnits(); register;
 asm
-  mov eax, [ebp-$340]
-  sub eax, ListOfUnits.Start
-  cmp eax, 1
-  jl @@LABEL1
-  cmp eax, 9
-  jg @@LABEL1
-  mov eax, $005B6C09
-  jmp eax
+    mov   eax, [ebp - $340]
+    sub   eax, ListOfUnits.Start
+    cmp   eax, 1
+    jl    @@LABEL1
+    cmp   eax, 9
+    jg    @@LABEL1
+    mov   eax, $005B6C09
+    jmp   eax
+
 @@LABEL1:
-  mov eax, $005B6BD8
-  jmp eax
+    mov   eax, $005B6BD8
+    jmp   eax
 end;
 
 var
@@ -459,13 +479,13 @@ var
 
 procedure j_Q_CreateScrollbar_sub_40FC50(This, A1: Pointer; A2: Integer; A3: Pointer; A4: Integer); stdcall;
 asm
-  mov ecx, [esp+8]
-  push [esp+$18]
-  push [esp+$18]
-  push [esp+$18]
-  push [esp+$18]
-  mov eax, $0040FC50
-  call eax
+    mov   ecx, [esp + 8]
+    push  [esp + $18]
+    push  [esp + $18]
+    push  [esp + $18]
+    push  [esp + $18]
+    mov   eax, $0040FC50
+    call  eax
 end;
 
 procedure PatchCallCreateScollBar(); stdcall;
@@ -480,12 +500,7 @@ begin
     ScrollBarControlInfo.Rect.Top := 36;
     ScrollBarControlInfo.Rect.Right := CurrPopupInfo.Width - 9;
     ScrollBarControlInfo.Rect.Bottom := CurrPopupInfo.Height - 45;
-    j_Q_CreateScrollbar_sub_40FC50(
-      @ScrollBarControlInfo,
-      Pointer(PInteger(Pointer(AThisCurrPopupInfo)^)^ + $48),
-      $0B,
-      @ScrollBarControlInfo.Rect,
-      1);
+    j_Q_CreateScrollbar_sub_40FC50(@ScrollBarControlInfo, Pointer(PInteger(Pointer(AThisCurrPopupInfo)^)^ + $48), $0B, @ScrollBarControlInfo.Rect, 1);
     SetScrollRange(ScrollBarControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
     SetScrollPos(ScrollBarControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
   end;
@@ -493,10 +508,10 @@ end;
 
 procedure PatchCreateUnitsListPopupParts(); register;
 asm
-  mov [ebp-$108], eax
-  call PatchCallCreateScollBar
-  push $005A3397
-  ret
+    mov   [ebp - $108], eax
+    call  PatchCallCreateScollBar
+    push  $005A3397
+    ret
 end;
 
 function PatchDrawUnit(thisWayToWindowInfo: Pointer; UnitIndex, A3, Left, Top, Zoom, A7: Integer): Integer; cdecl;
@@ -511,24 +526,21 @@ var
 begin
   Result := 0;
   asm
-    push A7
-    push Zoom
-    push Top
-    push Left
-    push A3
-    push UnitIndex
-    push thisWayToWindowInfo
-    mov eax, $0056BAFF   // Call Q_DrawUnit_sub_56BAFF
-    call eax
-    add esp, $1C
-    mov Result, eax
+    push  A7
+    push  Zoom
+    push  Top
+    push  Left
+    push  A3
+    push  UnitIndex
+    push  thisWayToWindowInfo
+    mov   eax, $0056BAFF   // Call Q_DrawUnit_sub_56BAFF
+    call  eax
+    add   esp, $1C
+    mov   Result, eax
   end;
 
   UnitType := AllUnits^[UnitIndex].UnitType;
-  if
-    (UnitTypes^[UnitType].Role = 5) and
-    (AllUnits^[UnitIndex].CivIndex = HumanCivIndex^) and
-    (AllUnits^[UnitIndex].Counter > 0) then
+  if (UnitTypes^[UnitType].Role = 5) and (AllUnits^[UnitIndex].CivIndex = HumanCivIndex^) and (AllUnits^[UnitIndex].Counter > 0) then
   begin
     TextOut := IntToStr(AllUnits^[UnitIndex].Counter);
     DC := PCardinal(PCardinal(Cardinal(thisWayToWindowInfo) + $40)^ + $4)^;
@@ -564,10 +576,10 @@ var
   TurnsRotation: Integer;
 begin
   asm
-    push Arg0
-    mov eax, $00569363 // Call Q_DrawSideBar_sub_569363
-    call eax
-    add esp, $04
+    push  Arg0
+    mov   eax, $00569363 // Call Q_DrawSideBar_sub_569363
+    call  eax
+    add   esp, $04
   end;
   DC := SideBarGraphicsInfo^.DrawInfo^.DeviceContext;
   SavedDC := SaveDC(DC);
@@ -580,8 +592,7 @@ begin
   TextOut := 'Oedo';
   Left := SideBarClientRect^.Right - Canvas.TextExtent(TextOut).cx - 1;
   TextOutWithShadows(Canvas, TextOut, Left, Top, clOlive, clBlack, SHADOW_BR);
-  TextOut := LeftStr(TextOut, TurnsRotation);
-  //TextOut := Copy(WideString(TextOut), 1, TurnsRotation);
+  TextOut := Copy(WideString(TextOut), 1, TurnsRotation);
   TextOutWithShadows(Canvas, TextOut, Left, Top, clYellow, clBlack, SHADOW_NONE);
   Canvas.Free;
   RestoreDC(DC, SavedDC);
@@ -598,19 +609,19 @@ var
   R: TRect;
 begin
   asm
-    push A9
-    push Width
-    push Height
-    push Total
-    push Current
-    push Top
-    push Left
-    push A2
-    push GraphicsInfo
-    mov eax, $00548C78 // Call Q_DrawProgressBar_sub_548C78
-    call eax
-    add esp, $24
-    mov Result, eax
+    push  A9
+    push  Width
+    push  Height
+    push  Total
+    push  Current
+    push  Top
+    push  Left
+    push  A2
+    push  GraphicsInfo
+    mov   eax, $00548C78 // Call Q_DrawProgressBar_sub_548C78
+    call  eax
+    add   esp, $24
+    mov   Result, eax
   end;
   if GraphicsInfo = ScienceAdvisorGraphicsInfo then
   begin
@@ -652,17 +663,17 @@ end;
 
 procedure Attach(HProcess: Cardinal);
 begin
-  //WriteMemory(HProcess, $00403D00, [OP_JMP], @Patch1);
-  //WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
-  //WriteMemory(HProcess, $005EB465, [], @PatchCallMouseWheelHandler);
-  //WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
-  //WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
-  //WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
-  //WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
-  //WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
-  //WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
-  //WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
-  //WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
+  WriteMemory(HProcess, $00403D00, [OP_JMP], @Patch1);
+  WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
+  WriteMemory(HProcess, $005EB465, [], @PatchCallMouseWheelHandler);
+  WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
+  WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
+  WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
+  WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
+  WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
+  WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
+  WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
+  WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
 end;
 
 procedure DllMain(Reason: Integer);
@@ -677,7 +688,8 @@ begin
         CloseHandle(HProcess);
         SendMessageToLoader(0, 0);
       end;
-    DLL_PROCESS_DETACH: ;
+    DLL_PROCESS_DETACH:
+      ;
   end;
 
 end;
@@ -686,3 +698,4 @@ begin
   DllProc := @DllMain;
   DllProc(DLL_PROCESS_ATTACH);
 end.
+

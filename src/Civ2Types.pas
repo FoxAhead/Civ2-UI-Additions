@@ -1,7 +1,9 @@
 unit Civ2Types;
 
 interface
-uses Windows;
+
+uses
+  Windows;
 
 type
   TCitySprite = packed record
@@ -12,6 +14,7 @@ type
     SType: Integer;
     SIndex: Integer;
   end;
+
   TCitySprites = array[0..199] of TCitySprite;
 
   TCityWindow = packed record             // 6A91B8
@@ -27,9 +30,10 @@ type
   end;
 
   TCity = packed record
-    Size: Byte;
+    SIZE: Byte;
     __1: array[1..$57] of Byte;
   end;
+
   TCities = array[0..$FF] of TCity;       // 64F349
 
   PWindowInfo = ^TWindowInfo;
@@ -40,7 +44,7 @@ type
   PCurrPopupInfo = ^TCurrPopupInfo;
   PPCurrPopupInfo = ^PCurrPopupInfo;
   PDrawInfo = ^TDrawInfo;
-
+  
   TControlInfo = packed record            // Size = $40
     ControlType: Integer;                 //  8-Scrollbar, 7-ListBox, 6-Button, 4-EditBox, 3-RadioButton(Group), 2-CheckBox, 1-ListItem
     Code: Integer;                        // + 0x04
@@ -179,7 +183,9 @@ type
   end;
 
   PHFONT = ^HFONT;
+
   PPHFONT = ^PHFONT;
+
   TFontInfo = packed record
     Handle: PPHFONT;
     Height: Longint;
@@ -235,9 +241,11 @@ type
     Beakers: Word;                        // + 0x08 = 64C6A8
     Unknown2: array[$A..$593] of Byte;
   end;
+
   TCivs = array[1..8] of TCiv;            // 64C6A0
 
   TShieldLeft = array[0..$3E] of Integer; // 642C48
+
   TShieldTop = array[0..$3E] of Integer;  // 642B48
 
 const
@@ -248,3 +256,5 @@ implementation
 
 end.
 //Types
+
+
