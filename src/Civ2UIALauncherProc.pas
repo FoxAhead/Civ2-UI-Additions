@@ -1,95 +1,113 @@
-unit Civ2UIAMain;
+unit Civ2UIALauncherProc;
 
+//--------------------------------------------------------------------------------------------------
 interface
+//--------------------------------------------------------------------------------------------------
 
 uses
-  Classes,
   Controls,
-  Dialogs,
   Forms,
-  Graphics,
-  Messages,
   StdCtrls,
   SysUtils,
-  Variants,
+  ShlObj,
+  ComObj,
+  ActiveX,
   Windows;
 
-type
-  TForm1 = class(TForm)
-    Memo1: TMemo;
-    OpenDialogExe: TOpenDialog;
-    ButtonBrowseExe: TButton;
-    EditExe: TEdit;
-    ButtonStart: TButton;
-    CheckBoxOnTop: TCheckBox;
-    EditDll: TEdit;
-    ButtonBrowseDll: TButton;
-    OpenDialogDll: TOpenDialog;
-    ButtonClear: TButton;
-    Label1: TLabel;
-    Label2: TLabel;
-    Button1: TButton;
-    procedure ButtonBrowseExeClick(Sender: TObject);
-    procedure CheckBoxOnTopClick(Sender: TObject);
-    procedure ButtonBrowseDllClick(Sender: TObject);
-    procedure FormCreate(Sender: TObject);
-    procedure ButtonClearClick(Sender: TObject);
-    procedure ButtonStartClick(Sender: TObject);
-  private
-    MessagesCounter: Integer;
-    procedure OnMessage(var MSG: TMessage); message WM_APP + 1;
-  public
-    { Public declarations }
-  end;
-
 var
-  Form1: TForm1;
-  ExeName: string = 'D:\GAMES\Civilization II Multiplayer Gold Edition\civ2.exe';
+  ExeName: string;                        // = 'D:\GAMES\Civilization II Multiplayer Gold Edition\civ2.exe';
   DllName: string;
   DllLoaded: Boolean;
+  LogMemo: TMemo;
 
 function InitializePaths(): Boolean;
-
-procedure LaunchGame();
 
 function IsSilentLaunch(): Boolean;
 
 procedure Log(Str: string);
+
+function CheckLaunchClose(): Boolean;
+
+function CurrentFileInfo(NameApp: string): string;
+
+procedure CreateLnk(FileName, Path, WorkingDirectory, Description, Arguments: string);
+
+procedure SetFileNameIfExist(var Variable: string; FileName: string);
+
+function GetFileSize(FileName: string): Cardinal;
 
 //--------------------------------------------------------------------------------------------------
 implementation
 //--------------------------------------------------------------------------------------------------
 
-{$R *.dfm}
+function CurrentFileInfo(NameApp: string): string;
+var
+  dump: DWORD;
+  size: Integer;
+  buffer: PChar;
+  VersionPointer, TransBuffer: PChar;
+  Temp: Integer;
+  CalcLangCharSet: string;
+begin
+  size := GetFileVersionInfoSize(PChar(NameApp), dump);
+  buffer := StrAlloc(size + 1);
+  try
+    GetFileVersionInfo(PChar(NameApp), 0, size, buffer);
+
+    VerQueryValue(buffer, '\VarFileInfo\Translation', Pointer(TransBuffer), dump);
+    if dump >= 4 then
+    begin
+      Temp := 0;
+      StrLCopy(@Temp, TransBuffer, 2);
+      CalcLangCharSet := IntToHex(Temp, 4);
+      StrLCopy(@Temp, TransBuffer + 2, 2);
+      CalcLangCharSet := CalcLangCharSet + IntToHex(Temp, 4);
+    end;
+
+    VerQueryValue(buffer, PChar('\StringFileInfo\' + CalcLangCharSet + '\' + 'FileVersion'), Pointer(VersionPointer), dump);
+    if (dump > 1) then
+    begin
+      SetLength(Result, dump);
+      StrLCopy(PChar(Result), VersionPointer, dump);
+    end
+    else
+      Result := '0.0.0.0';
+  finally
+    StrDispose(buffer);
+  end;
+end;
 
 function IsSilentLaunch(): Boolean;
 begin
-  Result := FindCmdLineSwitch('launch');
+  Result := FindCmdLineSwitch('play');
 end;
 
 function InitializePaths(): Boolean;
 var
   MyPath: string;
-  FileName: string;
+  i: Integer;
 begin
   MyPath := ExtractFilePath(Application.ExeName);
-  FileName := MyPath + 'civ2.exe';
-  if FileExists(FileName) then
-    ExeName := FileName;
-  FileName := MyPath + 'Civ2UIA.dll';
-  if FileExists(FileName) then
-    DllName := FileName;
+  SetFileNameIfExist(ExeName, MyPath + 'civ2.exe');
+  SetFileNameIfExist(DllName, MyPath + 'Civ2UIA.dll');
+  for i := 1 to ParamCount do
+  begin
+    if ParamStr(i) = '-exe' then
+      SetFileNameIfExist(ExeName, ParamStr(i + 1));
+    if ParamStr(i) = '-dll' then
+      SetFileNameIfExist(DllName, ParamStr(i + 1));
+  end;
   Result := (ExeName <> '') and (DllName <> '');
 end;
 
 procedure Log(Str: string);
 begin
-  if Form1 <> nil then
+  if LogMemo <> nil then
   begin
-    while Form1.Memo1.Lines.Count >= 100 do
-      Form1.Memo1.Lines.Delete(0);
-    Form1.Memo1.Lines.Add(Str);
-    Form1.Memo1.Text := Trim(Form1.Memo1.Text);
+    while LogMemo.Lines.Count >= 100 do
+      LogMemo.Lines.Delete(0);
+    LogMemo.Lines.Add(Str);
+    LogMemo.Text := Trim(LogMemo.Text);
   end;
 end;
 
@@ -172,9 +190,11 @@ end;
 function Check(): Boolean;
 begin
   if not FileExists(ExeName) then
-    raise Exception.Create('Exe file ' + ExeName + 'does not exist');
+    raise Exception.Create('Game exe file ' + ExeName + 'does not exist');
   if not FileExists(DllName) then
     raise Exception.Create('Dll file ' + DllName + 'does not exist');
+  if GetFileSize(ExeName) <> 2489344 then
+    raise Exception.Create('Wrong size of game exe file (Wrong version?)');
   Result := True;
 end;
 
@@ -184,73 +204,48 @@ begin
   try
     Check();
     LaunchGame();
+    Result := True;
     Application.Terminate();
   except
     on E: Exception do
-    begin
       Log('Error: ' + E.message);
-      Result := False;
-    end;
   end;
 end;
-//--------------------------------------------------------------------------------------------------
-//    TForm1
-//--------------------------------------------------------------------------------------------------
 
-procedure TForm1.ButtonBrowseExeClick(Sender: TObject);
+procedure CreateLnk(FileName, Path, WorkingDirectory, Description, Arguments: string);
+var
+  ComObject: IUnknown;
+  ShellLink: IShellLink;
+  PersistFile: IPersistFile;
 begin
-  if OpenDialogExe.Execute then
+  CoInitialize(nil);
+  ComObject := CreateComObject(CLSID_ShellLink);
+  ShellLink := ComObject as IShellLink;
+  PersistFile := ComObject as IPersistFile;
+  ShellLink.SetPath(PChar(Path));
+  ShellLink.SetWorkingDirectory(PChar(WorkingDirectory));
+  ShellLink.SetDescription(PChar(Description));
+  ShellLink.SetArguments(PChar(Arguments));
+  PersistFile.Save(PWideChar(WideString(FileName)), False);
+  CoUninitialize();
+end;
+
+procedure SetFileNameIfExist(var Variable: string; FileName: string);
+begin
+  if FileExists(FileName) then
+    Variable := FileName;
+end;
+
+function GetFileSize(FileName: string): Cardinal;
+var
+  sr: TSearchRec;
+begin
+  Result := 0;
+  if SysUtils.FindFirst(FileName, faAnyFile, sr) = 0 then
   begin
-    EditExe.Text := OpenDialogExe.FileName;
-    ExeName := OpenDialogExe.FileName;
+    Result := sr.size;
+    SysUtils.FindClose(sr);
   end;
-end;
-
-procedure TForm1.ButtonBrowseDllClick(Sender: TObject);
-begin
-  if OpenDialogDll.Execute then
-  begin
-    EditDll.Text := OpenDialogDll.FileName;
-    DllName := OpenDialogDll.FileName;
-  end;
-end;
-
-procedure TForm1.OnMessage(var MSG: TMessage);
-begin
-  Inc(MessagesCounter);
-  Log(IntToStr(MessagesCounter) + '. Recieved message: wParam = ' + IntToHex(MSG.WParam, 4) + ', lParam = ' + IntToHex(MSG.LParam, 4));
-  if (MSG.WParam = 0) and (MSG.LParam = 0) and (Form1.FormStyle <> fsStayOnTop) then
-    DllLoaded := True;
-end;
-
-procedure TForm1.CheckBoxOnTopClick(Sender: TObject);
-begin
-  if CheckBoxOnTop.Checked then
-    Form1.FormStyle := fsStayOnTop
-  else
-    Form1.FormStyle := fsNormal;
-end;
-
-procedure TForm1.FormCreate(Sender: TObject);
-begin
-  EditExe.Text := ExeName;
-  EditDll.Text := DllName;
-  if IsSilentLaunch() then
-    if not CheckLaunchClose() then
-      Application.ShowMainForm := True;
-end;
-
-procedure TForm1.ButtonClearClick(Sender: TObject);
-begin
-  Memo1.Clear;
-end;
-
-procedure TForm1.ButtonStartClick(Sender: TObject);
-begin
-  Self.Enabled := False;
-  CheckLaunchClose();
-  Self.Enabled := True;
 end;
 
 end.
-

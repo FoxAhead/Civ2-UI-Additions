@@ -1,10 +1,10 @@
 object Form1: TForm1
-  Left = 503
-  Top = 292
+  Left = 444
+  Top = 317
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'Civilization II UI Additions Launcher'
-  ClientHeight = 257
+  ClientHeight = 265
   ClientWidth = 513
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -31,6 +31,39 @@ object Form1: TForm1
     Width = 12
     Height = 13
     Caption = 'Dll'
+  end
+  object LabelVersion: TLabel
+    Left = 470
+    Top = 244
+    Width = 35
+    Height = 13
+    Alignment = taRightJustify
+    Caption = 'Version'
+    Enabled = False
+  end
+  object Label3: TLabel
+    Left = 8
+    Top = 236
+    Width = 75
+    Height = 13
+    Caption = '2017 FoxAhead'
+    Enabled = False
+  end
+  object LabelGitHub: TLabel
+    Left = 472
+    Top = 228
+    Width = 33
+    Height = 13
+    Cursor = crHandPoint
+    Alignment = taRightJustify
+    Caption = 'GitHub'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clBlue
+    Font.Height = -11
+    Font.Name = 'MS Sans Serif'
+    Font.Style = [fsUnderline]
+    ParentFont = False
+    OnClick = LabelGitHubClick
   end
   object Memo1: TMemo
     Left = 4
@@ -72,15 +105,16 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     ReadOnly = True
-    TabOrder = 7
+    TabOrder = 5
   end
   object ButtonStart: TButton
-    Left = 408
-    Top = 228
+    Left = 260
+    Top = 232
     Width = 101
     Height = 25
     Hint = 'Close and launch game'
-    Caption = 'Launch'
+    Caption = 'Play'
+    Default = True
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
@@ -89,15 +123,6 @@ object Form1: TForm1
     ParentFont = False
     TabOrder = 1
     OnClick = ButtonStartClick
-  end
-  object CheckBoxOnTop: TCheckBox
-    Left = 52
-    Top = 232
-    Width = 89
-    Height = 17
-    Caption = 'Always on top'
-    TabOrder = 5
-    OnClick = CheckBoxOnTopClick
   end
   object EditDll: TEdit
     Left = 44
@@ -114,7 +139,7 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     ReadOnly = True
-    TabOrder = 8
+    TabOrder = 6
   end
   object ButtonBrowseDll: TButton
     Left = 444
@@ -125,22 +150,14 @@ object Form1: TForm1
     TabOrder = 3
     OnClick = ButtonBrowseDllClick
   end
-  object ButtonClear: TButton
-    Left = 4
-    Top = 228
-    Width = 45
-    Height = 25
-    Caption = 'Clear'
-    TabOrder = 4
-    OnClick = ButtonClearClick
-  end
   object Button1: TButton
-    Left = 192
-    Top = 228
-    Width = 109
+    Left = 152
+    Top = 232
+    Width = 101
     Height = 25
-    Caption = 'Create shortcut'
-    TabOrder = 6
+    Caption = 'Create shortcut...'
+    TabOrder = 4
+    OnClick = Button1Click
   end
   object OpenDialogExe: TOpenDialog
     Filter = '*.exe|*.exe'
@@ -152,5 +169,12 @@ object Form1: TForm1
     Filter = '*.dll|*.dll'
     Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]
     Left = 404
+  end
+  object SaveDialogLnk: TSaveDialog
+    FileName = 'Civ2 with UI Additions.lnk'
+    Filter = '*.lnk|*.lnk'
+    Options = [ofOverwritePrompt, ofHideReadOnly, ofPathMustExist, ofEnableSizing]
+    Left = 120
+    Top = 232
   end
 end
