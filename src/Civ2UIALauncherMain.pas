@@ -30,15 +30,18 @@ type
     SaveDialogLnk: TSaveDialog;
     Label3: TLabel;
     LabelGitHub: TLabel;
+    LabelDebug: TLabel;
     procedure ButtonBrowseExeClick(Sender: TObject);
     procedure ButtonBrowseDllClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure ButtonStartClick(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure LabelGitHubClick(Sender: TObject);
+    procedure LabelDebugClick(Sender: TObject);
   private
     MessagesCounter: Integer;
     procedure OnMessage(var MSG: TMessage); message WM_APP + 1;
+    procedure AdjustFormToDebug();
   public
     { Public declarations }
   end;
@@ -103,6 +106,7 @@ begin
     Visible := True;
     Application.ShowMainForm := True;
     LabelVersion.Caption := 'Version ' + CurrentFileInfo(Application.ExeName);
+    AdjustFormToDebug( );
   end;
 end;
 
@@ -120,7 +124,9 @@ begin
   if SaveDialogLnk.Execute() then
   begin
     Arguments := '-play -exe "' + ExeName + '" -dll "' + DllName + '"';
-    CreateLnk(SaveDialogLnk.FileName, Application.ExeName, '', 'Play Civilzation II with UI Additions', Arguments);
+    if  DebugEnabled then
+      Arguments := '-debug ' + Arguments;
+    CreateLnk(SaveDialogLnk.FileName, Application.ExeName, ExtractFilePath(ExeName), 'Play Civilzation II with UI Additions', Arguments);
   end;
 end;
 
@@ -129,4 +135,21 @@ begin
   ShellExecute(Application.Handle, 'open', 'https://github.com/FoxAhead/Civ2-UI-Additions', nil, nil, SW_SHOW);
 end;
 
+procedure TForm1.LabelDebugClick(Sender: TObject);
+begin
+  DebugEnabled := not DebugEnabled;
+  AdjustFormToDebug( );
+  Log('DebugEnabled: ' + BoolToStr(DebugEnabled, True));
+end;
+
+procedure TForm1.AdjustFormToDebug;
+begin
+  LabelVersion.Enabled := DebugEnabled;
+  if DebugEnabled then
+    FormStyle := fsStayOnTop
+  else
+    FormStyle := fsNormal;
+end;
+
 end.
+

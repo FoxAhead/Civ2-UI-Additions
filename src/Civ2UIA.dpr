@@ -16,6 +16,8 @@ uses
   Classes,
   Messages,
   Windows,
+  ShellAPI,
+  Math,
   Civ2Types in 'Civ2Types.pas',
   Civ2UIATypes in 'Civ2UIATypes.pas';
 
@@ -44,6 +46,8 @@ var
   SideBarFontInfo: ^TFontInfo = Pointer($006ABF98);
   TimesFontInfo: ^TFontInfo = Pointer($0063EAB8);
   TimesBigFontInfo: ^TFontInfo = Pointer($0063EAC0);
+  MainMenu: ^HMENU = Pointer($006A64F8);
+  CurrPopupInfo: PPCurrPopupInfo = Pointer($006CEC84);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -80,6 +84,9 @@ begin
     Result := wtCityWindow;
   if v27 = $006A66B0 then
     Result := wtCivilopedia;
+  if (CurrPopupInfo^ <> nil) then
+    if (CurrPopupInfo^^.GraphicsInfo = Pointer(GetWindowLongA(HWindow, $0C))) and (CurrPopupInfo^^.NumberOfItems > 0) and (CurrPopupInfo^^.NumberOfLines = 0) then
+      Result := wtUnitsListPopup;
   if Result = wtUnknown then
   begin
     for i := Low(TWindowType) to High(TWindowType) do
@@ -131,11 +138,25 @@ begin
   Result := CreateFontIndirect(LFont);
 end;
 
+function ChangeListOfUnitsStart(Delta: Integer): Boolean;
+var
+  NewStart: Integer;
+begin
+  NewStart := ListOfUnits.Start + Delta;
+  if NewStart > (ListOfUnits.Length - 9) then
+    NewStart := ListOfUnits.Length - 9;
+  if NewStart < 0 then
+    NewStart := 0;
+  Result := ListOfUnits.Start <> NewStart;
+  if Result then
+    ListOfUnits.Start := NewStart;
+end;
+
+//--------------------------------------------------------------------------------------------------
 //
+//   Patches Section
 //
-// Patches Section
-//
-//
+//--------------------------------------------------------------------------------------------------
 
 {$O-}
 
@@ -216,6 +237,21 @@ begin
   Result := (PCityWindow^.WindowSize * (Size + $E) - ClickWidth) div 2 - 1;
 end;
 
+function PatchCommandHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam): BOOL; stdcall;
+begin
+  Result := True;
+  if Msg = WM_COMMAND then
+  begin
+    case LOWORD(WParam) of
+      IDM_GITHUB:
+        begin
+          ShellExecute(0, 'open', 'https://github.com/FoxAhead/Civ2-UI-Additions', nil, nil, SW_SHOW);
+          Result := False;
+        end;
+    end;
+  end;
+end;
+
 function PatchMouseWheelHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam): BOOL; stdcall;
 var
   CursorPoint: TPoint;
@@ -230,7 +266,7 @@ var
   WindowInfo: Pointer;
   WindowType: TWindowType;
   ScrollLines: Integer;
-  CurrPopupInfo: PCurrPopupInfo;
+  //CurrPopupInfo: PCurrPopupInfo;
 label
   EndOfFunction;
 begin
@@ -274,23 +310,18 @@ begin
     end;
   end;
 
-  CurrPopupInfo := Pointer(Pointer(AThisCurrPopupInfo)^);
-  if (CurrPopupInfo <> nil) and (CurrPopupInfo^.GraphicsInfo = Pointer(GetWindowLongA(HWindow, $0C))) then
+  if GuessWindowType(HWindow) = wtUnitsListPopup then
   begin
-    if (CurrPopupInfo^.NumberOfItems > 0) and (CurrPopupInfo^.NumberOfLines = 0) then
+    if ChangeListOfUnitsStart(Sign(Delta) * -3) then
     begin
-      if (Delta > 0) and (ListOfUnits.Start > 0) then
-        CurrPopupInfo^.SelectedItem := $FFFFFFFD
-      else if (Delta < 0) and (ListOfUnits.Start < ListOfUnits.Length - 9) then
-        CurrPopupInfo^.SelectedItem := $FFFFFFFE;
-      if CurrPopupInfo^.SelectedItem > $FFFFFFF0 then
-        asm
+      CurrPopupInfo^^.SelectedItem := $FFFFFFFC;
+      asm
     mov   eax, $005A3C58  // Call ClearPopupActive
     call  eax
-        end;
-      Result := False;
-      goto EndOfFunction;
+      end;
     end;
+    Result := False;
+    goto EndOfFunction;
   end;
 
   if (HWndScrollBar > 0) and IsWindowVisible(HWndScrollBar) then
@@ -327,27 +358,87 @@ begin
     Result := False;
   end;
 
-EndOfFunction:
-
+  EndOfFunction:
 
 end;
 
-procedure PatchCallMouseWheelHandler; register;
+function PatchVScrollHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam): BOOL; stdcall;
+var
+  ScrollPos: Integer;
+  Delta: Integer;
+begin
+  Result := True;
+  Delta := 0;
+  if GuessWindowType(HWindow) = wtUnitsListPopup then
+  begin
+    case LOWORD(WParam) of
+      SB_LINEUP: Delta := -1;
+      SB_LINEDOWN: Delta := 1;
+      SB_PAGEUP: Delta := -8;
+      SB_PAGEDOWN: Delta := 8;
+      SB_THUMBPOSITION: Delta := HiWord(WParam) - ListOfUnits.Start;
+    end;
+    if ChangeListOfUnitsStart(Delta) then
+    begin
+      CurrPopupInfo^^.SelectedItem := $FFFFFFFC;
+      asm
+    mov   eax, $005A3C58  // Call ClearPopupActive
+    call  eax
+      end;
+    end;
+    Result := False;
+  end;
+end;
+
+function PatchMessageHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam): BOOL; stdcall;
+begin
+  case Msg of
+    WM_COMMAND:
+      Result := PatchCommandHandler(HWindow, Msg, WParam, LParam);
+    WM_MOUSEWHEEL:
+      Result := PatchMouseWheelHandler(HWindow, Msg, WParam, LParam);
+    WM_VSCROLL:
+      Result := PatchVScrollHandler(HWindow, Msg, WParam, LParam);
+  else
+    Result := True;
+  end;
+end;
+
+procedure PatchMessageProcessingCommon; register;
 asm
     push  [ebp + $14]
     push  [ebp + $10]
     push  [ebp + $0C]
     push  [ebp + $08]
-    call  PatchMouseWheelHandler
+    call  PatchMessageHandler
     cmp   eax, 0
-    jz    @@LABEL2
+    jz    @@LABEL_MESSAGE_HANDLED
 
-@@LABEL1:
+@@LABEL_MESSAGE_NOT_HANDLED:
     push  $005EB483
     ret
 
-@@LABEL2:
+@@LABEL_MESSAGE_HANDLED:
     push  $005EC193
+    ret
+end;
+
+procedure PatchMessageProcessing; register;
+asm
+    push  [ebp + $14]
+    push  [ebp + $10]
+    push  [ebp + $0C]
+    push  [ebp + $08]
+    call  PatchMessageHandler
+    cmp   eax, 0
+    jz    @@LABEL_MESSAGE_HANDLED
+
+@@LABEL_MESSAGE_NOT_HANDLED:
+    push  $005EACFC
+    ret
+
+@@LABEL_MESSAGE_HANDLED:
+    push  $005EB2DF
     ret
 end;
 
@@ -449,11 +540,13 @@ asm
     mov   eax, $005B6AEA  // Call Q_PopupListOfUnits_sub_5B6AEA
     call  eax
     add   esp, $0C
-    push  eax
-    call  PatchChangeListOfUnitsStart
-    cmp   eax, $FFFFFFFE
-    je    @@LABEL_POPUP
-    cmp   eax, $FFFFFFFD
+    //push  eax
+    //call  PatchChangeListOfUnitsStart
+    //cmp   eax, $FFFFFFFE
+    //je    @@LABEL_POPUP
+    //cmp   eax, $FFFFFFFD
+    //je    @@LABEL_POPUP
+    cmp   eax, $FFFFFFFC
     je    @@LABEL_POPUP
     ret
 end;
@@ -489,18 +582,15 @@ asm
 end;
 
 procedure PatchCallCreateScollBar(); stdcall;
-var
-  CurrPopupInfo: PCurrPopupInfo;
 begin
-  CurrPopupInfo := Pointer(Pointer(AThisCurrPopupInfo)^);
-  if (CurrPopupInfo.NumberOfItems >= 9) and (ListOfUnits.Length > 9) then
+  if (CurrPopupInfo^^.NumberOfItems >= 9) and (ListOfUnits.Length > 9) then
   begin
     ZeroMemory(@ScrollBarControlInfo, SizeOf(ScrollBarControlInfo));
-    ScrollBarControlInfo.Rect.Left := CurrPopupInfo.Width - 25;
+    ScrollBarControlInfo.Rect.Left := CurrPopupInfo^^.Width - 25;
     ScrollBarControlInfo.Rect.Top := 36;
-    ScrollBarControlInfo.Rect.Right := CurrPopupInfo.Width - 9;
-    ScrollBarControlInfo.Rect.Bottom := CurrPopupInfo.Height - 45;
-    j_Q_CreateScrollbar_sub_40FC50(@ScrollBarControlInfo, Pointer(PInteger(Pointer(AThisCurrPopupInfo)^)^ + $48), $0B, @ScrollBarControlInfo.Rect, 1);
+    ScrollBarControlInfo.Rect.Right := CurrPopupInfo^^.Width - 9;
+    ScrollBarControlInfo.Rect.Bottom := CurrPopupInfo^^.Height - 45;
+    j_Q_CreateScrollbar_sub_40FC50(@ScrollBarControlInfo, @CurrPopupInfo^^.GraphicsInfo^.WindowInfo, $0B, @ScrollBarControlInfo.Rect, 1);
     SetScrollRange(ScrollBarControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
     SetScrollPos(ScrollBarControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
   end;
@@ -640,13 +730,23 @@ begin
   end;
 end;
 
+function PatchCreateMainMenu(): HMENU; stdcall;
+var
+  SubMenu: HMENU;
+begin
+  SubMenu := CreatePopupMenu();
+  AppendMenu(SubMenu, MF_STRING, IDM_GITHUB, 'GitHub');
+  AppendMenu(MainMenu^, MF_POPUP, SubMenu, 'UI Additions');
+  Result := MainMenu^;
+end;
+
 {$O+}
 
+//--------------------------------------------------------------------------------------------------
 //
+//   Initialization Section
 //
-// Initialization Section
-//
-//
+//--------------------------------------------------------------------------------------------------
 
 procedure WriteMemory(HProcess: Cardinal; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer);
 var
@@ -665,7 +765,8 @@ procedure Attach(HProcess: Cardinal);
 begin
   WriteMemory(HProcess, $00403D00, [OP_JMP], @Patch1);
   WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
-  WriteMemory(HProcess, $005EB465, [], @PatchCallMouseWheelHandler);
+  //  WriteMemory(HProcess, $005EB465, [], @PatchMessageProcessingCommon);
+  WriteMemory(HProcess, $005EACDE, [], @PatchMessageProcessing);
   WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
   WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
   WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
@@ -674,6 +775,7 @@ begin
   WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
   WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
   WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
+  WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
 end;
 
 procedure DllMain(Reason: Integer);
@@ -698,4 +800,3 @@ begin
   DllProc := @DllMain;
   DllProc(DLL_PROCESS_ATTACH);
 end.
-

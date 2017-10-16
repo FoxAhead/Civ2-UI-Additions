@@ -8,7 +8,7 @@ uses
 {$R *.res}
 
 begin
-  InitializePaths();
+  InitializeVars();
   Application.Title := 'Civilization II UI Additions Launcher';
   Application.ShowMainForm := not IsSilentLaunch();
   Application.CreateForm(TForm1, Form1);

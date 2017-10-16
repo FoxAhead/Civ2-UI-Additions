@@ -17,7 +17,8 @@ type
     wtDemographics,                       //F11
     wtCityWindow,
     wtTaxRate,
-    wtCivilopedia
+    wtCivilopedia,
+    wtUnitsListPopup
     );
 
   TListOfUnits = packed record
@@ -26,6 +27,7 @@ type
   end;
 
   TShadows = set of (stTopLeft, stTop, stTopRight);
+
 const
   OP_NOP: Byte = $90;
   OP_CALL: Byte = $E8;
@@ -41,6 +43,8 @@ const
   SHADOW_B_ = $40;
   SHADOW_BR = $80;
   SHADOW_ALL = $FF;
+
+  IDM_GITHUB = $FF01;
 
 implementation
 

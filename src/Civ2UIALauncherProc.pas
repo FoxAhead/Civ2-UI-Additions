@@ -19,8 +19,9 @@ var
   DllName: string;
   DllLoaded: Boolean;
   LogMemo: TMemo;
+  DebugEnabled: Boolean;
 
-function InitializePaths(): Boolean;
+function InitializeVars(): Boolean;
 
 function IsSilentLaunch(): Boolean;
 
@@ -82,7 +83,7 @@ begin
   Result := FindCmdLineSwitch('play');
 end;
 
-function InitializePaths(): Boolean;
+function InitializeVars(): Boolean;
 var
   MyPath: string;
   i: Integer;
@@ -97,6 +98,7 @@ begin
     if ParamStr(i) = '-dll' then
       SetFileNameIfExist(DllName, ParamStr(i + 1));
   end;
+  DebugEnabled := FindCmdLineSwitch('debug');
   Result := (ExeName <> '') and (DllName <> '');
 end;
 
@@ -204,8 +206,11 @@ begin
   try
     Check();
     LaunchGame();
-    Result := True;
-    Application.Terminate();
+    if not DebugEnabled then
+    begin
+      Result := True;
+      Application.Terminate();
+    end;
   except
     on E: Exception do
       Log('Error: ' + E.message);

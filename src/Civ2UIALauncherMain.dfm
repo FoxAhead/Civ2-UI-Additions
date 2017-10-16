@@ -65,6 +65,15 @@ object Form1: TForm1
     ParentFont = False
     OnClick = LabelGitHubClick
   end
+  object LabelDebug: TLabel
+    Left = 404
+    Top = 244
+    Width = 101
+    Height = 13
+    AutoSize = False
+    Transparent = True
+    OnClick = LabelDebugClick
+  end
   object Memo1: TMemo
     Left = 4
     Top = 60

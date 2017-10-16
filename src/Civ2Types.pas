@@ -250,7 +250,7 @@ type
 
 const
   AThisCitySprites: Cardinal = $006A9490;
-  AThisCurrPopupInfo = $006CEC84;
+//  AThisCurrPopupInfo = $006CEC84;
 
 implementation
 
