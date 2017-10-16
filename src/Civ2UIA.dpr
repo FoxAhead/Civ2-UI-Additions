@@ -48,6 +48,7 @@ var
   TimesBigFontInfo: ^TFontInfo = Pointer($0063EAC0);
   MainMenu: ^HMENU = Pointer($006A64F8);
   CurrPopupInfo: PPCurrPopupInfo = Pointer($006CEC84);
+  MapZoom: PSmallInt = Pointer($0066CA8C);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -152,6 +153,18 @@ begin
     ListOfUnits.Start := NewStart;
 end;
 
+function ChangeMapZoom(Delta: Integer): Boolean;
+var
+  NewZoom: Integer;
+begin
+  NewZoom := MapZoom^ + Delta;
+  if NewZoom > 8 then NewZoom := 8;
+  if NewZoom < -7 then NewZoom := -7;
+  Result := MapZoom^ <> NewZoom;
+  if Result then
+    MapZoom^ := NewZoom;
+end;
+
 //--------------------------------------------------------------------------------------------------
 //
 //   Patches Section
@@ -237,7 +250,7 @@ begin
   Result := (PCityWindow^.WindowSize * (Size + $E) - ClickWidth) div 2 - 1;
 end;
 
-function PatchCommandHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam): BOOL; stdcall;
+function PatchCommandHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 begin
   Result := True;
   if Msg = WM_COMMAND then
@@ -252,7 +265,7 @@ begin
   end;
 end;
 
-function PatchMouseWheelHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam): BOOL; stdcall;
+function PatchMouseWheelHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 var
   CursorPoint: TPoint;
   HWndCursor: HWND;
@@ -356,13 +369,30 @@ begin
     call  eax
     end;
     Result := False;
+    goto EndOfFunction;
+  end;
+
+  if LOWORD(WParam) = MK_CONTROL then
+  begin
+    if ChangeMapZoom(Sign(Delta)) then
+    begin
+      asm
+    push 1
+    push [$006D1DA0]
+    mov ecx, $0066C7A8
+    mov eax, $0047CD51  // Call j_Q_RedrawMap_sub_47CD51
+    call eax
+      end;
+      Result := False;
+      goto EndOfFunction;
+    end;
   end;
 
   EndOfFunction:
 
 end;
 
-function PatchVScrollHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam): BOOL; stdcall;
+function PatchVScrollHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 var
   ScrollPos: Integer;
   Delta: Integer;
@@ -390,15 +420,15 @@ begin
   end;
 end;
 
-function PatchMessageHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam): BOOL; stdcall;
+function PatchMessageHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 begin
   case Msg of
     WM_COMMAND:
-      Result := PatchCommandHandler(HWindow, Msg, WParam, LParam);
+      Result := PatchCommandHandler(HWindow, Msg, WParam, LParam, FromCommon);
     WM_MOUSEWHEEL:
-      Result := PatchMouseWheelHandler(HWindow, Msg, WParam, LParam);
+      Result := PatchMouseWheelHandler(HWindow, Msg, WParam, LParam, FromCommon);
     WM_VSCROLL:
-      Result := PatchVScrollHandler(HWindow, Msg, WParam, LParam);
+      Result := PatchVScrollHandler(HWindow, Msg, WParam, LParam, FromCommon);
   else
     Result := True;
   end;
@@ -406,6 +436,7 @@ end;
 
 procedure PatchMessageProcessingCommon; register;
 asm
+    push  1
     push  [ebp + $14]
     push  [ebp + $10]
     push  [ebp + $0C]
@@ -425,6 +456,7 @@ end;
 
 procedure PatchMessageProcessing; register;
 asm
+    push  0
     push  [ebp + $14]
     push  [ebp + $10]
     push  [ebp + $0C]
@@ -765,7 +797,7 @@ procedure Attach(HProcess: Cardinal);
 begin
   WriteMemory(HProcess, $00403D00, [OP_JMP], @Patch1);
   WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
-  //  WriteMemory(HProcess, $005EB465, [], @PatchMessageProcessingCommon);
+  WriteMemory(HProcess, $005EB465, [], @PatchMessageProcessingCommon);
   WriteMemory(HProcess, $005EACDE, [], @PatchMessageProcessing);
   WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
   WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
