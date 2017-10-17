@@ -158,8 +158,10 @@ var
   NewZoom: Integer;
 begin
   NewZoom := MapZoom^ + Delta;
-  if NewZoom > 8 then NewZoom := 8;
-  if NewZoom < -7 then NewZoom := -7;
+  if NewZoom > 8 then
+    NewZoom := 8;
+  if NewZoom < -7 then
+    NewZoom := -7;
   Result := MapZoom^ <> NewZoom;
   if Result then
     MapZoom^ := NewZoom;
@@ -377,11 +379,11 @@ begin
     if ChangeMapZoom(Sign(Delta)) then
     begin
       asm
-    push 1
-    push [$006D1DA0]
-    mov ecx, $0066C7A8
-    mov eax, $0047CD51  // Call j_Q_RedrawMap_sub_47CD51
-    call eax
+    push  1
+    push  [$006D1DA0]
+    mov   ecx, $0066C7A8
+    mov   eax, $0047CD51  // Call j_Q_RedrawMap_sub_47CD51
+    call  eax
       end;
       Result := False;
       goto EndOfFunction;
@@ -402,11 +404,16 @@ begin
   if GuessWindowType(HWindow) = wtUnitsListPopup then
   begin
     case LOWORD(WParam) of
-      SB_LINEUP: Delta := -1;
-      SB_LINEDOWN: Delta := 1;
-      SB_PAGEUP: Delta := -8;
-      SB_PAGEDOWN: Delta := 8;
-      SB_THUMBPOSITION: Delta := HiWord(WParam) - ListOfUnits.Start;
+      SB_LINEUP:
+        Delta := -1;
+      SB_LINEDOWN:
+        Delta := 1;
+      SB_PAGEUP:
+        Delta := -8;
+      SB_PAGEDOWN:
+        Delta := 8;
+      SB_THUMBPOSITION:
+        Delta := HiWord(WParam) - ListOfUnits.Start;
     end;
     if ChangeListOfUnitsStart(Delta) then
     begin
@@ -772,6 +779,32 @@ begin
   Result := MainMenu^;
 end;
 
+procedure PatchEditBox64Bit(); register;
+asm
+    push  GCL_CBWNDEXTRA
+    mov   eax, [ebp + $08]
+    push  eax
+    call  [$006E7E9C]   // GetClassLongA
+    mov   ebx, eax
+    sub   al, 4
+    push  eax
+    mov   eax, [ebp + $08]
+    push  eax
+    call  [$006E7E2C]   // GetWindowLongA
+    sub   ebx, 8
+    mov   [ebp - $08], eax
+    mov   eax, [ebp - $0C]
+    push  ebx
+    mov   eax, [ebp + $08]
+    push  eax
+    call  [$006E7E2C]   // GetWindowLongA
+    mov   [ebp - $14], eax
+    mov   eax, [ebp + $0C]
+    mov   [ebp - $1C], eax
+    push  $005D2C94
+    ret
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -808,6 +841,7 @@ begin
   WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
   WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
   WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
+  WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
 end;
 
 procedure DllMain(Reason: Integer);
