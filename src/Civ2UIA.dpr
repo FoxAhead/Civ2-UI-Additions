@@ -99,7 +99,6 @@ begin
       end;
     end;
   end;
-  //if (v27 = $0063EB58) and (Result = wtUnknown) then Result := wtCityStatus;
 end;
 
 function ScaleByZoom(Value, Zoom: Integer): Integer;
@@ -182,7 +181,7 @@ asm
     call  eax
 end;
 
-function Patch1(X: Integer; Y: Integer; var A4: Integer; var A5: Integer): Integer; stdcall;
+function PatchGetInfoOfClickedCitySprite(X: Integer; Y: Integer; var A4: Integer; var A5: Integer): Integer; stdcall;
 var
   v6: Integer;
   i: Integer;
@@ -281,7 +280,6 @@ var
   WindowInfo: Pointer;
   WindowType: TWindowType;
   ScrollLines: Integer;
-  //CurrPopupInfo: PCurrPopupInfo;
 label
   EndOfFunction;
 begin
@@ -307,8 +305,16 @@ begin
     ScreenToClient(HWndCursor, CursorPoint);
     asm
     mov   ecx, AThisCitySprites // $006A9490
+    lea   eax, SType
+    push  eax
+    lea   eax, SIndex
+    push  eax
+    push  CursorPoint.Y
+    push  CursorPoint.X
+    mov   eax, A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85
+    call  eax
     end;
-    Patch1(CursorPoint.X, CursorPoint.Y, SIndex, SType);
+    //PatchGetInfoOfClickedCitySprite(CursorPoint.X, CursorPoint.Y, SIndex, SType);
     if SType = 2 then
     begin
       ChangeSpecialistDown := (Delta = -1);
@@ -417,13 +423,14 @@ begin
     end;
     if ChangeListOfUnitsStart(Delta) then
     begin
+      SetScrollPos(LParam, SB_CTL, ListOfUnits.Start, True);
       CurrPopupInfo^^.SelectedItem := $FFFFFFFC;
       asm
     mov   eax, $005A3C58  // Call ClearPopupActive
     call  eax
       end;
+      Result := False;
     end;
-    Result := False;
   end;
 end;
 
@@ -718,11 +725,16 @@ begin
   Canvas.Brush.Style := bsClear;
   Top := SideBarClientRect^.Top + (SideBarFontInfo^.Height - 1) * 2;
   TurnsRotation := ((GameTurn^ - 1) and 3) + 1;
+  TextOut := 'Turn ' + IntToStr(GameTurn^);
+  Left := SideBarClientRect^.Right - Canvas.TextExtent(TextOut).cx - 1;
+  TextOutWithShadows(Canvas, TextOut, Left, Top, TColor($444444), TColor($CCCCCC), SHADOW_BR);
+  {
   TextOut := 'Oedo';
   Left := SideBarClientRect^.Right - Canvas.TextExtent(TextOut).cx - 1;
   TextOutWithShadows(Canvas, TextOut, Left, Top, clOlive, clBlack, SHADOW_BR);
   TextOut := Copy(WideString(TextOut), 1, TurnsRotation);
   TextOutWithShadows(Canvas, TextOut, Left, Top, clYellow, clBlack, SHADOW_NONE);
+  }
   Canvas.Free;
   RestoreDC(DC, SavedDC);
 end;
@@ -828,7 +840,7 @@ end;
 
 procedure Attach(HProcess: Cardinal);
 begin
-  WriteMemory(HProcess, $00403D00, [OP_JMP], @Patch1);
+  //WriteMemory(HProcess, $00403D00, [OP_JMP], @PatchGetInfoOfClickedCitySprite);
   WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
   WriteMemory(HProcess, $005EB465, [], @PatchMessageProcessingCommon);
   WriteMemory(HProcess, $005EACDE, [], @PatchMessageProcessing);

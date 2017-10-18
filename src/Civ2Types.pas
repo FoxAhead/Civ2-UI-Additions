@@ -249,8 +249,8 @@ type
   TShieldTop = array[0..$3E] of Integer;  // 642B48
 
 const
-  AThisCitySprites: Cardinal = $006A9490;
-//  AThisCurrPopupInfo = $006CEC84;
+  AThisCitySprites = $006A9490;
+  A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85 = $00403D00;
 
 implementation
 
