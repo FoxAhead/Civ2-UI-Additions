@@ -3,9 +3,7 @@ unit Civ2UIATypes;
 interface
 
 type
-  TWindowType = (
-    wtUnknown,
-    wtCityStatus,                         //F1
+  TWindowType = (wtUnknown, wtCityStatus, //F1
     wtDefenceMinister,                    //F2
     wtIntelligenceReport,                 //F3
     wtAttitudeAdvisor,                    //F4
@@ -15,11 +13,7 @@ type
     wtTop5Cities,                         //F8
     wtCivilizationScore,                  //F9
     wtDemographics,                       //F11
-    wtCityWindow,
-    wtTaxRate,
-    wtCivilopedia,
-    wtUnitsListPopup
-    );
+    wtCityWindow, wtTaxRate, wtCivilopedia, wtUnitsListPopup);
 
   TListOfUnits = packed record
     Start: Integer;
@@ -28,11 +22,16 @@ type
 
   TShadows = set of (stTopLeft, stTop, stTopRight);
 
+  TMouseDrag = packed record
+    Active: Boolean;
+    StartX: Smallint;
+    StartY: Smallint;
+  end;
+
 const
   OP_NOP: Byte = $90;
   OP_CALL: Byte = $E8;
   OP_JMP: Byte = $E9;
-
   SHADOW_NONE = $00;
   SHADOW_TL = $01;
   SHADOW_T_ = $02;
@@ -43,7 +42,6 @@ const
   SHADOW_B_ = $40;
   SHADOW_BR = $80;
   SHADOW_ALL = $FF;
-
   IDM_GITHUB = $FF01;
 
 implementation

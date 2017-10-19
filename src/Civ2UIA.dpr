@@ -30,6 +30,8 @@ var
   SavedReturnAddress2: Cardinal;
   SavedThis: Cardinal;
   ListOfUnits: TListOfUnits;
+  MouseDrag: TMouseDrag;
+
   ShieldLeft: ^TShieldLeft = Pointer($642C48);
   ShieldTop: ^TShieldTop = Pointer($642B48);
   ShieldFontInfo: ^TFontInfo = Pointer($006AC090);
@@ -49,6 +51,7 @@ var
   MainMenu: ^HMENU = Pointer($006A64F8);
   CurrPopupInfo: PPCurrPopupInfo = Pointer($006CEC84);
   MapZoom: PSmallInt = Pointer($0066CA8C);
+  MapGraphicsInfo: PGraphicsInfo = Pointer($0066C7A8);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -173,6 +176,15 @@ end;
 //--------------------------------------------------------------------------------------------------
 
 {$O-}
+
+procedure j_Q_RedrawMap(); register;
+asm
+    push  1
+    push  [$006D1DA0]
+    mov   ecx, $0066C7A8
+    mov   eax, A_j_Q_RedrawMap_sub_47CD51
+    call  eax
+end;
 
 function GetFontHeightWithExLeading(thisFont: Pointer): Integer;
 asm
@@ -384,13 +396,7 @@ begin
   begin
     if ChangeMapZoom(Sign(Delta)) then
     begin
-      asm
-    push  1
-    push  [$006D1DA0]
-    mov   ecx, $0066C7A8
-    mov   eax, $0047CD51  // Call j_Q_RedrawMap_sub_47CD51
-    call  eax
-      end;
+      j_Q_RedrawMap();
       Result := False;
       goto EndOfFunction;
     end;
@@ -434,6 +440,61 @@ begin
   end;
 end;
 
+function PatchMButtonUpHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
+var
+  ScreenX: Integer;
+  ScreenY: Integer;
+  DeltaX: Integer;
+  DeltaY: Integer;
+  MapX: Integer;
+  MapY: Integer;
+  ConversionError: LongBool;
+begin
+  Result := True;
+  ScreenX := Smallint(LParam and $FFFF);
+  ScreenY := Smallint((LParam shr 16) and $FFFF);
+  case Msg of
+    WM_MBUTTONDOWN:
+      begin
+        MouseDrag.Active := True;
+        MouseDrag.StartX := ScreenX;
+        MouseDrag.StartY := ScreenY;
+        Result := False;
+      end;
+    WM_MOUSEMOVE:
+      if MouseDrag.Active then
+      begin
+        DeltaX := MouseDrag.StartX - ScreenX;
+        DeltaY := MouseDrag.StartY - ScreenY;
+        asm
+    push  ScreenY
+    push  ScreenX
+    lea   eax, MapY
+    push  eax
+    lea   eax, MapX
+    push  eax
+    mov   ecx, MapGraphicsInfo
+    mov   eax, A_j_Q_ScreenToMap_sub_47A540
+    call  eax
+    mov   ConversionError, eax
+        end;
+        if not ConversionError then
+        begin
+          MapGraphicsInfo^.MapCenter.X := MapX;
+          MapGraphicsInfo^.MapCenter.Y := MapY;
+          j_Q_RedrawMap();
+          Result := False;
+        end
+      end;
+    WM_MBUTTONUP:
+      begin
+        MouseDrag.Active := False;
+        Result := False;
+      end;
+  end;
+
+end;
+
 function PatchMessageHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 begin
   case Msg of
@@ -443,6 +504,8 @@ begin
       Result := PatchMouseWheelHandler(HWindow, Msg, WParam, LParam, FromCommon);
     WM_VSCROLL:
       Result := PatchVScrollHandler(HWindow, Msg, WParam, LParam, FromCommon);
+    //WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE:
+      //Result := PatchMButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
   else
     Result := True;
   end;
@@ -866,6 +929,7 @@ begin
   case Reason of
     DLL_PROCESS_ATTACH:
       begin
+        SendMessageToLoader(1, 1);
         HProcess := OpenProcess(PROCESS_ALL_ACCESS, False, GetCurrentProcessId());
         Attach(HProcess);
         CloseHandle(HProcess);

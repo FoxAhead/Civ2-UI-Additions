@@ -105,12 +105,15 @@ end;
 procedure Log(Str: string);
 begin
   if LogMemo <> nil then
-  begin
-    while LogMemo.Lines.Count >= 100 do
-      LogMemo.Lines.Delete(0);
-    LogMemo.Lines.Add(Str);
-    LogMemo.Text := Trim(LogMemo.Text);
-  end;
+    if Str = '' then
+      LogMemo.Lines.Clear()
+    else
+    begin
+      while LogMemo.Lines.Count >= 100 do
+        LogMemo.Lines.Delete(0);
+      LogMemo.Lines.Add(Str);
+      LogMemo.Text := Trim(LogMemo.Text);
+    end;
 end;
 
 procedure LaunchGame();
@@ -136,6 +139,7 @@ var
   i: Integer;
 begin
   try
+    Log('');
     DllLoaded := False;
     FileName := ExeName;
     Path := ExtractFilePath(ExeName);
@@ -144,8 +148,6 @@ begin
     ZeroMemory(@ProcessInformation, SizeOf(ProcessInformation));
     if not CreateProcess(PAnsiChar(FileName), nil, nil, nil, False, CREATE_SUSPENDED, nil, PAnsiChar(Path), StartupInfo, ProcessInformation) then
       raise Exception.Create('CreateProcess: ' + IntToStr(GetLastError()));
-    ZeroMemory(@Context, SizeOf(Context));
-    Context.ContextFlags := CONTEXT_FULL;
     EntryPointAddress := $005F6E90;
     ZeroMemory(@Inject, SizeOf(Inject));
     Inject.PushCommand := $68;
@@ -155,11 +157,14 @@ begin
     Inject.JumpCommand := $EB;
     Inject.JumpOffset := $FE;
     StrPCopy(Inject.LibraryName, DllName);
-    ReadProcessMemory(ProcessInformation.hProcess, Pointer(EntryPointAddress), @SavedBytes, SizeOf(SavedBytes), BytesRead);
+    if not ReadProcessMemory(ProcessInformation.hProcess, Pointer(EntryPointAddress), @SavedBytes, SizeOf(SavedBytes), BytesRead) then
+      raise Exception.Create('ReadProcessMemory: ' + IntToStr(GetLastError()));
+    Log('BytesRead ' + IntToStr(BytesRead));
     if not WriteProcessMemory(ProcessInformation.hProcess, Pointer(EntryPointAddress), @Inject, SizeOf(Inject), BytesWritten) then
       raise Exception.Create('WriteProcessMemory: ' + IntToStr(GetLastError()));
     Log('BytesWritten ' + IntToStr(BytesWritten));
-    ResumeThread(ProcessInformation.hThread);
+    if ResumeThread(ProcessInformation.hThread) = $FFFFFFFF then
+      raise Exception.Create('ResumeThread: ' + IntToStr(GetLastError()));
     for i := 1 to 50 do
     begin
       Application.ProcessMessages();
@@ -170,15 +175,20 @@ begin
     if not DllLoaded then
       raise Exception.Create('Dll not loaded');
 
-    SuspendThread(ProcessInformation.hThread);
+    if SuspendThread(ProcessInformation.hThread) = $FFFFFFFF then
+      raise Exception.Create('SuspendThread: ' + IntToStr(GetLastError()));
     if not WriteProcessMemory(ProcessInformation.hProcess, Pointer(EntryPointAddress), @SavedBytes, SizeOf(SavedBytes), BytesWritten) then
       raise Exception.Create('WriteProcessMemory: ' + IntToStr(GetLastError()));
+    Log('BytesWritten ' + IntToStr(BytesWritten));
+    ZeroMemory(@Context, SizeOf(Context));
     Context.ContextFlags := CONTEXT_FULL;
-    GetThreadContext(ProcessInformation.hThread, Context);
+    if not GetThreadContext(ProcessInformation.hThread, Context) then
+      raise Exception.Create('GetThreadContext: ' + IntToStr(GetLastError()));
     Context.Eip := EntryPointAddress;
-    SetThreadContext(ProcessInformation.hThread, Context);
-
-    ResumeThread(ProcessInformation.hThread);
+    if not SetThreadContext(ProcessInformation.hThread, Context) then
+      raise Exception.Create('SetThreadContext: ' + IntToStr(GetLastError()));
+    if ResumeThread(ProcessInformation.hThread) = $FFFFFFFF then
+      raise Exception.Create('ResumeThread: ' + IntToStr(GetLastError()));
 
   except
     if (ProcessInformation.hProcess <> 0) then

@@ -44,7 +44,8 @@ type
   PCurrPopupInfo = ^TCurrPopupInfo;
   PPCurrPopupInfo = ^PCurrPopupInfo;
   PDrawInfo = ^TDrawInfo;
-  
+  PMapCoordinates = ^TMapCoordinates;
+
   TControlInfo = packed record            // Size = $40
     ControlType: Integer;                 //  8-Scrollbar, 7-ListBox, 6-Button, 4-EditBox, 3-RadioButton(Group), 2-CheckBox, 1-ListItem
     Code: Integer;                        // + 0x04
@@ -152,6 +153,11 @@ type
     ListItems: array of TControlInfo;     // + 0x280
   end;
 
+  TMapCoordinates = packed record
+    X: SmallInt;
+    Y: SmallInt;
+  end;
+
   TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C)
     Unknown1: array[$00..$13] of Byte;
     Rectangle: Pointer;                   // + 0x14
@@ -161,6 +167,8 @@ type
     DrawInfo: PDrawInfo;                  // + 0x40
     Unknown4: array[$44..$47] of Byte;
     WindowInfo: PWindowInfo;              // + 0x48
+    Unknown5: array[$4C..$2DF] of Byte;
+    MapCenter: TMapCoordinates;           // + 0x2E0
   end;
 
   TDrawInfo = packed record
@@ -251,10 +259,9 @@ type
 const
   AThisCitySprites = $006A9490;
   A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85 = $00403D00;
-
+  A_j_Q_ScreenToMap_sub_47A540 = $00402B2B;
+  A_j_Q_RedrawMap_sub_47CD51 = $00401F32;
 implementation
 
 end.
 //Types
-
-

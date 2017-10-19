@@ -49,7 +49,7 @@ type
 var
   Form1: TForm1;
 
-  //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 implementation
 //--------------------------------------------------------------------------------------------------
 
@@ -106,7 +106,7 @@ begin
     Visible := True;
     Application.ShowMainForm := True;
     LabelVersion.Caption := 'Version ' + CurrentFileInfo(Application.ExeName);
-    AdjustFormToDebug( );
+    AdjustFormToDebug();
   end;
 end;
 
@@ -124,7 +124,7 @@ begin
   if SaveDialogLnk.Execute() then
   begin
     Arguments := '-play -exe "' + ExeName + '" -dll "' + DllName + '"';
-    if  DebugEnabled then
+    if DebugEnabled then
       Arguments := '-debug ' + Arguments;
     CreateLnk(SaveDialogLnk.FileName, Application.ExeName, ExtractFilePath(ExeName), 'Play Civilzation II with UI Additions', Arguments);
   end;
@@ -138,7 +138,7 @@ end;
 procedure TForm1.LabelDebugClick(Sender: TObject);
 begin
   DebugEnabled := not DebugEnabled;
-  AdjustFormToDebug( );
+  AdjustFormToDebug();
   Log('DebugEnabled: ' + BoolToStr(DebugEnabled, True));
 end;
 
@@ -152,4 +152,3 @@ begin
 end;
 
 end.
-
