@@ -1,10 +1,10 @@
 object Form1: TForm1
-  Left = 444
-  Top = 317
+  Left = 631
+  Top = 308
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'Civilization II UI Additions Launcher'
-  ClientHeight = 265
+  ClientHeight = 289
   ClientWidth = 513
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -34,7 +34,7 @@ object Form1: TForm1
   end
   object LabelVersion: TLabel
     Left = 470
-    Top = 244
+    Top = 268
     Width = 35
     Height = 13
     Alignment = taRightJustify
@@ -43,7 +43,7 @@ object Form1: TForm1
   end
   object Label3: TLabel
     Left = 8
-    Top = 236
+    Top = 260
     Width = 75
     Height = 13
     Caption = '2017 FoxAhead'
@@ -51,7 +51,7 @@ object Form1: TForm1
   end
   object LabelGitHub: TLabel
     Left = 472
-    Top = 228
+    Top = 252
     Width = 33
     Height = 13
     Cursor = crHandPoint
@@ -67,7 +67,7 @@ object Form1: TForm1
   end
   object LabelDebug: TLabel
     Left = 404
-    Top = 244
+    Top = 268
     Width = 101
     Height = 13
     AutoSize = False
@@ -78,13 +78,35 @@ object Form1: TForm1
     Left = 4
     Top = 60
     Width = 505
-    Height = 161
+    Height = 189
     TabStop = False
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
     Font.Height = -11
     Font.Name = 'MS Sans Serif'
     Font.Style = []
+    Lines.Strings = (
+      
+        'This launcher will add some enhancements without modifying game ' +
+        'executable.'
+      'Features added:'
+      ' - Mouse wheel support wherever possible'
+      ' - Ability to choose any unit in stack beyond limit of 9'
+      ' - Work counter for Settlers/Engineers is displayed'
+      ' - Click-bounds of specialists sprites corrected in city screen'
+      ' - Number of the game turn is displayed'
+      ' - Current research numbers are displayed in Science Advisor'
+      ' - 64 bit patch included'
+      
+        'This launcher will search for CIV2.EXE and CIV2UIA.DLL in its cu' +
+        'rrent folder and try to set all paths '
+      'automatically.'
+      
+        'You can create shortcut to start game immediately. All selected ' +
+        'paths are saved in shortcut.'
+      
+        'Game version Multiplayer Gold Edition 5.4.0f (Patch 3) supported' +
+        ' only.')
     ParentFont = False
     ReadOnly = True
     ScrollBars = ssVertical
@@ -118,10 +140,10 @@ object Form1: TForm1
   end
   object ButtonStart: TButton
     Left = 260
-    Top = 232
+    Top = 256
     Width = 101
     Height = 25
-    Hint = 'Close and launch game'
+    Hint = 'Close this screen and start game'
     Caption = 'Play'
     Default = True
     Font.Charset = DEFAULT_CHARSET
@@ -161,7 +183,7 @@ object Form1: TForm1
   end
   object Button1: TButton
     Left = 152
-    Top = 232
+    Top = 256
     Width = 101
     Height = 25
     Caption = 'Create shortcut...'
@@ -184,6 +206,6 @@ object Form1: TForm1
     Filter = '*.lnk|*.lnk'
     Options = [ofOverwritePrompt, ofHideReadOnly, ofPathMustExist, ofEnableSizing]
     Left = 120
-    Top = 232
+    Top = 256
   end
 end

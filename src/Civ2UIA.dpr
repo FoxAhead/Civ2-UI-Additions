@@ -832,10 +832,13 @@ var
   SizeOP: Integer;
 begin
   SizeOP := SizeOf(Opcodes);
-  Offset := Integer(ProcAddress) - Address - 4 - SizeOP;
   if SizeOP > 0 then
     WriteProcessMemory(HProcess, Pointer(Address), @Opcodes, SizeOP, BytesWritten);
-  WriteProcessMemory(HProcess, Pointer(Address + SizeOP), @Offset, 4, BytesWritten);
+  if ProcAddress <> nil then
+  begin
+    Offset := Integer(ProcAddress) - Address - 4 - SizeOP;
+    WriteProcessMemory(HProcess, Pointer(Address + SizeOP), @Offset, 4, BytesWritten);
+  end;
 end;
 
 procedure Attach(HProcess: Cardinal);

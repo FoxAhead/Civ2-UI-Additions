@@ -196,7 +196,7 @@ begin
   if not FileExists(DllName) then
     raise Exception.Create('Dll file ' + DllName + 'does not exist');
   if GetFileSize(ExeName) <> 2489344 then
-    raise Exception.Create('Wrong size of game exe file (Wrong version?)');
+    raise Exception.Create('Wrong size of game exe file. Game version Multiplayer Gold Edition 5.4.0f (Patch 3) supported only.');
   Result := True;
 end;
 
