@@ -57,7 +57,7 @@ procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
   HWindow: HWND;
 begin
-  HWindow := FindWindow(nil, 'Civilization II UI Additions Launcher');
+  HWindow := FindWindow('TForm1', 'Civilization II UI Additions Launcher');
   if HWindow > 0 then
   begin
     PostMessage(HWindow, WM_APP + 1, WParam, LParam);
@@ -184,6 +184,18 @@ asm
     mov   ecx, $0066C7A8
     mov   eax, A_j_Q_RedrawMap_sub_47CD51
     call  eax
+end;
+
+function j_Q_ScreenToMap(ScreenX, ScreenY: Integer; var MapX, MapY: Integer): LongBool; register;
+asm
+    push  ScreenY
+    push  ScreenX
+    push  MapY
+    push  MapX
+    mov   ecx, MapGraphicsInfo
+    mov   eax, A_j_Q_ScreenToMap_sub_47A540
+    call  eax
+    mov   @Result, eax
 end;
 
 function GetFontHeightWithExLeading(thisFont: Pointer): Integer;
@@ -449,45 +461,51 @@ var
   MapX: Integer;
   MapY: Integer;
   ConversionError: LongBool;
+  SavedMapTopLeft: TPoint;
 begin
+  //SendMessageToLoader(Msg,$1111);
   Result := True;
   ScreenX := Smallint(LParam and $FFFF);
   ScreenY := Smallint((LParam shr 16) and $FFFF);
   case Msg of
     WM_MBUTTONDOWN:
       begin
-        MouseDrag.Active := True;
-        MouseDrag.StartX := ScreenX;
-        MouseDrag.StartY := ScreenY;
+        MouseDrag.Active := False;
+        if not j_Q_ScreenToMap(ScreenX, ScreenY, MapX, MapY) then
+        begin
+          MouseDrag.Active := True;
+          MouseDrag.ScreenStart.X := ScreenX;
+          MouseDrag.ScreenStart.Y := ScreenY;
+          MouseDrag.MapStartCorner.X := MapGraphicsInfo^.MapTopLeft.X;
+          MouseDrag.MapStartCorner.Y := MapGraphicsInfo^.MapTopLeft.Y;
+          Result := False;
+        end;
+        SendMessageToLoader($FFFF,0);
         Result := False;
       end;
     WM_MOUSEMOVE:
       if MouseDrag.Active then
       begin
-        DeltaX := MouseDrag.StartX - ScreenX;
-        DeltaY := MouseDrag.StartY - ScreenY;
-        asm
-    push  ScreenY
-    push  ScreenX
-    lea   eax, MapY
-    push  eax
-    lea   eax, MapX
-    push  eax
-    mov   ecx, MapGraphicsInfo
-    mov   eax, A_j_Q_ScreenToMap_sub_47A540
-    call  eax
-    mov   ConversionError, eax
-        end;
-        if not ConversionError then
+        {SavedMapTopLeft := MapGraphicsInfo^.MapTopLeft;
+        MapGraphicsInfo^.MapTopLeft := MouseDrag.MapStartCorner;
+        DeltaX := ScreenX - MouseDrag.ScreenStart.X;
+        DeltaY := ScreenY - MouseDrag.ScreenStart.Y;
+        //SendMessageToLoader(DeltaX,DeltaY);
+        if not j_Q_ScreenToMap(MouseDrag.ScreenStart.X - DeltaX, MouseDrag.ScreenStart.Y - DeltaY, MapX, MapY) then
         begin
           MapGraphicsInfo^.MapCenter.X := MapX;
           MapGraphicsInfo^.MapCenter.Y := MapY;
-          j_Q_RedrawMap();
           Result := False;
-        end
+        end;
+        MapGraphicsInfo^.MapTopLeft := SavedMapTopLeft;}
+        PInteger($0062BCB0)^ := 1;
+        j_Q_RedrawMap();
+        PInteger($0062BCB0)^ := 0;
+        Result := False;
       end;
     WM_MBUTTONUP:
       begin
+        SendMessageToLoader(0,$FFFF);
         MouseDrag.Active := False;
         Result := False;
       end;

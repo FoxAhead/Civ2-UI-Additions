@@ -2,6 +2,9 @@ unit Civ2UIATypes;
 
 interface
 
+uses
+  Types;
+
 type
   TWindowType = (wtUnknown, wtCityStatus, //F1
     wtDefenceMinister,                    //F2
@@ -24,8 +27,8 @@ type
 
   TMouseDrag = packed record
     Active: Boolean;
-    StartX: Smallint;
-    StartY: Smallint;
+    ScreenStart: TPoint;
+    MapStartCorner: TPoint;
   end;
 
 const
@@ -47,3 +50,4 @@ const
 implementation
 
 end.
+

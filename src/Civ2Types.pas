@@ -167,8 +167,14 @@ type
     DrawInfo: PDrawInfo;                  // + 0x40
     Unknown4: array[$44..$47] of Byte;
     WindowInfo: PWindowInfo;              // + 0x48
-    Unknown5: array[$4C..$2DF] of Byte;
+    Unknown5: array[$4C..$123] of Byte;
+    ClientRect: TRect;                    // + 0x124
+    Unknown6: array[$134..$2DF] of Byte;
     MapCenter: TMapCoordinates;           // + 0x2E0
+    Unknown7: Integer;
+    MapTopLeft: TPoint;                   // + 0x2E8
+    Unknown8: array[$2F0..$307] of Byte;
+    MapCellSize: TSize;                   // + 0x308
   end;
 
   TDrawInfo = packed record
