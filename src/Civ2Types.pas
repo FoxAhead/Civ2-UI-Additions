@@ -267,6 +267,8 @@ const
   A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85 = $00403D00;
   A_j_Q_ScreenToMap_sub_47A540 = $00402B2B;
   A_j_Q_RedrawMap_sub_47CD51 = $00401F32;
+  A_Q_GetFontHeightWithExLeading_sub_403819 = $00403819;
+  A_Q_On_WM_TIMER_sub_5D47D0 = $005D47D0;
 implementation
 
 end.

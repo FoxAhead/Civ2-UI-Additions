@@ -194,12 +194,13 @@ object Form1: TForm1
     Filter = '*.exe|*.exe'
     Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]
     Left = 404
-    Top = 28
+    Top = 4
   end
   object OpenDialogDll: TOpenDialog
     Filter = '*.dll|*.dll'
     Options = [ofHideReadOnly, ofFileMustExist, ofEnableSizing]
     Left = 404
+    Top = 32
   end
   object SaveDialogLnk: TSaveDialog
     FileName = 'Civ2 with UI Additions.lnk'

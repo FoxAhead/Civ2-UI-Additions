@@ -15,6 +15,7 @@ uses
   SysUtils,
   Classes,
   Messages,
+  MMSystem,
   Windows,
   ShellAPI,
   Math,
@@ -31,7 +32,9 @@ var
   SavedThis: Cardinal;
   ListOfUnits: TListOfUnits;
   MouseDrag: TMouseDrag;
-
+  MCIPlayId: MCIDEVICEID;
+  MCIPlayTrack: Cardinal;
+  MCIPlayLength: Cardinal;
   ShieldLeft: ^TShieldLeft = Pointer($642C48);
   ShieldTop: ^TShieldTop = Pointer($642B48);
   ShieldFontInfo: ^TFontInfo = Pointer($006AC090);
@@ -169,6 +172,41 @@ begin
     MapZoom^ := NewZoom;
 end;
 
+function FastSwap(Value: Cardinal): Cardinal; register;
+asm
+    bswap eax
+end;
+
+function CDGetTrackLength(Id: MCIDEVICEID; TrackN: Cardinal): Cardinal;
+var
+  StatusParms: TMCI_Status_Parms;
+begin
+  Result := 0;
+  StatusParms.dwItem := MCI_STATUS_LENGTH;
+  StatusParms.dwTrack := TrackN;
+  if mciSendCommand(Id, MCI_STATUS, MCI_STATUS_ITEM + MCI_TRACK, LongInt(@StatusParms)) = 0 then
+    Result := FastSwap(StatusParms.dwReturn shl 8);
+end;
+
+function CDGetPosition(Id: MCIDEVICEID): Cardinal;
+var
+  StatusParms: TMCI_Status_Parms;
+begin
+  Result := 0;
+  StatusParms.dwItem := MCI_STATUS_POSITION;
+  if mciSendCommand(Id, MCI_STATUS, MCI_STATUS_ITEM, LongInt(@StatusParms)) = 0 then
+    Result := FastSwap(StatusParms.dwReturn);
+end;
+
+function CDGetMode(Id: MCIDEVICEID): Cardinal;
+var
+  StatusParms: TMCI_Status_Parms;
+begin
+  Result := 0;
+  StatusParms.dwItem := MCI_STATUS_MODE;
+  if mciSendCommand(Id, MCI_STATUS, MCI_STATUS_ITEM, LongInt(@StatusParms)) = 0 then
+    Result := StatusParms.dwReturn;
+end;
 //--------------------------------------------------------------------------------------------------
 //
 //   Patches Section
@@ -201,7 +239,7 @@ end;
 function GetFontHeightWithExLeading(thisFont: Pointer): Integer;
 asm
     mov   ecx, thisFont
-    mov   eax, $00403819 // CallQ_GetFontHeightWithExLeading_sub_403819
+    mov   eax, A_Q_GetFontHeightWithExLeading_sub_403819
     call  eax
 end;
 
@@ -480,7 +518,7 @@ begin
           MouseDrag.MapStartCorner.Y := MapGraphicsInfo^.MapTopLeft.Y;
           Result := False;
         end;
-        SendMessageToLoader($FFFF,0);
+        SendMessageToLoader($FFFF, 0);
         Result := False;
       end;
     WM_MOUSEMOVE:
@@ -505,7 +543,7 @@ begin
       end;
     WM_MBUTTONUP:
       begin
-        SendMessageToLoader(0,$FFFF);
+        SendMessageToLoader(0, $FFFF);
         MouseDrag.Active := False;
         Result := False;
       end;
@@ -898,6 +936,45 @@ asm
     ret
 end;
 
+function PatchMciPlay(MCIId: MCIDEVICEID; uMessage: UINT; dwParam1, dwParam2: DWORD): MCIERROR; stdcall;
+var
+  PlayParms: TMCI_Play_Parms;
+begin
+  MCIPlayId := 0;
+  MCIPlayTrack := 0;
+  Result := mciSendCommand(MCIId, uMessage, dwParam1, dwParam2);
+  if Result = 0 then
+  begin
+    PlayParms := PMCI_Play_Parms(dwParam2)^;
+    MCIPlayId := MCIId;
+    MCIPlayTrack := PlayParms.dwFrom;
+    MCIPlayLength := CDGetTrackLength(MCIPlayId, MCIPlayTrack);
+  end;
+end;
+
+function PatchCheckCDStatus(): Integer; stdcall;
+var
+  Position: Cardinal;
+  Id: Cardinal;
+begin
+  Result := 0;
+  if MCIPlayId > 0 then
+  begin
+    if CDGetMode(MCIPlayId) = MCI_MODE_PLAY then
+    begin
+      Position := CDGetPosition(MCIPlayId);
+      if ((Position and $00FFFFFF) >= MCIPlayLength) or ((Position shr 24) <> MCIPlayTrack) then
+      begin
+        Id := MCIPlayId;
+        MCIPlayId := 0;
+        mciSendCommand(Id, MCI_STOP, 0, 0);
+        mciSendCommand(Id, MCI_CLOSE, 0, 0);
+        PostMessage(PCardinal($006E4FF8)^, MM_MCINOTIFY, MCI_NOTIFY_SUCCESSFUL, Id);
+      end;
+    end;
+  end;
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -938,6 +1015,8 @@ begin
   WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
   WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
   WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
+  WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchCheckCDStatus);
+  WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
 end;
 
 procedure DllMain(Reason: Integer);

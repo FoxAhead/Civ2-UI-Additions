@@ -20,6 +20,7 @@ var
   DllLoaded: Boolean;
   LogMemo: TMemo;
   DebugEnabled: Boolean;
+  WaitProcess: Boolean;
 
 function InitializeVars(): Boolean;
 
@@ -99,6 +100,7 @@ begin
       SetFileNameIfExist(DllName, ParamStr(i + 1));
   end;
   DebugEnabled := FindCmdLineSwitch('debug');
+  WaitProcess := FindCmdLineSwitch('wait');
   Result := (ExeName <> '') and (DllName <> '');
 end;
 
@@ -116,7 +118,7 @@ begin
     end;
 end;
 
-procedure LaunchGame();
+function LaunchGame(): TProcessInformation;
 var
   FileName: string;
   Path: string;
@@ -189,7 +191,7 @@ begin
       raise Exception.Create('SetThreadContext: ' + IntToStr(GetLastError()));
     if ResumeThread(ProcessInformation.hThread) = $FFFFFFFF then
       raise Exception.Create('ResumeThread: ' + IntToStr(GetLastError()));
-
+    Result := ProcessInformation;
   except
     if (ProcessInformation.hProcess <> 0) then
       TerminateProcess(ProcessInformation.hProcess, 1);
@@ -211,13 +213,19 @@ begin
 end;
 
 function CheckLaunchClose(): Boolean;
+var
+  PI: TProcessInformation;
 begin
   Result := False;
   try
     Check();
-    LaunchGame();
+    PI := LaunchGame();
     if not DebugEnabled then
     begin
+      if WaitProcess then
+      begin
+        while (WaitForSingleObject(PI.hProcess, 500) = WAIT_TIMEOUT) do;
+      end;
       Result := True;
       Application.Terminate();
     end;
