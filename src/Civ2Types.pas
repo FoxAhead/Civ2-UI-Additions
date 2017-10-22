@@ -160,15 +160,15 @@ type
 
   TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C)
     Unknown1: array[$00..$13] of Byte;
-    Rectangle: Pointer;                   // + 0x14
-    Unknown2: array[$18..$33] of Byte;
+    ClientRectangle: TRect;               // + 0x14
+    WindowRectangle: TRect;               // + 0x24
     SpriteArea: Pointer;                  // + 0x34
     Unknown3: array[$35..$3C] of Byte;
     DrawInfo: PDrawInfo;                  // + 0x40
     Unknown4: array[$44..$47] of Byte;
-    WindowInfo: PWindowInfo;              // + 0x48
-    Unknown5: array[$4C..$123] of Byte;
-    ClientRect: TRect;                    // + 0x124
+    WindowInfo: TWindowInfo;              // + 0x48
+    Unknown5: array[$48 + SizeOf(TWindowInfo)..$123] of Byte;
+    ClientRect: TRect;                    // + 0x124 ???
     Unknown6: array[$134..$2DF] of Byte;
     MapCenter: TMapCoordinates;           // + 0x2E0
     Unknown7: Integer;
@@ -194,6 +194,8 @@ type
   TWindowStructure = packed record
     Unknown1: Integer;
     HWindow: HWND;                        // + 0x04
+    Unknown2: array[$08..$1F] of Byte;
+    Icon: HICON;                          // + 0x20
   end;
 
   PHFONT = ^HFONT;
@@ -269,7 +271,7 @@ const
   A_j_Q_RedrawMap_sub_47CD51 = $00401F32;
   A_Q_GetFontHeightWithExLeading_sub_403819 = $00403819;
   A_Q_On_WM_TIMER_sub_5D47D0 = $005D47D0;
+  A_Q_LoadMainIcon_sub_408050 = $00408050;
 implementation
 
 end.
-//Types

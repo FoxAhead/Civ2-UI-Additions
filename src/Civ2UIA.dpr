@@ -32,9 +32,11 @@ var
   SavedThis: Cardinal;
   ListOfUnits: TListOfUnits;
   MouseDrag: TMouseDrag;
+  MCICDCheckThrottle: Integer;
   MCIPlayId: MCIDEVICEID;
   MCIPlayTrack: Cardinal;
   MCIPlayLength: Cardinal;
+  MCITextSizeX: Integer;
   ShieldLeft: ^TShieldLeft = Pointer($642C48);
   ShieldTop: ^TShieldTop = Pointer($642B48);
   ShieldFontInfo: ^TFontInfo = Pointer($006AC090);
@@ -55,6 +57,7 @@ var
   CurrPopupInfo: PPCurrPopupInfo = Pointer($006CEC84);
   MapZoom: PSmallInt = Pointer($0066CA8C);
   MapGraphicsInfo: PGraphicsInfo = Pointer($0066C7A8);
+  MainWindowInfo: PWindowInfo = Pointer($006553D8);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -207,6 +210,65 @@ begin
   if mciSendCommand(Id, MCI_STATUS, MCI_STATUS_ITEM, LongInt(@StatusParms)) = 0 then
     Result := StatusParms.dwReturn;
 end;
+
+function CDPosition_To_String(TMSF: Cardinal): string;
+begin
+  Result := Format('Track %.2d - %.2d:%.2d', [HiByte(HiWord(TMSF)), LoByte(HiWord(TMSF)), HiByte(LoWord(TMSF))]);
+end;
+
+function CDLength_To_String(MSF: Cardinal): string;
+begin
+  Result := Format('%.2d:%.2d', [LoByte(HiWord(MSF)), HiByte(LoWord(MSF))]);
+end;
+
+function CDTime_To_Frames(TMSF: Cardinal): Integer;
+begin
+  Result := LoByte(HiWord(TMSF)) * 60 * 75 + HiByte(LoWord(TMSF)) * 75 + LoByte(LoWord(TMSF));
+end;
+
+procedure DrawCDPositon(Position: Cardinal);
+var
+  DC: HDC;
+  Canvas: TCanvas;
+  SavedDC: Integer;
+  UnitType: Byte;
+  TextOut: string;
+  R: TRect;
+  R2: TRect;
+  TextSize: TSize;
+begin
+  TextOut := CDPosition_To_String(Position) + ' / ' + CDLength_To_String(MCIPlayLength);
+  DC := MapGraphicsInfo^.DrawInfo^.DeviceContext;
+  SavedDC := SaveDC(DC);
+  Canvas := TCanvas.Create();
+  Canvas.Handle := DC;
+  Canvas.Font.Style := [];
+  Canvas.Font.Size := 10;
+  Canvas.Font.Name := 'Arial';
+  TextSize := Canvas.TextExtent(TextOut);
+  if TextSize.cx > MCITextSizeX then
+    MCITextSizeX := TextSize.cx;
+  R := Rect(0, 0, MCITextSizeX, TextSize.cy);
+  OffsetRect(R, MapGraphicsInfo^.ClientRectangle.Right - MCITextSizeX, 9);
+  InflateRect(R, 2, 0);
+  Canvas.Brush.Style := bsSolid;
+  Canvas.Brush.Color := clWhite;
+  Canvas.Pen.Color := clBlack;
+  Canvas.Rectangle(R);
+  R2 := R;
+  InflateRect(R2, -1, -1);
+  R2.Right := R2.Left + (R2.Right - R2.Left) * CDTime_To_Frames(Position) div CDTime_To_Frames(MCIPlayLength);
+  Canvas.Brush.Color := clSkyBlue;
+  Canvas.Pen.Color := clSkyBlue;
+  Canvas.Rectangle(R2);
+  Canvas.Brush.Style := bsClear;
+  TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 0, clBlack, clWhite, SHADOW_NONE);
+  Canvas.Handle := 0;
+  Canvas.Free;
+  RestoreDC(DC, SavedDC);
+  InvalidateRect(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow, @R, True);
+end;
+
 //--------------------------------------------------------------------------------------------------
 //
 //   Patches Section
@@ -318,7 +380,7 @@ begin
   Result := True;
   if Msg = WM_COMMAND then
   begin
-    case LOWORD(WParam) of
+    case LoWord(WParam) of
       IDM_GITHUB:
         begin
           ShellExecute(0, 'open', 'https://github.com/FoxAhead/Civ2-UI-Additions', nil, nil, SW_SHOW);
@@ -442,7 +504,7 @@ begin
     goto EndOfFunction;
   end;
 
-  if LOWORD(WParam) = MK_CONTROL then
+  if LoWord(WParam) = MK_CONTROL then
   begin
     if ChangeMapZoom(Sign(Delta)) then
     begin
@@ -465,7 +527,7 @@ begin
   Delta := 0;
   if GuessWindowType(HWindow) = wtUnitsListPopup then
   begin
-    case LOWORD(WParam) of
+    case LoWord(WParam) of
       SB_LINEUP:
         Delta := -1;
       SB_LINEDOWN:
@@ -958,21 +1020,40 @@ var
   Id: Cardinal;
 begin
   Result := 0;
-  if MCIPlayId > 0 then
+  Inc(MCICDCheckThrottle);
+  if MCICDCheckThrottle > 5 then
   begin
-    if CDGetMode(MCIPlayId) = MCI_MODE_PLAY then
+    MCICDCheckThrottle := 0;
+    if MCIPlayId > 0 then
     begin
-      Position := CDGetPosition(MCIPlayId);
-      if ((Position and $00FFFFFF) >= MCIPlayLength) or ((Position shr 24) <> MCIPlayTrack) then
+      if CDGetMode(MCIPlayId) = MCI_MODE_PLAY then
       begin
-        Id := MCIPlayId;
-        MCIPlayId := 0;
-        mciSendCommand(Id, MCI_STOP, 0, 0);
-        mciSendCommand(Id, MCI_CLOSE, 0, 0);
-        PostMessage(PCardinal($006E4FF8)^, MM_MCINOTIFY, MCI_NOTIFY_SUCCESSFUL, Id);
+        Position := CDGetPosition(MCIPlayId);
+        DrawCDPositon(Position);
+        if ((Position and $00FFFFFF) >= MCIPlayLength) or ((Position shr 24) <> MCIPlayTrack) then
+        begin
+          Id := MCIPlayId;
+          MCIPlayId := 0;
+          mciSendCommand(Id, MCI_STOP, 0, 0);
+          mciSendCommand(Id, MCI_CLOSE, 0, 0);
+          PostMessage(PCardinal($006E4FF8)^, MM_MCINOTIFY, MCI_NOTIFY_SUCCESSFUL, Id);
+        end;
       end;
     end;
   end;
+end;
+
+procedure PatchLoadMainIcon(IconName: PChar); stdcall;
+var
+  ThisWindowInfo: PWindowInfo;
+begin
+  asm
+    mov   ThisWindowInfo, ecx
+    push  IconName
+    mov   eax, A_Q_LoadMainIcon_sub_408050
+    call  eax
+  end;
+  SetClassLong(ThisWindowInfo^.WindowStructure^.HWindow, GCL_HICON, ThisWindowInfo^.WindowStructure^.Icon);
 end;
 
 {$O+}
@@ -1017,6 +1098,7 @@ begin
   WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
   WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchCheckCDStatus);
   WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
+  WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
 end;
 
 procedure DllMain(Reason: Integer);
