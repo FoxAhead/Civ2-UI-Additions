@@ -1,4 +1,4 @@
-unit Civ2UIATypes;
+unit Civ2UIA_Types;
 
 interface
 
@@ -29,6 +29,7 @@ type
     Active: Boolean;
     ScreenStart: TPoint;
     MapStartCorner: TPoint;
+    MapStartCenter: TSmallPoint;
   end;
 
 const

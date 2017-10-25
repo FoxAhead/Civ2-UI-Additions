@@ -29,13 +29,6 @@ type
     MarginY: Cardinal;                    // + 15E0 = 6AA798
   end;
 
-  TCity = packed record
-    SIZE: Byte;
-    __1: array[1..$57] of Byte;
-  end;
-
-  TCities = array[0..$FF] of TCity;       // 64F349
-
   PWindowInfo = ^TWindowInfo;
   PButtonInfo = ^TButtonInfo;
   PScrollBarData = ^TScrollBarData;
@@ -44,7 +37,6 @@ type
   PCurrPopupInfo = ^TCurrPopupInfo;
   PPCurrPopupInfo = ^PCurrPopupInfo;
   PDrawInfo = ^TDrawInfo;
-  PMapCoordinates = ^TMapCoordinates;
 
   TControlInfo = packed record            // Size = $40
     ControlType: Integer;                 //  8-Scrollbar, 7-ListBox, 6-Button, 4-EditBox, 3-RadioButton(Group), 2-CheckBox, 1-ListItem
@@ -111,7 +103,6 @@ type
     _Unknown6: array[$90..$BB] of Byte;   // + 0x90
     ButtonInfoOK: PButtonInfo;            // + 0xBC
     ButtonInfoCANCEL: PButtonInfo;        // + 0xC0
-
   end;
 
   TScrollBarData = packed record          // GetWindowLongA(hWnd, GetClassLongA(hWnd, GCL_CBWNDEXTRA) - 8)
@@ -153,11 +144,6 @@ type
     ListItems: array of TControlInfo;     // + 0x280
   end;
 
-  TMapCoordinates = packed record
-    X: SmallInt;
-    Y: SmallInt;
-  end;
-
   TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C)
     Unknown1: array[$00..$13] of Byte;
     ClientRectangle: TRect;               // + 0x14
@@ -170,7 +156,7 @@ type
     Unknown5: array[$48 + SizeOf(TWindowInfo)..$123] of Byte;
     ClientRect: TRect;                    // + 0x124 ???
     Unknown6: array[$134..$2DF] of Byte;
-    MapCenter: TMapCoordinates;           // + 0x2E0
+    MapCenter: TSmallPoint;               // + 0x2E0
     Unknown7: Integer;
     MapTopLeft: TPoint;                   // + 0x2E8
     Unknown8: array[$2F0..$307] of Byte;
@@ -242,20 +228,64 @@ type
     Orders: Byte;                         // 0x6560FF
     byte_656100: Byte;                    // Home city
     align2: Byte;
-    word_656102: Word;
-    word_656104: Word;                    // PrevInStack
-    word_656106: Word;                    // NextInStack
-    word_656108: Word;
+    word_656102: Word;                    // GotoX
+    word_656104: Word;                    // GotoY
+    word_656106: Word;                    // PrevInStack
+    word_656108: Word;                    // NextInStack
     dword_65610A: Cardinal;
     word_65610E: Word;
   end;
 
   TUnits = array[0..$800] of TUnit;       // 6560F0
 
+  TCity = packed record                   // Size = 0x58
+    X: SmallInt;                          //
+    Y: SmallInt;                          // + 0x02
+    byte_64F344: Byte;                    // + 0x04
+    unk_64F345: Byte;                     // + 0x05
+    byte_64F346: Byte;                    // + 0x06
+    byte_64F347: Byte;                    // + 0x07
+    Owner: Byte;                          // + 0x08
+    Size: Byte;                           // + 0x09
+    Founder: Byte;                        // + 0x0A
+    TurnsCaptured: Byte;                  // + 0x0B
+    byte_64F34C: Byte;
+    RevealedSize: array[1..9] of Byte;
+    dword_64F356: Integer;
+    word_64F35A: SmallInt;
+    word_64F35C: SmallInt;
+    word_64F35E: SmallInt;
+    Name: array[0..15] of Char;
+    dword_64F370: Integer;
+    byte_64F374: array[1..5] of Byte;
+    byte_64F379: Byte;
+    byte_64F37A: Byte;
+    byte_64F37B: Byte;
+    byte_64F37C: array[1..2] of Byte;
+    byte_64F37E: Byte;
+    byte_64F37F: array[1..2] of Byte;
+    byte_64F381: Byte;
+    byte_64F382: array[1..2] of Byte;
+    word_64F384: SmallInt;
+    word_64F386: array[1..2] of SmallInt;
+    word_64F38A: SmallInt;
+    word_64F38C: SmallInt;
+    word_64F38E: SmallInt;
+    byte_64F390: Byte;
+    byte_64F391: Byte;
+    byte_64F392: Byte;
+    byte_64F393: Byte;
+    ID: Integer;
+  end;
+
+  TCities = array[1..$100] of TCity;      // 64F340
+
   TCiv = packed record                    // Size = 0x594
-    Unknown1: array[0..$7] of Byte;       //          64C6A0
+    Unknown1: Word;                       //          64C6A0
+    Gold: Integer;                        // + 0x02 = 64C6A2
+    Unknown2: Word;                       // + 0x06 = 64C6A6
     Beakers: Word;                        // + 0x08 = 64C6A8
-    Unknown2: array[$A..$593] of Byte;
+    Unknown3: array[$A..$593] of Byte;
   end;
 
   TCivs = array[1..8] of TCiv;            // 64C6A0
@@ -272,6 +302,9 @@ const
   A_Q_GetFontHeightWithExLeading_sub_403819 = $00403819;
   A_Q_On_WM_TIMER_sub_5D47D0 = $005D47D0;
   A_Q_LoadMainIcon_sub_408050 = $00408050;
+  A_j_Q_GetNumberOfUnitsInStack_sub_5B50AD = $004029E1;
+  A_Q_PopupListOfUnits_sub_5B6AEA = $005B6AEA;
+  A_j_Q_CreateScrollbar_sub_40FC50 = $0040FC50;
 implementation
 
 end.

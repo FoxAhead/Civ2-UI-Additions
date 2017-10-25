@@ -20,7 +20,10 @@ uses
   ShellAPI,
   Math,
   Civ2Types in 'Civ2Types.pas',
-  Civ2UIATypes in 'Civ2UIATypes.pas';
+  Civ2UIA_Types in 'Civ2UIA_Types.pas',
+  Civ2UIA_Options in 'Civ2UIA_Options.pas',
+  Civ2UIA_c2p in 'Civ2UIA_c2p.pas',
+  Civ2UIA_Proc in 'Civ2UIA_Proc.pas';
 
 {$R *.res}
 
@@ -283,6 +286,15 @@ asm
     push  [$006D1DA0]
     mov   ecx, $0066C7A8
     mov   eax, A_j_Q_RedrawMap_sub_47CD51
+    call  eax
+end;
+
+procedure Q_CenterView_sub_410402(X, Y: Integer);
+asm
+    push  Y
+    push  X
+    mov   ecx, MapGraphicsInfo
+    mov   eax, $00403404
     call  eax
 end;
 
@@ -573,33 +585,47 @@ begin
         MouseDrag.Active := False;
         if not j_Q_ScreenToMap(ScreenX, ScreenY, MapX, MapY) then
         begin
+          SendMessageToLoader($FFFF, 0);
           MouseDrag.Active := True;
           MouseDrag.ScreenStart.X := ScreenX;
           MouseDrag.ScreenStart.Y := ScreenY;
           MouseDrag.MapStartCorner.X := MapGraphicsInfo^.MapTopLeft.X;
           MouseDrag.MapStartCorner.Y := MapGraphicsInfo^.MapTopLeft.Y;
+          MouseDrag.MapStartCenter.X := MapGraphicsInfo^.MapCenter.X;
+          MouseDrag.MapStartCenter.Y := MapGraphicsInfo^.MapCenter.Y;
           Result := False;
+          SendMessageToLoader(MouseDrag.MapStartCorner.X, MouseDrag.MapStartCorner.Y);
+          SendMessageToLoader(MouseDrag.MapStartCenter.X, MouseDrag.MapStartCenter.Y);
         end;
-        SendMessageToLoader($FFFF, 0);
         Result := False;
       end;
     WM_MOUSEMOVE:
       if MouseDrag.Active then
       begin
-        {SavedMapTopLeft := MapGraphicsInfo^.MapTopLeft;
+        SavedMapTopLeft := MapGraphicsInfo^.MapTopLeft;
         MapGraphicsInfo^.MapTopLeft := MouseDrag.MapStartCorner;
         DeltaX := ScreenX - MouseDrag.ScreenStart.X;
         DeltaY := ScreenY - MouseDrag.ScreenStart.Y;
         //SendMessageToLoader(DeltaX,DeltaY);
-        if not j_Q_ScreenToMap(MouseDrag.ScreenStart.X - DeltaX, MouseDrag.ScreenStart.Y - DeltaY, MapX, MapY) then
+//        if not j_Q_ScreenToMap(MouseDrag.ScreenStart.X - DeltaX, MouseDrag.ScreenStart.Y - DeltaY, MapX, MapY) then
+        if not j_Q_ScreenToMap(ScreenX, ScreenY, MapX, MapY) then
         begin
-          MapGraphicsInfo^.MapCenter.X := MapX;
-          MapGraphicsInfo^.MapCenter.Y := MapY;
+          SendMessageToLoader(MapX, MapY);
+          MapGraphicsInfo^.MapCenter.X := 2 * MouseDrag.MapStartCenter.X - MapX;
+          MapGraphicsInfo^.MapCenter.Y := 2 * MouseDrag.MapStartCenter.Y - MapY;
+          if MapGraphicsInfo^.MapCenter.Y < 0 then
+            MapGraphicsInfo^.MapCenter.Y := 0;
+          //SendMessageToLoader(MapGraphicsInfo^.MapCenter.X, MapGraphicsInfo^.MapCenter.Y);
           Result := False;
         end;
-        MapGraphicsInfo^.MapTopLeft := SavedMapTopLeft;}
-        PInteger($0062BCB0)^ := 1;
-        j_Q_RedrawMap();
+        MapGraphicsInfo^.MapTopLeft := SavedMapTopLeft;
+        MapGraphicsInfo^.MapTopLeft.X := MapGraphicsInfo^.MapCenter.X - (MouseDrag.MapStartCenter.X - MouseDrag.MapStartCorner.X);
+        MapGraphicsInfo^.MapTopLeft.Y := MapGraphicsInfo^.MapCenter.Y - (MouseDrag.MapStartCenter.Y - MouseDrag.MapStartCorner.Y);
+        if MapGraphicsInfo^.MapTopLeft.Y < -1 then
+          MapGraphicsInfo^.MapTopLeft.Y := -1;
+        PInteger($0062BCB0)^ := 1;        // Don't flush messages
+        Q_CenterView_sub_410402(MapGraphicsInfo^.MapCenter.X, MapGraphicsInfo^.MapCenter.Y);
+        //j_Q_RedrawMap();
         PInteger($0062BCB0)^ := 0;
         Result := False;
       end;
@@ -739,10 +765,6 @@ end;
 
 function PatchChangeListOfUnitsStart(PopupResult: Cardinal): Cardinal; stdcall;
 begin
-  if PopupResult = $FFFFFFFE then
-    Inc(ListOfUnits.Start, 3);
-  if PopupResult = $FFFFFFFD then
-    Dec(ListOfUnits.Start, 3);
   if ListOfUnits.Start > (ListOfUnits.Length - 9) then
     ListOfUnits.Start := ListOfUnits.Length - 9;
   if ListOfUnits.Start < 0 then
@@ -755,8 +777,8 @@ asm
     mov   ListOfUnits.Start, 0
     push  2
     push  [ebp - $1C]      // UnitIndex
-    mov   eax, $004029E1
-    call  eax            // Call j_Q_GetNumberOfUnitsInStack_sub_5B50AD
+    mov   eax, A_j_Q_GetNumberOfUnitsInStack_sub_5B50AD
+    call  eax
     add   esp, 8
     mov   ListOfUnits.Length, eax
 
@@ -764,15 +786,9 @@ asm
     push  [ebp - $14]
     push  [ebp - $18]
     push  [ebp - $1C]      // UnitIndex
-    mov   eax, $005B6AEA  // Call Q_PopupListOfUnits_sub_5B6AEA
+    mov   eax, A_Q_PopupListOfUnits_sub_5B6AEA
     call  eax
     add   esp, $0C
-    //push  eax
-    //call  PatchChangeListOfUnitsStart
-    //cmp   eax, $FFFFFFFE
-    //je    @@LABEL_POPUP
-    //cmp   eax, $FFFFFFFD
-    //je    @@LABEL_POPUP
     cmp   eax, $FFFFFFFC
     je    @@LABEL_POPUP
     ret
@@ -804,7 +820,7 @@ asm
     push  [esp + $18]
     push  [esp + $18]
     push  [esp + $18]
-    mov   eax, $0040FC50
+    mov   eax, A_j_Q_CreateScrollbar_sub_40FC50
     call  eax
 end;
 
@@ -1064,22 +1080,6 @@ end;
 //
 //--------------------------------------------------------------------------------------------------
 
-procedure WriteMemory(HProcess: Cardinal; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer);
-var
-  BytesWritten: Cardinal;
-  Offset: Integer;
-  SizeOP: Integer;
-begin
-  SizeOP := SizeOf(Opcodes);
-  if SizeOP > 0 then
-    WriteProcessMemory(HProcess, Pointer(Address), @Opcodes, SizeOP, BytesWritten);
-  if ProcAddress <> nil then
-  begin
-    Offset := Integer(ProcAddress) - Address - 4 - SizeOP;
-    WriteProcessMemory(HProcess, Pointer(Address + SizeOP), @Offset, 4, BytesWritten);
-  end;
-end;
-
 procedure Attach(HProcess: Cardinal);
 begin
   //WriteMemory(HProcess, $00403D00, [OP_JMP], @PatchGetInfoOfClickedCitySprite);
@@ -1099,6 +1099,7 @@ begin
   WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchCheckCDStatus);
   WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
   WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
+  C2Patches(HProcess);
 end;
 
 procedure DllMain(Reason: Integer);
@@ -1110,7 +1111,8 @@ begin
       begin
         SendMessageToLoader(1, 1);
         HProcess := OpenProcess(PROCESS_ALL_ACCESS, False, GetCurrentProcessId());
-        Attach(HProcess);
+        if UIAOPtions.MasterOn then
+          Attach(HProcess);
         CloseHandle(HProcess);
         SendMessageToLoader(0, 0);
       end;

@@ -4,7 +4,7 @@ object Form1: TForm1
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'Civilization II UI Additions Launcher'
-  ClientHeight = 289
+  ClientHeight = 297
   ClientWidth = 513
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -34,7 +34,7 @@ object Form1: TForm1
   end
   object LabelVersion: TLabel
     Left = 470
-    Top = 268
+    Top = 280
     Width = 35
     Height = 13
     Alignment = taRightJustify
@@ -43,7 +43,7 @@ object Form1: TForm1
   end
   object Label3: TLabel
     Left = 8
-    Top = 260
+    Top = 272
     Width = 75
     Height = 13
     Caption = '2017 FoxAhead'
@@ -51,7 +51,7 @@ object Form1: TForm1
   end
   object LabelGitHub: TLabel
     Left = 472
-    Top = 252
+    Top = 264
     Width = 33
     Height = 13
     Cursor = crHandPoint
@@ -67,7 +67,7 @@ object Form1: TForm1
   end
   object LabelDebug: TLabel
     Left = 404
-    Top = 268
+    Top = 280
     Width = 101
     Height = 13
     AutoSize = False
@@ -78,7 +78,7 @@ object Form1: TForm1
     Left = 4
     Top = 60
     Width = 505
-    Height = 189
+    Height = 201
     TabStop = False
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clWindowText
@@ -97,6 +97,7 @@ object Form1: TForm1
       ' - Number of the game turn is displayed'
       ' - Current research numbers are displayed in Science Advisor'
       ' - 64 bit patch included'
+      ' - CD Audio: correct looping and progress display'
       
         'This launcher will search for CIV2.EXE and CIV2UIA.DLL in its cu' +
         'rrent folder and try to set all paths '
@@ -140,7 +141,7 @@ object Form1: TForm1
   end
   object ButtonStart: TButton
     Left = 260
-    Top = 256
+    Top = 268
     Width = 101
     Height = 25
     Hint = 'Close this screen and start game'
@@ -183,7 +184,7 @@ object Form1: TForm1
   end
   object Button1: TButton
     Left = 152
-    Top = 256
+    Top = 268
     Width = 101
     Height = 25
     Caption = 'Create shortcut...'
@@ -207,6 +208,6 @@ object Form1: TForm1
     Filter = '*.lnk|*.lnk'
     Options = [ofOverwritePrompt, ofHideReadOnly, ofPathMustExist, ofEnableSizing]
     Left = 120
-    Top = 256
+    Top = 268
   end
 end

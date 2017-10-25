@@ -54,6 +54,8 @@ implementation
 //--------------------------------------------------------------------------------------------------
 
 uses
+  Types,
+  Civ2UIA_Options,
   Civ2UIALauncherProc;
 
 {$R *.dfm}

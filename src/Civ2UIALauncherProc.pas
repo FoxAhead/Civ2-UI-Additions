@@ -42,6 +42,14 @@ function GetFileSize(FileName: string): Cardinal;
 implementation
 //--------------------------------------------------------------------------------------------------
 
+uses
+  Civ2UIA_Options;
+
+procedure Zero(Destination: Pointer);
+begin
+  FillChar(Destination^, SizeOf(Destination^), 0);
+end;
+
 function CurrentFileInfo(NameApp: string): string;
 var
   dump: DWORD;
@@ -139,6 +147,7 @@ var
   BytesRead: Cardinal;
   BytesWritten: Cardinal;
   i: Integer;
+  Options: TUIAOptions;
 begin
   try
     Log('');
@@ -163,6 +172,22 @@ begin
       raise Exception.Create('ReadProcessMemory: ' + IntToStr(GetLastError()));
     Log('BytesRead ' + IntToStr(BytesRead));
     if not WriteProcessMemory(ProcessInformation.hProcess, Pointer(EntryPointAddress), @Inject, SizeOf(Inject), BytesWritten) then
+      raise Exception.Create('WriteProcessMemory: ' + IntToStr(GetLastError()));
+    Log('BytesWritten ' + IntToStr(BytesWritten));
+    Zero(@Options);
+    Options.MasterOn := True;
+    Options.RetirementYearOn := False;
+    Options.RetirementWarningYear := 3000;
+    Options.RetirementYear := 3020;
+    Options.GoldLimitOn := True;
+    Options.GoldLimit := $3FFFFFFF;       //0x7530
+    Options.PopulationLimitOn := True;
+    Options.PopulationLimit := $3FFFFFFF; // 0x7D00
+    Options.MapSizeLimitOn := True;
+    Options.MapXLimit := $1FF;            // 250
+    Options.MapYLimit := $1FF;            // 250
+    Options.MapSizeLimit := $7FFF;        // 10000
+    if not WriteProcessMemory(ProcessInformation.hProcess, UIAOPtions, @Options, SizeOf(Options), BytesWritten) then
       raise Exception.Create('WriteProcessMemory: ' + IntToStr(GetLastError()));
     Log('BytesWritten ' + IntToStr(BytesWritten));
     if ResumeThread(ProcessInformation.hThread) = $FFFFFFFF then
@@ -224,7 +249,7 @@ begin
     begin
       if WaitProcess then
       begin
-        while (WaitForSingleObject(PI.hProcess, 500) = WAIT_TIMEOUT) do;
+        while (WaitForSingleObject(PI.hProcess, 500) = WAIT_TIMEOUT) do ;
       end;
       Result := True;
       Application.Terminate();
