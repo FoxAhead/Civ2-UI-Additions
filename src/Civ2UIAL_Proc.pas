@@ -1,18 +1,11 @@
-unit Civ2UIALauncherProc;
+unit Civ2UIAL_Proc;
 
 //--------------------------------------------------------------------------------------------------
 interface
 //--------------------------------------------------------------------------------------------------
 
 uses
-  Controls,
-  Forms,
-  StdCtrls,
-  SysUtils,
-  ShlObj,
-  ComObj,
-  ActiveX,
-  Windows;
+  StdCtrls;
 
 var
   ExeName: string;                        // = 'D:\GAMES\Civilization II Multiplayer Gold Edition\civ2.exe';
@@ -22,28 +15,64 @@ var
   DebugEnabled: Boolean;
   WaitProcess: Boolean;
 
+function AlreadyRunning(): Boolean;
+
+function CheckLaunchClose(): Boolean;
+
+function Civ2IsRunning(): Boolean;
+
+procedure CreateLnk(FileName, Path, WorkingDirectory, Description, Arguments: string);
+
+function CurrentFileInfo(NameApp: string): string;
+
 function InitializeVars(): Boolean;
 
 function IsSilentLaunch(): Boolean;
 
 procedure Log(Str: string);
 
-function CheckLaunchClose(): Boolean;
+function GetFileSize(FileName: string): Cardinal;
 
-function CurrentFileInfo(NameApp: string): string;
+function GetProcessHandle(Name: string): THandle;
 
-procedure CreateLnk(FileName, Path, WorkingDirectory, Description, Arguments: string);
+procedure SaveOptionsToINI();
 
 procedure SetFileNameIfExist(var Variable: string; FileName: string);
 
-function GetFileSize(FileName: string): Cardinal;
+procedure ShowOptionsDialog();
 
 //--------------------------------------------------------------------------------------------------
 implementation
 //--------------------------------------------------------------------------------------------------
 
 uses
-  Civ2UIA_Options;
+  Controls,
+  Forms,
+  SysUtils,
+  ShlObj,
+  ComObj,
+  ActiveX,
+  Windows,
+  IniFiles,
+  TlHelp32,
+  Civ2UIA_Options,
+  Civ2UIAL_FormOptions;
+
+function AlreadyRunning(): Boolean;
+begin
+  CreateMutex(nil, True, 'Civ2UIALauncher Once Only');
+  Result := (GetLastError = ERROR_ALREADY_EXISTS);
+end;
+
+function Civ2IsRunning(): Boolean;
+var
+  Mutex: THandle;
+begin
+  Mutex := OpenMutex(SYNCHRONIZE, False, 'Civilization II Once Only');
+  Result := Mutex <> 0;
+  if Result then
+    CloseHandle(Mutex);
+end;
 
 procedure Zero(Destination: Pointer);
 begin
@@ -92,6 +121,54 @@ begin
   Result := FindCmdLineSwitch('play');
 end;
 
+procedure LoadOptionsFromINI();
+var
+  OptionsINI: TMemIniFile;
+  INIFileName: string;
+begin
+  INIFileName := ChangeFileExt(Application.ExeName, '.ini');
+  OptionsINI := TMemIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
+  Options.MasterOn := OptionsINI.ReadBool('Options', 'MasterOn', Options.MasterOn);
+  Options.HostileAiOn := OptionsINI.ReadBool('civ2patch', 'HostileAiOn', Options.HostileAiOn);
+  Options.RetirementYearOn := OptionsINI.ReadBool('civ2patch', 'RetirementYearOn', Options.RetirementYearOn);
+  Options.RetirementWarningYear := OptionsINI.ReadInteger('civ2patch', 'RetirementWarningYear', Options.RetirementWarningYear);
+  Options.RetirementYear := OptionsINI.ReadInteger('civ2patch', 'RetirementYear', Options.RetirementYear);
+  Options.PopulationLimitOn := OptionsINI.ReadBool('civ2patch', 'PopulationLimitOn', Options.PopulationLimitOn);
+  Options.PopulationLimit := OptionsINI.ReadInteger('civ2patch', 'PopulationLimit', Options.PopulationLimit);
+  Options.GoldLimitOn := OptionsINI.ReadBool('civ2patch', 'GoldLimitOn', Options.GoldLimitOn);
+  Options.GoldLimit := OptionsINI.ReadInteger('civ2patch', 'GoldLimit', Options.GoldLimit);
+  Options.MapSizeLimitOn := OptionsINI.ReadBool('civ2patch', 'MapSizeLimitOn', Options.MapSizeLimitOn);
+  Options.MapXLimit := OptionsINI.ReadInteger('civ2patch', 'MapXLimit', Options.MapXLimit);
+  Options.MapYLimit := OptionsINI.ReadInteger('civ2patch', 'MapYLimit', Options.MapYLimit);
+  Options.MapSizeLimit := OptionsINI.ReadInteger('civ2patch', 'MapSizeLimit', Options.MapSizeLimit);
+  OptionsINI.Free;
+end;
+
+procedure SaveOptionsToINI();
+var
+  OptionsINI: TMemIniFile;
+  INIFileName: string;
+begin
+  INIFileName := ChangeFileExt(Application.ExeName, '.ini');
+  DeleteFile(PChar(INIFileName));
+  OptionsINI := TMemIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
+  OptionsINI.WriteBool('Options', 'MasterOn', Options.MasterOn);
+  OptionsINI.WriteBool('civ2patch', 'HostileAiOn', Options.HostileAiOn);
+  OptionsINI.WriteBool('civ2patch', 'RetirementYearOn', Options.RetirementYearOn);
+  OptionsINI.WriteInteger('civ2patch', 'RetirementWarningYear', Options.RetirementWarningYear);
+  OptionsINI.WriteInteger('civ2patch', 'RetirementYear', Options.RetirementYear);
+  OptionsINI.WriteBool('civ2patch', 'PopulationLimitOn', Options.PopulationLimitOn);
+  OptionsINI.WriteInteger('civ2patch', 'PopulationLimit', Options.PopulationLimit);
+  OptionsINI.WriteBool('civ2patch', 'GoldLimitOn', Options.GoldLimitOn);
+  OptionsINI.WriteInteger('civ2patch', 'GoldLimit', Options.GoldLimit);
+  OptionsINI.WriteBool('civ2patch', 'MapSizeLimitOn', Options.MapSizeLimitOn);
+  OptionsINI.WriteInteger('civ2patch', 'MapXLimit', Options.MapXLimit);
+  OptionsINI.WriteInteger('civ2patch', 'MapYLimit', Options.MapYLimit);
+  OptionsINI.WriteInteger('civ2patch', 'MapSizeLimit', Options.MapSizeLimit);
+  OptionsINI.UpdateFile();
+  OptionsINI.Free;
+end;
+
 function InitializeVars(): Boolean;
 var
   MyPath: string;
@@ -110,6 +187,7 @@ begin
   DebugEnabled := FindCmdLineSwitch('debug');
   WaitProcess := FindCmdLineSwitch('wait');
   Result := (ExeName <> '') and (DllName <> '');
+  LoadOptionsFromINI();
 end;
 
 procedure Log(Str: string);
@@ -147,7 +225,6 @@ var
   BytesRead: Cardinal;
   BytesWritten: Cardinal;
   i: Integer;
-  Options: TUIAOptions;
 begin
   try
     Log('');
@@ -174,19 +251,6 @@ begin
     if not WriteProcessMemory(ProcessInformation.hProcess, Pointer(EntryPointAddress), @Inject, SizeOf(Inject), BytesWritten) then
       raise Exception.Create('WriteProcessMemory: ' + IntToStr(GetLastError()));
     Log('BytesWritten ' + IntToStr(BytesWritten));
-    Zero(@Options);
-    Options.MasterOn := True;
-    Options.RetirementYearOn := False;
-    Options.RetirementWarningYear := 3000;
-    Options.RetirementYear := 3020;
-    Options.GoldLimitOn := True;
-    Options.GoldLimit := $3FFFFFFF;       //0x7530
-    Options.PopulationLimitOn := True;
-    Options.PopulationLimit := $3FFFFFFF; // 0x7D00
-    Options.MapSizeLimitOn := True;
-    Options.MapXLimit := $1FF;            // 250
-    Options.MapYLimit := $1FF;            // 250
-    Options.MapSizeLimit := $7FFF;        // 10000
     if not WriteProcessMemory(ProcessInformation.hProcess, UIAOPtions, @Options, SizeOf(Options), BytesWritten) then
       raise Exception.Create('WriteProcessMemory: ' + IntToStr(GetLastError()));
     Log('BytesWritten ' + IntToStr(BytesWritten));
@@ -244,12 +308,14 @@ begin
   Result := False;
   try
     Check();
+    LoadOptionsFromINI();
     PI := LaunchGame();
     if not DebugEnabled then
     begin
       if WaitProcess then
       begin
-        while (WaitForSingleObject(PI.hProcess, 500) = WAIT_TIMEOUT) do ;
+        while (WaitForSingleObject(PI.hProcess, 500) = WAIT_TIMEOUT) do
+          ;
       end;
       Result := True;
       Application.Terminate();
@@ -294,6 +360,36 @@ begin
     Result := sr.size;
     SysUtils.FindClose(sr);
   end;
+end;
+
+function GetProcessHandle(Name: string): THandle;
+var
+  Snapshot: THandle;
+  PE32: TProcessEntry32;
+begin
+  Result := 0;
+  Snapshot := CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  if Snapshot = INVALID_HANDLE_VALUE then
+    Exit;
+  PE32.dwSize := SizeOf(TProcessEntry32);
+  if (Process32First(Snapshot, PE32)) then
+    repeat
+      if PE32.szExeFile = Name then
+        Result := PE32.th32ProcessID;
+    until not Process32Next(Snapshot, PE32);
+  CloseHandle(Snapshot);
+end;
+
+procedure ShowOptionsDialog();
+var
+  FormOptions: TFormOptions;
+begin
+  FormOptions := TFormOptions.Create(Application);
+  if FormOptions.ShowModal() = mrOK then
+  begin
+
+  end;
+  FormOptions.Free;
 end;
 
 end.

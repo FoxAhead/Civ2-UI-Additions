@@ -154,13 +154,19 @@ type
     Unknown4: array[$44..$47] of Byte;
     WindowInfo: TWindowInfo;              // + 0x48
     Unknown5: array[$48 + SizeOf(TWindowInfo)..$123] of Byte;
-    ClientRect: TRect;                    // + 0x124 ???
+    ClientTopLeft: TPoint;                // + 0x124 ???
+    ClientSize: TSize;
     Unknown6: array[$134..$2DF] of Byte;
     MapCenter: TSmallPoint;               // + 0x2E0
-    Unknown7: Integer;
-    MapTopLeft: TPoint;                   // + 0x2E8
-    Unknown8: array[$2F0..$307] of Byte;
+    MapZoom: SmallInt;                    // + 0x2E4
+    Unknown7: SmallInt;                   // + 0x2E6
+    MapRect: TRect;                       // + 0x2E8
+    MapHalf: TSize;                       // + 0x2F8
+    Unknown8: array[$300..$307] of Byte;
     MapCellSize: TSize;                   // + 0x308
+    MapCellSize2: TSize;                  // + 0x310  1/2
+    MapCellSize4: TSize;                  // + 0x318  1/4
+
   end;
 
   TDrawInfo = packed record

@@ -27,9 +27,9 @@ type
 
   TMouseDrag = packed record
     Active: Boolean;
-    ScreenStart: TPoint;
-    MapStartCorner: TPoint;
-    MapStartCenter: TSmallPoint;
+    Moved: Boolean;
+    StartScreen: TPoint;
+    StartMapMean: TPoint;
   end;
 
 const

@@ -58,7 +58,6 @@ var
   TimesBigFontInfo: ^TFontInfo = Pointer($0063EAC0);
   MainMenu: ^HMENU = Pointer($006A64F8);
   CurrPopupInfo: PPCurrPopupInfo = Pointer($006CEC84);
-  MapZoom: PSmallInt = Pointer($0066CA8C);
   MapGraphicsInfo: PGraphicsInfo = Pointer($0066C7A8);
   MainWindowInfo: PWindowInfo = Pointer($006553D8);
 
@@ -168,14 +167,14 @@ function ChangeMapZoom(Delta: Integer): Boolean;
 var
   NewZoom: Integer;
 begin
-  NewZoom := MapZoom^ + Delta;
+  NewZoom := MapGraphicsInfo^.MapZoom + Delta;
   if NewZoom > 8 then
     NewZoom := 8;
   if NewZoom < -7 then
     NewZoom := -7;
-  Result := MapZoom^ <> NewZoom;
+  Result := MapGraphicsInfo^.MapZoom <> NewZoom;
   if Result then
-    MapZoom^ := NewZoom;
+    MapGraphicsInfo^.MapZoom := NewZoom;
 end;
 
 function FastSwap(Value: Cardinal): Cardinal; register;
@@ -516,7 +515,7 @@ begin
     goto EndOfFunction;
   end;
 
-  if LoWord(WParam) = MK_CONTROL then
+  if (LoWord(WParam) and MK_CONTROL) <> 0 then
   begin
     if ChangeMapZoom(Sign(Delta)) then
     begin
@@ -566,73 +565,111 @@ end;
 
 function PatchMButtonUpHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 var
-  ScreenX: Integer;
-  ScreenY: Integer;
-  DeltaX: Integer;
-  DeltaY: Integer;
-  MapX: Integer;
-  MapY: Integer;
-  ConversionError: LongBool;
-  SavedMapTopLeft: TPoint;
+  Screen: TPoint;
+  Delta: TPoint;
+  MapDelta: TPoint;
+  Xc, Yc: Integer;
+  IsMapWindow: Boolean;
 begin
-  //SendMessageToLoader(Msg,$1111);
   Result := True;
-  ScreenX := Smallint(LParam and $FFFF);
-  ScreenY := Smallint((LParam shr 16) and $FFFF);
+  Screen.X := Smallint(LParam and $FFFF);
+  Screen.Y := Smallint((LParam shr 16) and $FFFF);
+  IsMapWindow := False;
+  if MapGraphicsInfo^.WindowInfo.WindowStructure <> nil then
+    IsMapWindow := (HWindow = MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow);
   case Msg of
     WM_MBUTTONDOWN:
+      if (LoWord(WParam) and MK_CONTROL) <> 0 then
+      begin
+        if ChangeMapZoom(-MapGraphicsInfo^.MapZoom) then
+        begin
+          j_Q_RedrawMap();
+          Result := False;
+        end
+      end
+      else if (LoWord(WParam) and MK_SHIFT) <> 0 then
+      begin
+        SendMessageToLoader(MapGraphicsInfo^.MapCenter.X, MapGraphicsInfo^.MapCenter.Y);
+        SendMessageToLoader(MapGraphicsInfo^.MapHalf.cx, MapGraphicsInfo^.MapHalf.cy);
+        SendMessageToLoader(MapGraphicsInfo^.MapRect.Left, MapGraphicsInfo^.MapRect.Top);
+        Result := False;
+      end
+      else
       begin
         MouseDrag.Active := False;
-        if not j_Q_ScreenToMap(ScreenX, ScreenY, MapX, MapY) then
+        MouseDrag.Moved := False;
+        if IsMapWindow then
         begin
-          SendMessageToLoader($FFFF, 0);
           MouseDrag.Active := True;
-          MouseDrag.ScreenStart.X := ScreenX;
-          MouseDrag.ScreenStart.Y := ScreenY;
-          MouseDrag.MapStartCorner.X := MapGraphicsInfo^.MapTopLeft.X;
-          MouseDrag.MapStartCorner.Y := MapGraphicsInfo^.MapTopLeft.Y;
-          MouseDrag.MapStartCenter.X := MapGraphicsInfo^.MapCenter.X;
-          MouseDrag.MapStartCenter.Y := MapGraphicsInfo^.MapCenter.Y;
-          Result := False;
-          SendMessageToLoader(MouseDrag.MapStartCorner.X, MouseDrag.MapStartCorner.Y);
-          SendMessageToLoader(MouseDrag.MapStartCenter.X, MouseDrag.MapStartCenter.Y);
+          MouseDrag.StartScreen.X := Screen.X;
+          MouseDrag.StartScreen.Y := Screen.Y;
+          MouseDrag.StartMapMean.X := MapGraphicsInfo^.MapRect.Left + MapGraphicsInfo^.MapHalf.cx;
+          MouseDrag.StartMapMean.Y := MapGraphicsInfo^.MapRect.Top + MapGraphicsInfo^.MapHalf.cy;
         end;
         Result := False;
       end;
     WM_MOUSEMOVE:
-      if MouseDrag.Active then
       begin
-        SavedMapTopLeft := MapGraphicsInfo^.MapTopLeft;
-        MapGraphicsInfo^.MapTopLeft := MouseDrag.MapStartCorner;
-        DeltaX := ScreenX - MouseDrag.ScreenStart.X;
-        DeltaY := ScreenY - MouseDrag.ScreenStart.Y;
-        //SendMessageToLoader(DeltaX,DeltaY);
-//        if not j_Q_ScreenToMap(MouseDrag.ScreenStart.X - DeltaX, MouseDrag.ScreenStart.Y - DeltaY, MapX, MapY) then
-        if not j_Q_ScreenToMap(ScreenX, ScreenY, MapX, MapY) then
+        MouseDrag.Active := MouseDrag.Active and PtInRect(MapGraphicsInfo^.WindowRectangle, Screen) and IsMapWindow;
+        if MouseDrag.Active then
         begin
-          SendMessageToLoader(MapX, MapY);
-          MapGraphicsInfo^.MapCenter.X := 2 * MouseDrag.MapStartCenter.X - MapX;
-          MapGraphicsInfo^.MapCenter.Y := 2 * MouseDrag.MapStartCenter.Y - MapY;
-          if MapGraphicsInfo^.MapCenter.Y < 0 then
-            MapGraphicsInfo^.MapCenter.Y := 0;
-          //SendMessageToLoader(MapGraphicsInfo^.MapCenter.X, MapGraphicsInfo^.MapCenter.Y);
-          Result := False;
+          MouseDrag.Moved := True;
+          Delta.X := Screen.X - MouseDrag.StartScreen.X;
+          Delta.Y := Screen.Y - MouseDrag.StartScreen.Y;
+          MapDelta.X := (Delta.X * 2 + MapGraphicsInfo^.MapCellSize2.cx) div MapGraphicsInfo^.MapCellSize.cx;
+          MapDelta.Y := (Delta.Y * 2 + MapGraphicsInfo^.MapCellSize2.cy) div (MapGraphicsInfo^.MapCellSize.cy - 1);
+          if not Odd(MapDelta.X + MapDelta.Y) then
+          begin
+            if (LoWord(WParam) and MK_SHIFT) <> 0 then
+            begin
+              SendMessageToLoader(Delta.X, Delta.Y);
+              SendMessageToLoader(MapDelta.X, MapDelta.Y);
+            end;
+            Xc := MouseDrag.StartMapMean.X - MapDelta.X;
+            Yc := MouseDrag.StartMapMean.Y - MapDelta.Y;
+            if Odd(Xc + Yc) then
+            begin
+              if Odd(MapGraphicsInfo^.MapHalf.cx) then
+              begin
+                if Odd(Yc) then
+                  Dec(Xc)
+                else
+                  Inc(Xc);
+              end
+              else
+              begin
+                if Odd(Yc) then
+                  Inc(Xc)
+                else
+                  Dec(Xc);
+              end;
+            end;
+            if not Odd(Xc + Yc) and ((MapGraphicsInfo^.MapCenter.X <> Xc) or (MapGraphicsInfo^.MapCenter.Y <> Yc)) then
+            begin
+              PInteger($0062BCB0)^ := 1;  // Don't flush messages
+              Q_CenterView_sub_410402(Xc, Yc);
+              PInteger($0062BCB0)^ := 0;
+              Result := False;
+            end;
+          end;
         end;
-        MapGraphicsInfo^.MapTopLeft := SavedMapTopLeft;
-        MapGraphicsInfo^.MapTopLeft.X := MapGraphicsInfo^.MapCenter.X - (MouseDrag.MapStartCenter.X - MouseDrag.MapStartCorner.X);
-        MapGraphicsInfo^.MapTopLeft.Y := MapGraphicsInfo^.MapCenter.Y - (MouseDrag.MapStartCenter.Y - MouseDrag.MapStartCorner.Y);
-        if MapGraphicsInfo^.MapTopLeft.Y < -1 then
-          MapGraphicsInfo^.MapTopLeft.Y := -1;
-        PInteger($0062BCB0)^ := 1;        // Don't flush messages
-        Q_CenterView_sub_410402(MapGraphicsInfo^.MapCenter.X, MapGraphicsInfo^.MapCenter.Y);
-        //j_Q_RedrawMap();
-        PInteger($0062BCB0)^ := 0;
-        Result := False;
       end;
     WM_MBUTTONUP:
+      if MouseDrag.Active then
       begin
-        SendMessageToLoader(0, $FFFF);
         MouseDrag.Active := False;
+        if not MouseDrag.Moved then
+        begin
+          if not j_Q_ScreenToMap(MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y, Xc, Yc) then
+          begin
+            if ((MapGraphicsInfo^.MapCenter.X <> Xc) or (MapGraphicsInfo^.MapCenter.Y <> Yc)) then
+            begin
+              PInteger($0062BCB0)^ := 1;  // Don't flush messages
+              Q_CenterView_sub_410402(Xc, Yc);
+              PInteger($0062BCB0)^ := 0;
+            end;
+          end;
+        end;
         Result := False;
       end;
   end;
@@ -648,8 +685,8 @@ begin
       Result := PatchMouseWheelHandler(HWindow, Msg, WParam, LParam, FromCommon);
     WM_VSCROLL:
       Result := PatchVScrollHandler(HWindow, Msg, WParam, LParam, FromCommon);
-    //WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE:
-      //Result := PatchMButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
+    WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE:
+      Result := PatchMButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
   else
     Result := True;
   end;
