@@ -1119,24 +1119,30 @@ end;
 
 procedure Attach(HProcess: Cardinal);
 begin
-  //WriteMemory(HProcess, $00403D00, [OP_JMP], @PatchGetInfoOfClickedCitySprite);
-  WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
-  WriteMemory(HProcess, $005EB465, [], @PatchMessageProcessingCommon);
-  WriteMemory(HProcess, $005EACDE, [], @PatchMessageProcessing);
-  WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
-  WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
-  WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
-  WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
-  WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
-  WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
-  WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
-  WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
-  WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
-  WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
-  WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchCheckCDStatus);
-  WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
-  WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
-  C2Patches(HProcess);
+  if UIAOPtions.UIAEnable then
+  begin
+    //WriteMemory(HProcess, $00403D00, [OP_JMP], @PatchGetInfoOfClickedCitySprite);
+    WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
+    WriteMemory(HProcess, $005EB465, [], @PatchMessageProcessingCommon);
+    WriteMemory(HProcess, $005EACDE, [], @PatchMessageProcessing);
+    WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
+    WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
+    WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
+    WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
+    WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
+    WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
+    WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
+    WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
+    WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
+    WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
+    WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchCheckCDStatus);
+    WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
+    WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
+  end;
+  if UIAOPtions.civ2patchEnable then
+  begin
+    C2Patches(HProcess);
+  end;
 end;
 
 procedure DllMain(Reason: Integer);
@@ -1146,10 +1152,8 @@ begin
   case Reason of
     DLL_PROCESS_ATTACH:
       begin
-        SendMessageToLoader(1, 1);
         HProcess := OpenProcess(PROCESS_ALL_ACCESS, False, GetCurrentProcessId());
-        if UIAOPtions.MasterOn then
-          Attach(HProcess);
+        Attach(HProcess);
         CloseHandle(HProcess);
         SendMessageToLoader(0, 0);
       end;

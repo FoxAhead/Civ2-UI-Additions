@@ -1,5 +1,7 @@
 program Civ2UIALauncher;
 
+{$R 'Civ2UIAL_FormOptions.res' 'Civ2UIAL_FormOptions.rc'}
+
 uses
   Forms,
   Civ2UIA_Options in 'Civ2UIA_Options.pas',

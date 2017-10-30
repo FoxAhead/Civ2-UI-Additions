@@ -241,6 +241,7 @@ object Form1: TForm1
     Top = 192
   end
   object Timer1: TTimer
+    Enabled = False
     Interval = 500
     OnTimer = Timer1Timer
     Left = 404

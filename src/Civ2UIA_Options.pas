@@ -9,8 +9,9 @@ type
   PUIAOptions = ^TUIAOptions;
 
   TUIAOptions = packed record
-    MasterOn: Boolean;
+    UIAEnable: Boolean;
     // civ2patch
+    civ2patchEnable: Boolean;
     HostileAiOn: Boolean;
     RetirementYearOn: Boolean;
     RetirementWarningYear: Word;
@@ -27,7 +28,8 @@ type
 
 var
   Options: TUIAOptions = (
-    MasterOn: True;
+    UIAEnable: True;
+    civ2patchEnable: True;
     HostileAiOn: True;
     RetirementYearOn: True;
     RetirementWarningYear: 3000;          // Default = 2000

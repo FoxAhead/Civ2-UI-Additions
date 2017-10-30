@@ -14,7 +14,9 @@ object FormOptions: TFormOptions
   Font.Style = []
   OldCreateOrder = False
   Position = poMainFormCenter
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
+  OnDestroy = FormDestroy
   DesignSize = (
     513
     245)
@@ -25,6 +27,7 @@ object FormOptions: TFormOptions
     Top = 4
     Width = 133
     Height = 205
+    OnClickCheck = CheckListBox1ClickCheck
     Flat = False
     ItemHeight = 13
     TabOrder = 0
@@ -46,6 +49,7 @@ object FormOptions: TFormOptions
     ModalResult = 1
     ParentFont = False
     TabOrder = 1
+    OnClick = ButtonOKClick
   end
   object ButtonCancel: TButton
     Left = 260

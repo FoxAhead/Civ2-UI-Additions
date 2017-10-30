@@ -21,19 +21,23 @@ function CheckLaunchClose(): Boolean;
 
 function Civ2IsRunning(): Boolean;
 
-procedure CreateLnk(FileName, Path, WorkingDirectory, Description, Arguments: string);
-
 function CurrentFileInfo(NameApp: string): string;
+
+function GetFileSize(FileName: string): Cardinal;
+
+function GetOptionByKey(Key: string): Variant;
+
+procedure SetOptionByKey(Key: string; Value: Variant);
+
+function GetProcessHandle(Name: string): THandle;
 
 function InitializeVars(): Boolean;
 
 function IsSilentLaunch(): Boolean;
 
+procedure CreateLnk(FileName, Path, WorkingDirectory, Description, Arguments: string);
+
 procedure Log(Str: string);
-
-function GetFileSize(FileName: string): Cardinal;
-
-function GetProcessHandle(Name: string): THandle;
 
 procedure SaveOptionsToINI();
 
@@ -46,17 +50,17 @@ implementation
 //--------------------------------------------------------------------------------------------------
 
 uses
+  ActiveX,
+  Civ2UIA_Options,
+  Civ2UIAL_FormOptions,
+  ComObj,
   Controls,
   Forms,
-  SysUtils,
-  ShlObj,
-  ComObj,
-  ActiveX,
-  Windows,
   IniFiles,
+  ShlObj,
+  SysUtils,
   TlHelp32,
-  Civ2UIA_Options,
-  Civ2UIAL_FormOptions;
+  Windows;
 
 function AlreadyRunning(): Boolean;
 begin
@@ -128,7 +132,8 @@ var
 begin
   INIFileName := ChangeFileExt(Application.ExeName, '.ini');
   OptionsINI := TMemIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
-  Options.MasterOn := OptionsINI.ReadBool('Options', 'MasterOn', Options.MasterOn);
+  Options.UIAEnable := OptionsINI.ReadBool('UI Additions', 'UIAEnable', Options.UIAEnable);
+  Options.civ2patchEnable := OptionsINI.ReadBool('civ2patch', 'civ2patchEnable', Options.civ2patchEnable);
   Options.HostileAiOn := OptionsINI.ReadBool('civ2patch', 'HostileAiOn', Options.HostileAiOn);
   Options.RetirementYearOn := OptionsINI.ReadBool('civ2patch', 'RetirementYearOn', Options.RetirementYearOn);
   Options.RetirementWarningYear := OptionsINI.ReadInteger('civ2patch', 'RetirementWarningYear', Options.RetirementWarningYear);
@@ -152,7 +157,8 @@ begin
   INIFileName := ChangeFileExt(Application.ExeName, '.ini');
   DeleteFile(PChar(INIFileName));
   OptionsINI := TMemIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
-  OptionsINI.WriteBool('Options', 'MasterOn', Options.MasterOn);
+  OptionsINI.WriteBool('UI Additions', 'UIAEnable', Options.UIAEnable);
+  OptionsINI.WriteBool('civ2patch', 'civ2patchEnable', Options.civ2patchEnable);
   OptionsINI.WriteBool('civ2patch', 'HostileAiOn', Options.HostileAiOn);
   OptionsINI.WriteBool('civ2patch', 'RetirementYearOn', Options.RetirementYearOn);
   OptionsINI.WriteInteger('civ2patch', 'RetirementWarningYear', Options.RetirementWarningYear);
@@ -392,4 +398,70 @@ begin
   FormOptions.Free;
 end;
 
+function GetOptionByKey(Key: string): Variant;
+begin
+  VarClear(Result);
+  if Key = 'UIAEnable' then
+    Result := Options.UIAEnable;
+  if Key = 'civ2patchEnable' then
+    Result := Options.civ2patchEnable;
+  if Key = 'HostileAiOn' then
+    Result := Options.HostileAiOn;
+  if Key = 'RetirementYearOn' then
+    Result := Options.RetirementYearOn;
+  if Key = 'RetirementWarningYear' then
+    Result := Options.RetirementWarningYear;
+  if Key = 'RetirementYear' then
+    Result := Options.RetirementYear;
+  if Key = 'PopulationLimitOn' then
+    Result := Options.PopulationLimitOn;
+  if Key = 'PopulationLimit' then
+    Result := Options.PopulationLimit;
+  if Key = 'GoldLimitOn' then
+    Result := Options.GoldLimitOn;
+  if Key = 'GoldLimit' then
+    Result := Options.GoldLimit;
+  if Key = 'MapSizeLimitOn' then
+    Result := Options.MapSizeLimitOn;
+  if Key = 'MapXLimit' then
+    Result := Options.MapXLimit;
+  if Key = 'MapYLimit' then
+    Result := Options.MapYLimit;
+  if Key = 'MapSizeLimit' then
+    Result := Options.MapSizeLimit;
+end;
+
+procedure SetOptionByKey(Key: string; Value: Variant);
+begin
+  if Key = 'UIAEnable' then
+    Options.UIAEnable := Value;
+  if Key = 'civ2patchEnable' then
+    Options.civ2patchEnable := Value;
+  if Key = 'HostileAiOn' then
+    Options.HostileAiOn := Value;
+  if Key = 'RetirementYearOn' then
+    Options.RetirementYearOn := Value;
+  if Key = 'RetirementWarningYear' then
+    Options.RetirementWarningYear := Value;
+  if Key = 'RetirementYear' then
+    Options.RetirementYear := Value;
+  if Key = 'PopulationLimitOn' then
+    Options.PopulationLimitOn := Value;
+  if Key = 'PopulationLimit' then
+    Options.PopulationLimit := Value;
+  if Key = 'GoldLimitOn' then
+    Options.GoldLimitOn := Value;
+  if Key = 'GoldLimit' then
+    Options.GoldLimit := Value;
+  if Key = 'MapSizeLimitOn' then
+    Options.MapSizeLimitOn := Value;
+  if Key = 'MapXLimit' then
+    Options.MapXLimit := Value;
+  if Key = 'MapYLimit' then
+    Options.MapYLimit := Value;
+  if Key = 'MapSizeLimit' then
+    Options.MapSizeLimit := Value;
+end;
+
 end.
+
