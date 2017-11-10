@@ -16,7 +16,6 @@ object FormOptions: TFormOptions
   Position = poMainFormCenter
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
-  OnDestroy = FormDestroy
   DesignSize = (
     513
     245)
@@ -28,7 +27,6 @@ object FormOptions: TFormOptions
     Width = 133
     Height = 205
     OnClickCheck = CheckListBox1ClickCheck
-    Flat = False
     ItemHeight = 13
     TabOrder = 0
     OnClick = CheckListBox1Click

@@ -16,6 +16,14 @@ uses
   Civ2UIA_Options,
   Civ2UIA_Proc;
 
+procedure C2PatchCdCheck(HProcess: THandle);
+begin
+  WriteMemory(HProcess, $0056463C, [$03], nil);
+  WriteMemory(HProcess, $0056467A, [$EB, $12, $90, $90, $90, $90, $90, $90, $90, $90, $90, $90, $90, $90, $90, $90, $90, $90, $90, $90], nil);
+  WriteMemory(HProcess, $005646A7, [$80], nil);
+end;
+
+
 procedure C2PatchHostileAi(HProcess: THandle);
 begin
   WriteMemory(HProcess, $00561FC9, [$90, $90, $90, $90, $90, $90, $90, $90], nil);
@@ -58,6 +66,8 @@ end;
 
 procedure C2Patches(HProcess: THandle);
 begin
+  if UIAOPtions^.DisableCDCheckOn then
+    C2PatchCdCheck(HProcess);
   if UIAOPtions^.HostileAiOn then
     C2PatchHostileAi(HProcess);
   if UIAOPtions^.RetirementYearOn then

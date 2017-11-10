@@ -569,11 +569,13 @@ var
   Delta: TPoint;
   MapDelta: TPoint;
   Xc, Yc: Integer;
+  MButtonIsDown: Boolean;
   IsMapWindow: Boolean;
 begin
   Result := True;
   Screen.X := Smallint(LParam and $FFFF);
   Screen.Y := Smallint((LParam shr 16) and $FFFF);
+  MButtonIsDown := (LoWord(WParam) and MK_MBUTTON) <> 0;
   IsMapWindow := False;
   if MapGraphicsInfo^.WindowInfo.WindowStructure <> nil then
     IsMapWindow := (HWindow = MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow);
@@ -597,7 +599,7 @@ begin
       else
       begin
         MouseDrag.Active := False;
-        MouseDrag.Moved := False;
+        MouseDrag.Moved := 0;
         if IsMapWindow then
         begin
           MouseDrag.Active := True;
@@ -610,10 +612,10 @@ begin
       end;
     WM_MOUSEMOVE:
       begin
-        MouseDrag.Active := MouseDrag.Active and PtInRect(MapGraphicsInfo^.WindowRectangle, Screen) and IsMapWindow;
+        MouseDrag.Active := MouseDrag.Active and PtInRect(MapGraphicsInfo^.WindowRectangle, Screen) and IsMapWindow and MButtonIsDown;
         if MouseDrag.Active then
         begin
-          MouseDrag.Moved := True;
+          Inc(MouseDrag.Moved);
           Delta.X := Screen.X - MouseDrag.StartScreen.X;
           Delta.Y := Screen.Y - MouseDrag.StartScreen.Y;
           MapDelta.X := (Delta.X * 2 + MapGraphicsInfo^.MapCellSize2.cx) div MapGraphicsInfo^.MapCellSize.cx;
@@ -646,6 +648,7 @@ begin
             end;
             if not Odd(Xc + Yc) and ((MapGraphicsInfo^.MapCenter.X <> Xc) or (MapGraphicsInfo^.MapCenter.Y <> Yc)) then
             begin
+              Inc(MouseDrag.Moved, 5);
               PInteger($0062BCB0)^ := 1;  // Don't flush messages
               Q_CenterView_sub_410402(Xc, Yc);
               PInteger($0062BCB0)^ := 0;
@@ -655,22 +658,24 @@ begin
         end;
       end;
     WM_MBUTTONUP:
-      if MouseDrag.Active then
       begin
-        MouseDrag.Active := False;
-        if not MouseDrag.Moved then
+        if MouseDrag.Active then
         begin
-          if not j_Q_ScreenToMap(MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y, Xc, Yc) then
+          MouseDrag.Active := False;
+          if MouseDrag.Moved < 5 then
           begin
-            if ((MapGraphicsInfo^.MapCenter.X <> Xc) or (MapGraphicsInfo^.MapCenter.Y <> Yc)) then
+            if not j_Q_ScreenToMap(MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y, Xc, Yc) then
             begin
-              PInteger($0062BCB0)^ := 1;  // Don't flush messages
-              Q_CenterView_sub_410402(Xc, Yc);
-              PInteger($0062BCB0)^ := 0;
+              if ((MapGraphicsInfo^.MapCenter.X <> Xc) or (MapGraphicsInfo^.MapCenter.Y <> Yc)) then
+              begin
+                PInteger($0062BCB0)^ := 1; // Don't flush messages
+                Q_CenterView_sub_410402(Xc, Yc);
+                PInteger($0062BCB0)^ := 0;
+              end;
             end;
           end;
+          Result := False;
         end;
-        Result := False;
       end;
   end;
 

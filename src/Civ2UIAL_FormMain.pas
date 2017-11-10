@@ -63,8 +63,8 @@ implementation
 //--------------------------------------------------------------------------------------------------
 
 uses
-  Types,
-  Civ2UIA_Options,
+  ActiveX,
+  
   Civ2UIAL_Proc;
 
 {$R *.dfm}
@@ -107,6 +107,7 @@ begin
   EditExe.Text := ExeName;
   EditDll.Text := DllName;
   LogMemo := Memo1;
+
   if IsSilentLaunch() then
   begin
     Visible := False;
@@ -238,10 +239,7 @@ end;
 
 procedure TForm1.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  try
-    SaveOptionsToINI();
-  except
-  end;
+  CoUninitialize();
 end;
 
 procedure TForm1.ButtonOptionsClick(Sender: TObject);
@@ -256,4 +254,3 @@ begin
 end;
 
 end.
-

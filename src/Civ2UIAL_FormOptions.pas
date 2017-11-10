@@ -9,28 +9,9 @@ uses
   Forms,
   StdCtrls,
   SysUtils,
-  Types,
-  XMLDoc,
-  XMLIntf;
+  Civ2UIAL_Proc;
 
 type
-  TOptionSubItem = record
-    Key: string;
-    Name: string;
-    Value: Variant;
-  end;
-
-  TOptionSubItems = array of TOptionSubItem;
-  POptionItem = ^TOptionItem;
-  TOptionItem = record
-    Key: string;
-    Name: string;
-    Checked: Boolean;
-    ParentIndex: Integer;
-    Description: string;
-    OptionSubItems: TOptionSubItems;
-  end;
-
   TFormOptions = class(TForm)
     CheckListBox1: TCheckListBox;
     ButtonOK: TButton;
@@ -38,7 +19,6 @@ type
     Memo1: TMemo;
     procedure FormCreate(Sender: TObject);
     procedure CheckListBox1Click(Sender: TObject);
-    procedure FormDestroy(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure ButtonOKClick(Sender: TObject);
     procedure CheckListBox1ClickCheck(Sender: TObject);
@@ -51,9 +31,6 @@ type
     procedure FreeEdits();
   public
     { Public declarations }
-    OptionItems: array of TOptionItem;
-    procedure AddItems(Nodes: IXMLNodeList; ParentIndex: Integer = -1);
-    procedure AddSubItems(Nodes: IXMLNodeList; var SubItems: TOptionSubItems);
     procedure CopyOptionsToBackend();
     procedure CopyBackendToOptions();
     procedure CopyFrontendToBackend();
@@ -64,30 +41,17 @@ type
 implementation
 
 uses
-  ActiveX,
   Graphics,
-  Variants,
-  Civ2UIAL_Proc;
+  Variants;
 
 {$R *.dfm}
 
 procedure TFormOptions.FormCreate(Sender: TObject);
 var
   i: Integer;
-  Doc: IXMLDocument;
-  ResourceStream: TResourceStream;
 begin
-  CoInitialize(nil);
 
   CheckListBox1.Clear();
-
-  ResourceStream := TResourceStream.Create(HInstance, 'FormOptions', RT_RCDATA);
-  Doc := TXMLDocument.Create(nil);
-  Doc.LoadFromStream(ResourceStream, xetUTF_8);
-  Doc.Active := True;
-  ResourceStream.Free;
-
-  AddItems(Doc.DocumentElement.ChildNodes);
 
   for i := 0 to High(OptionItems) do
   begin
@@ -160,70 +124,6 @@ begin
     if Labels[i] <> nil then
       FreeAndNil(Labels[i]);
   SetLength(Labels, 0);
-end;
-
-procedure TFormOptions.AddItems(Nodes: IXMLNodeList; ParentIndex: Integer = -1);
-var
-  N: Integer;
-  i: Integer;
-begin
-  if Nodes.Count = 0 then
-    Exit;
-  for i := 0 to Nodes.Count - 1 do
-  begin
-    N := Length(OptionItems);
-    if Nodes[i].NodeName = 'section' then
-    begin
-      SetLength(OptionItems, N + 1);
-      OptionItems[N].Name := Nodes[i].Attributes['name'];
-      OptionItems[N].Description := Nodes[i].Attributes['description'];
-      OptionItems[N].ParentIndex := ParentIndex;
-      if Nodes[i].HasChildNodes then
-        AddItems(Nodes[i].ChildNodes);
-    end;
-    if Nodes[i].NodeName = 'boolean' then
-    begin
-      SetLength(OptionItems, N + 1);
-      OptionItems[N].Key := Nodes[i].Attributes['key'];
-      OptionItems[N].Name := OptionItems[N].Name + Nodes[i].Attributes['name'];
-      OptionItems[N].ParentIndex := ParentIndex;
-      if ParentIndex <> -1 then
-      begin
-        OptionItems[N].Name := '-' + StringOfChar(' ', 3) + OptionItems[N].Name;
-      end;
-      OptionItems[N].Description := Nodes[i].Attributes['description'];
-      if Nodes[i].HasChildNodes then
-        AddSubItems(Nodes[i].ChildNodes, OptionItems[N].OptionSubItems);
-      if Nodes[i].HasChildNodes then
-        AddItems(Nodes[i].ChildNodes, N);
-    end;
-  end;
-end;
-
-procedure TFormOptions.AddSubItems(Nodes: IXMLNodeList; var SubItems: TOptionSubItems);
-var
-  N: Integer;
-  i: Integer;
-begin
-  if Nodes.Count = 0 then
-    Exit;
-  for i := 0 to Nodes.Count - 1 do
-  begin
-    N := Length(SubItems);
-    if Nodes[i].NodeName = 'integer' then
-    begin
-      SetLength(SubItems, N + 1);
-      SubItems[N].Key := Nodes[i].Attributes['key'];
-      SubItems[N].Name := Nodes[i].Attributes['name'];
-      TVarData(SubItems[N].Value).VType := varInteger;
-    end;
-  end;
-
-end;
-
-procedure TFormOptions.FormDestroy(Sender: TObject);
-begin
-  CoUninitialize();
 end;
 
 function TFormOptions.ValidateInput(Index: Integer): Boolean;

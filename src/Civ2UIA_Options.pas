@@ -2,8 +2,7 @@ unit Civ2UIA_Options;
 
 interface
 
-uses
-  Windows;
+
 
 type
   PUIAOptions = ^TUIAOptions;
@@ -12,6 +11,7 @@ type
     UIAEnable: Boolean;
     // civ2patch
     civ2patchEnable: Boolean;
+    DisableCDCheckOn: Boolean;
     HostileAiOn: Boolean;
     RetirementYearOn: Boolean;
     RetirementWarningYear: Word;
@@ -30,6 +30,7 @@ var
   Options: TUIAOptions = (
     UIAEnable: True;
     civ2patchEnable: True;
+    DisableCDCheckOn: True;
     HostileAiOn: True;
     RetirementYearOn: True;
     RetirementWarningYear: 3000;          // Default = 2000

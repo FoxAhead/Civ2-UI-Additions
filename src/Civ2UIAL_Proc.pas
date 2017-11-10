@@ -7,6 +7,26 @@ interface
 uses
   StdCtrls;
 
+type
+  TOptionSubItem = record
+    Key: string;
+    Name: string;
+    Value: Variant;
+  end;
+
+  TOptionSubItems = array of TOptionSubItem;
+
+  POptionItem = ^TOptionItem;
+
+  TOptionItem = record
+    Key: string;
+    Name: string;
+    Checked: Boolean;
+    ParentIndex: Integer;
+    Description: string;
+    OptionSubItems: TOptionSubItems;
+  end;
+
 var
   ExeName: string;                        // = 'D:\GAMES\Civilization II Multiplayer Gold Edition\civ2.exe';
   DllName: string;
@@ -14,6 +34,7 @@ var
   LogMemo: TMemo;
   DebugEnabled: Boolean;
   WaitProcess: Boolean;
+  OptionItems: array of TOptionItem;
 
 function AlreadyRunning(): Boolean;
 
@@ -37,6 +58,8 @@ function IsSilentLaunch(): Boolean;
 
 procedure CreateLnk(FileName, Path, WorkingDirectory, Description, Arguments: string);
 
+procedure LoadFormOptionsFromXML();
+
 procedure Log(Str: string);
 
 procedure SaveOptionsToINI();
@@ -54,13 +77,17 @@ uses
   Civ2UIA_Options,
   Civ2UIAL_FormOptions,
   ComObj,
+  Classes,
   Controls,
   Forms,
   IniFiles,
   ShlObj,
   SysUtils,
   TlHelp32,
-  Windows;
+  XMLDoc,
+  XMLIntf,
+  Windows,
+  Variants;
 
 function AlreadyRunning(): Boolean;
 begin
@@ -125,27 +152,55 @@ begin
   Result := FindCmdLineSwitch('play');
 end;
 
+procedure INIReadToOptionByKey(OptionsINI: TMemIniFile; Section, Key: string);
+var
+  DefaultValue: Variant;
+  Value: Variant;
+begin
+  DefaultValue := GetOptionByKey(Key);
+  case VarType(DefaultValue) of
+    varBoolean:
+      Value := OptionsINI.ReadBool(Section, Key, DefaultValue);
+    varInteger, varSmallint, varByte, varWord, varLongWord:
+      Value := OptionsINI.ReadInteger(Section, Key, DefaultValue);
+  end;
+  if not VarIsEmpty(Value) then
+    SetOptionByKey(Key, Value);
+end;
+
+procedure INIWriteFromOptionByKey(OptionsINI: TMemIniFile; Section, Key: string);
+var
+  Value: Variant;
+begin
+  Value := GetOptionByKey(Key);
+  case VarType(Value) of
+    varBoolean:
+      OptionsINI.WriteBool(Section, Key, Value);
+    varInteger, varSmallint, varByte, varWord, varLongWord:
+      OptionsINI.WriteInteger(Section, Key, Value);
+  end;
+end;
+
 procedure LoadOptionsFromINI();
 var
   OptionsINI: TMemIniFile;
   INIFileName: string;
+  i, j: Integer;
+  Section: string;
+  Key: string;
 begin
   INIFileName := ChangeFileExt(Application.ExeName, '.ini');
   OptionsINI := TMemIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
-  Options.UIAEnable := OptionsINI.ReadBool('UI Additions', 'UIAEnable', Options.UIAEnable);
-  Options.civ2patchEnable := OptionsINI.ReadBool('civ2patch', 'civ2patchEnable', Options.civ2patchEnable);
-  Options.HostileAiOn := OptionsINI.ReadBool('civ2patch', 'HostileAiOn', Options.HostileAiOn);
-  Options.RetirementYearOn := OptionsINI.ReadBool('civ2patch', 'RetirementYearOn', Options.RetirementYearOn);
-  Options.RetirementWarningYear := OptionsINI.ReadInteger('civ2patch', 'RetirementWarningYear', Options.RetirementWarningYear);
-  Options.RetirementYear := OptionsINI.ReadInteger('civ2patch', 'RetirementYear', Options.RetirementYear);
-  Options.PopulationLimitOn := OptionsINI.ReadBool('civ2patch', 'PopulationLimitOn', Options.PopulationLimitOn);
-  Options.PopulationLimit := OptionsINI.ReadInteger('civ2patch', 'PopulationLimit', Options.PopulationLimit);
-  Options.GoldLimitOn := OptionsINI.ReadBool('civ2patch', 'GoldLimitOn', Options.GoldLimitOn);
-  Options.GoldLimit := OptionsINI.ReadInteger('civ2patch', 'GoldLimit', Options.GoldLimit);
-  Options.MapSizeLimitOn := OptionsINI.ReadBool('civ2patch', 'MapSizeLimitOn', Options.MapSizeLimitOn);
-  Options.MapXLimit := OptionsINI.ReadInteger('civ2patch', 'MapXLimit', Options.MapXLimit);
-  Options.MapYLimit := OptionsINI.ReadInteger('civ2patch', 'MapYLimit', Options.MapYLimit);
-  Options.MapSizeLimit := OptionsINI.ReadInteger('civ2patch', 'MapSizeLimit', Options.MapSizeLimit);
+  for i := 0 to High(OptionItems) do
+  begin
+    Key := OptionItems[i].Key;
+    if (Key = '') and (Section <> OptionItems[i].Name) then
+      Section := OptionItems[i].Name;
+    if Key <> '' then
+      INIReadToOptionByKey(OptionsINI, Section, Key);
+    for j := 0 to High(OptionItems[i].OptionSubItems) do
+      INIReadToOptionByKey(OptionsINI, Section, OptionItems[i].OptionSubItems[j].Key);
+  end;
   OptionsINI.Free;
 end;
 
@@ -153,25 +208,23 @@ procedure SaveOptionsToINI();
 var
   OptionsINI: TMemIniFile;
   INIFileName: string;
+  i, j: Integer;
+  Section: string;
+  Key: string;
 begin
   INIFileName := ChangeFileExt(Application.ExeName, '.ini');
-  DeleteFile(PChar(INIFileName));
   OptionsINI := TMemIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
-  OptionsINI.WriteBool('UI Additions', 'UIAEnable', Options.UIAEnable);
-  OptionsINI.WriteBool('civ2patch', 'civ2patchEnable', Options.civ2patchEnable);
-  OptionsINI.WriteBool('civ2patch', 'HostileAiOn', Options.HostileAiOn);
-  OptionsINI.WriteBool('civ2patch', 'RetirementYearOn', Options.RetirementYearOn);
-  OptionsINI.WriteInteger('civ2patch', 'RetirementWarningYear', Options.RetirementWarningYear);
-  OptionsINI.WriteInteger('civ2patch', 'RetirementYear', Options.RetirementYear);
-  OptionsINI.WriteBool('civ2patch', 'PopulationLimitOn', Options.PopulationLimitOn);
-  OptionsINI.WriteInteger('civ2patch', 'PopulationLimit', Options.PopulationLimit);
-  OptionsINI.WriteBool('civ2patch', 'GoldLimitOn', Options.GoldLimitOn);
-  OptionsINI.WriteInteger('civ2patch', 'GoldLimit', Options.GoldLimit);
-  OptionsINI.WriteBool('civ2patch', 'MapSizeLimitOn', Options.MapSizeLimitOn);
-  OptionsINI.WriteInteger('civ2patch', 'MapXLimit', Options.MapXLimit);
-  OptionsINI.WriteInteger('civ2patch', 'MapYLimit', Options.MapYLimit);
-  OptionsINI.WriteInteger('civ2patch', 'MapSizeLimit', Options.MapSizeLimit);
-  OptionsINI.UpdateFile();
+  for i := 0 to High(OptionItems) do
+  begin
+    Key := OptionItems[i].Key;
+    if (Key = '') and (Section <> OptionItems[i].Name) then
+      Section := OptionItems[i].Name;
+    if Key <> '' then
+      INIWriteFromOptionByKey(OptionsINI, Section, Key);
+    for j := 0 to High(OptionItems[i].OptionSubItems) do
+      INIWriteFromOptionByKey(OptionsINI, Section, OptionItems[i].OptionSubItems[j].Key);
+  end;
+  OptionsINI.UpdateFile;
   OptionsINI.Free;
 end;
 
@@ -180,6 +233,7 @@ var
   MyPath: string;
   i: Integer;
 begin
+  CoInitialize(nil);
   MyPath := ExtractFilePath(Application.ExeName);
   SetFileNameIfExist(ExeName, MyPath + 'civ2.exe');
   SetFileNameIfExist(DllName, MyPath + 'Civ2UIA.dll');
@@ -193,6 +247,7 @@ begin
   DebugEnabled := FindCmdLineSwitch('debug');
   WaitProcess := FindCmdLineSwitch('wait');
   Result := (ExeName <> '') and (DllName <> '');
+  LoadFormOptionsFromXML();
   LoadOptionsFromINI();
 end;
 
@@ -380,7 +435,7 @@ begin
   PE32.dwSize := SizeOf(TProcessEntry32);
   if (Process32First(Snapshot, PE32)) then
     repeat
-      if PE32.szExeFile = Name then
+      if CompareText(ExtractFileName(PE32.szExeFile), Name) = 0 then
         Result := PE32.th32ProcessID;
     until not Process32Next(Snapshot, PE32);
   CloseHandle(Snapshot);
@@ -391,11 +446,89 @@ var
   FormOptions: TFormOptions;
 begin
   FormOptions := TFormOptions.Create(Application);
-  if FormOptions.ShowModal() = mrOK then
+  if FormOptions.ShowModal() = mrOk then
   begin
+    try
+      SaveOptionsToINI();
+    except
+    end;
 
   end;
   FormOptions.Free;
+end;
+
+procedure FormOptionsAddSubItems(Nodes: IXMLNodeList; var SubItems: TOptionSubItems);
+var
+  N: Integer;
+  i: Integer;
+begin
+  if Nodes.Count = 0 then
+    Exit;
+  for i := 0 to Nodes.Count - 1 do
+  begin
+    N := Length(SubItems);
+    if Nodes[i].NodeName = 'integer' then
+    begin
+      SetLength(SubItems, N + 1);
+      SubItems[N].Key := Nodes[i].Attributes['key'];
+      SubItems[N].Name := Nodes[i].Attributes['name'];
+      TVarData(SubItems[N].Value).VType := varInteger;
+    end;
+  end;
+
+end;
+
+procedure FormOptionsAddItems(Nodes: IXMLNodeList; ParentIndex: Integer = -1);
+var
+  N: Integer;
+  i: Integer;
+begin
+  if Nodes.Count = 0 then
+    Exit;
+  for i := 0 to Nodes.Count - 1 do
+  begin
+    N := Length(OptionItems);
+    if Nodes[i].NodeName = 'section' then
+    begin
+      SetLength(OptionItems, N + 1);
+      OptionItems[N].Name := Nodes[i].Attributes['name'];
+      OptionItems[N].Description := Nodes[i].Attributes['description'];
+      OptionItems[N].ParentIndex := ParentIndex;
+      if Nodes[i].HasChildNodes then
+        FormOptionsAddItems(Nodes[i].ChildNodes);
+    end;
+    if Nodes[i].NodeName = 'boolean' then
+    begin
+      SetLength(OptionItems, N + 1);
+      OptionItems[N].Key := Nodes[i].Attributes['key'];
+      OptionItems[N].Name := OptionItems[N].Name + Nodes[i].Attributes['name'];
+      OptionItems[N].ParentIndex := ParentIndex;
+      if ParentIndex <> -1 then
+      begin
+        OptionItems[N].Name := '-' + StringOfChar(' ', 3) + OptionItems[N].Name;
+      end;
+      OptionItems[N].Description := Nodes[i].Attributes['description'];
+      if Nodes[i].HasChildNodes then
+        FormOptionsAddSubItems(Nodes[i].ChildNodes, OptionItems[N].OptionSubItems);
+      if Nodes[i].HasChildNodes then
+        FormOptionsAddItems(Nodes[i].ChildNodes, N);
+    end;
+  end;
+end;
+
+procedure LoadFormOptionsFromXML();
+var
+  i: Integer;
+  Doc: IXMLDocument;
+  ResourceStream: TResourceStream;
+begin
+  SetLength(OptionItems, 0);
+  ResourceStream := TResourceStream.Create(HInstance, 'FormOptions', RT_RCDATA);
+  Doc := TXMLDocument.Create(nil);
+  Doc.LoadFromStream(ResourceStream, xetUTF_8);
+  Doc.Active := True;
+  ResourceStream.Free;
+  FormOptionsAddItems(Doc.DocumentElement.ChildNodes);
 end;
 
 function GetOptionByKey(Key: string): Variant;
@@ -405,6 +538,8 @@ begin
     Result := Options.UIAEnable;
   if Key = 'civ2patchEnable' then
     Result := Options.civ2patchEnable;
+  if Key = 'DisableCDCheckOn' then
+    Result := Options.DisableCDCheckOn;
   if Key = 'HostileAiOn' then
     Result := Options.HostileAiOn;
   if Key = 'RetirementYearOn' then
@@ -439,6 +574,8 @@ begin
     Options.civ2patchEnable := Value;
   if Key = 'HostileAiOn' then
     Options.HostileAiOn := Value;
+  if Key = 'DisableCDCheckOn' then
+    Options.DisableCDCheckOn := Value;
   if Key = 'RetirementYearOn' then
     Options.RetirementYearOn := Value;
   if Key = 'RetirementWarningYear' then
@@ -464,4 +601,3 @@ begin
 end;
 
 end.
-

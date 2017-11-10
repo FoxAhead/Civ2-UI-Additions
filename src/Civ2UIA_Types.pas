@@ -27,7 +27,7 @@ type
 
   TMouseDrag = packed record
     Active: Boolean;
-    Moved: Boolean;
+    Moved: Integer;
     StartScreen: TPoint;
     StartMapMean: TPoint;
   end;
