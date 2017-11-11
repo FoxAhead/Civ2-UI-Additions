@@ -64,7 +64,6 @@ implementation
 
 uses
   ActiveX,
-  
   Civ2UIAL_Proc;
 
 {$R *.dfm}
@@ -254,3 +253,4 @@ begin
 end;
 
 end.
+

@@ -1139,10 +1139,17 @@ begin
     WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
     WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
     WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
-    WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
     WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchCheckCDStatus);
     WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
     WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
+  end;
+  if UIAOPtions.Patch64bitOn then
+    WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
+  if UIAOPtions.DisableCDCheckOn then
+  begin
+    WriteMemory(HProcess, $0056463C, [$03]);
+    WriteMemory(HProcess, $0056467A, [$EB, $12]);
+    WriteMemory(HProcess, $005646A7, [$80]);
   end;
   if UIAOPtions.civ2patchEnable then
   begin

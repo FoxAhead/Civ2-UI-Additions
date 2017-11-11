@@ -213,6 +213,7 @@ var
   Key: string;
 begin
   INIFileName := ChangeFileExt(Application.ExeName, '.ini');
+  DeleteFile(PChar(INIFileName));
   OptionsINI := TMemIniFile.Create(ChangeFileExt(Application.ExeName, '.ini'));
   for i := 0 to High(OptionItems) do
   begin
@@ -401,7 +402,7 @@ begin
   ShellLink.SetWorkingDirectory(PChar(WorkingDirectory));
   ShellLink.SetDescription(PChar(Description));
   ShellLink.SetArguments(PChar(Arguments));
-  PersistFile.Save(PWideChar(WideString(FileName)), False);
+  PersistFile.Save(PWideChar(WideString(ChangeFileExt(FileName, '.lnk'))), False);
   CoUninitialize();
 end;
 
@@ -536,10 +537,12 @@ begin
   VarClear(Result);
   if Key = 'UIAEnable' then
     Result := Options.UIAEnable;
-  if Key = 'civ2patchEnable' then
-    Result := Options.civ2patchEnable;
+  if Key = 'Patch64BitOn' then
+    Result := Options.Patch64BitOn;
   if Key = 'DisableCDCheckOn' then
     Result := Options.DisableCDCheckOn;
+  if Key = 'civ2patchEnable' then
+    Result := Options.civ2patchEnable;
   if Key = 'HostileAiOn' then
     Result := Options.HostileAiOn;
   if Key = 'RetirementYearOn' then
@@ -570,12 +573,14 @@ procedure SetOptionByKey(Key: string; Value: Variant);
 begin
   if Key = 'UIAEnable' then
     Options.UIAEnable := Value;
+  if Key = 'Patch64BitOn' then
+    Options.Patch64BitOn := Value;
+  if Key = 'DisableCDCheckOn' then
+    Options.DisableCDCheckOn := Value;
   if Key = 'civ2patchEnable' then
     Options.civ2patchEnable := Value;
   if Key = 'HostileAiOn' then
     Options.HostileAiOn := Value;
-  if Key = 'DisableCDCheckOn' then
-    Options.DisableCDCheckOn := Value;
   if Key = 'RetirementYearOn' then
     Options.RetirementYearOn := Value;
   if Key = 'RetirementWarningYear' then

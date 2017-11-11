@@ -2,7 +2,7 @@ unit Civ2UIA_Proc;
 
 interface
 
-procedure WriteMemory(HProcess: THandle; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer);
+procedure WriteMemory(HProcess: THandle; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer = nil);
 
 implementation
 

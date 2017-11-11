@@ -102,17 +102,24 @@ object Form1: TForm1
     Font.Style = []
     Lines.Strings = (
       
-        'This launcher will add some enhancements without modifying game ' +
-        'executable.'
-      'Features added:'
-      ' - Mouse wheel support wherever possible'
-      ' - Ability to choose any unit in stack beyond limit of 9'
-      ' - Work counter for Settlers/Engineers is displayed'
-      ' - Click-bounds of specialists sprites corrected in city screen'
-      ' - Number of the game turn is displayed'
-      ' - Current research numbers are displayed in Science Advisor'
-      ' - 64 bit patch included'
-      ' - CD Audio: correct looping and progress display'
+        'This launcher adds some enhancements without modifying game exec' +
+        'utable.'
+      
+        'Most features intended to extend usability without affecting ori' +
+        'ginal game rules or limitations. Those '
+      'include:'
+      
+        '64-bit patch; no-CD patch; mouse wheel support; choosing any uni' +
+        't in large stacks; displaying work '
+      
+        'counter for Settlers/Engineers, displaying game turn, research p' +
+        'rogress; correct CD Music playing.'
+      
+        'Also some enhancements from civ2patch project included. Those pa' +
+        'tches affect some game rules and '
+      'limitations.'
+      'Features can be switched in '#39'Options...'#39' dialog.'
+      ''
       
         'This launcher will search for CIV2.EXE and CIV2UIA.DLL in its cu' +
         'rrent folder and try to set all paths '
@@ -122,7 +129,8 @@ object Form1: TForm1
         'paths are saved in shortcut.'
       
         'Game version Multiplayer Gold Edition 5.4.0f (Patch 3) supported' +
-        ' only.')
+        ' only.'
+      ' ')
     ParentFont = False
     ReadOnly = True
     ScrollBars = ssVertical
