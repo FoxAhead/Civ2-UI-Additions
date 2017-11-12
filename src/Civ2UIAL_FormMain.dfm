@@ -113,8 +113,8 @@ object Form1: TForm1
         'e stacks; displaying work counter for '
       
         'Settlers/Engineers, displaying game turn, research progress; cor' +
-        'rect CD Music playing; 64-bit patch; '
-      'no-CD patch.'
+        'rect CD Music playing; Alt+Tab icon; '
+      '64-bit patch; no-CD patch.'
       
         'Also some enhancements from civ2patch project included. Those pa' +
         'tches affect some game rules and '
@@ -130,7 +130,8 @@ object Form1: TForm1
         'paths are saved in shortcut.'
       
         'Game version Multiplayer Gold Edition 5.4.0f (Patch 3) is suppor' +
-        'ted only.')
+        'ted only.'
+      ' ')
     ParentFont = False
     ReadOnly = True
     ScrollBars = ssVertical
