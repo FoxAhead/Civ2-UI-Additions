@@ -105,15 +105,16 @@ object Form1: TForm1
         'This launcher adds some enhancements without modifying game exec' +
         'utable.'
       
-        'Most features intended to extend usability without affecting ori' +
-        'ginal game rules or limitations. Those '
+        'Most features are intended to extend usability without affecting' +
+        ' original game rules or limitations. Those '
       'include:'
       
-        '64-bit patch; no-CD patch; mouse wheel support; choosing any uni' +
-        't in large stacks; displaying work '
+        'mouse wheel and middle button support; choosing any unit in larg' +
+        'e stacks; displaying work counter for '
       
-        'counter for Settlers/Engineers, displaying game turn, research p' +
-        'rogress; correct CD Music playing.'
+        'Settlers/Engineers, displaying game turn, research progress; cor' +
+        'rect CD Music playing; 64-bit patch; '
+      'no-CD patch.'
       
         'Also some enhancements from civ2patch project included. Those pa' +
         'tches affect some game rules and '
@@ -121,16 +122,15 @@ object Form1: TForm1
       'Features can be switched in '#39'Options...'#39' dialog.'
       ''
       
-        'This launcher will search for CIV2.EXE and CIV2UIA.DLL in its cu' +
+        'This launcher will search for CIV2.EXE and Civ2UIA.dll in its cu' +
         'rrent folder and try to set all paths '
       'automatically.'
       
         'You can create shortcut to start game immediately. All selected ' +
         'paths are saved in shortcut.'
       
-        'Game version Multiplayer Gold Edition 5.4.0f (Patch 3) supported' +
-        ' only.'
-      ' ')
+        'Game version Multiplayer Gold Edition 5.4.0f (Patch 3) is suppor' +
+        'ted only.')
     ParentFont = False
     ReadOnly = True
     ScrollBars = ssVertical

@@ -3,7 +3,7 @@
 	<section name="UI Additions" description="Section of User Interface Additions.
 These patches do not change any original game rules or limitations.">
 		<boolean key="UIAEnable" name="UIA features" description="Enable features from User Interface Additions
-- Mouse wheel support wherever possible
+- Mouse wheel and middle button support
 - Ability to choose any unit in stack beyond limit of 9
 - Work counter for Settlers/Engineers is displayed
 - Click-bounds of specialists sprites corrected in city screen
