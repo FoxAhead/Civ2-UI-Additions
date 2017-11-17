@@ -31,6 +31,7 @@ This launcher will add some enhancements to Sid Meier's Civilization II: Multipl
 
 Also some enhancements from [civ2patch project](https://github.com/vinceho/civ2patch) included:
  - reducing CPU usage when the application is idle
+
 and patches that affect some game rules and limitations:
  - AI hostility
  - Retirement year
