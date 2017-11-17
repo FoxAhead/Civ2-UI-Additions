@@ -23,6 +23,8 @@ This launcher will add some enhancements to Sid Meier's Civilization II: Multipl
 
 ![Screenshot](Screenshots/ScienceAdvisor.png?raw=true "Screenshot")
  - Correct CD audio tracks looping and displaying play progress
+
+![Screenshot](Screenshots/CDAudioTrackProgress.png?raw=true "Screenshot")
  - Game icon fix (visible in Alt+Tab popup)
  - 64-bit patch included
  - No-CD patch included

@@ -541,6 +541,8 @@ begin
     Result := Options.Patch64BitOn;
   if Key = 'DisableCDCheckOn' then
     Result := Options.DisableCDCheckOn;
+  if Key = 'CpuUsageOn' then
+    Result := Options.CpuUsageOn;
   if Key = 'civ2patchEnable' then
     Result := Options.civ2patchEnable;
   if Key = 'HostileAiOn' then
@@ -577,6 +579,8 @@ begin
     Options.Patch64BitOn := Value;
   if Key = 'DisableCDCheckOn' then
     Options.DisableCDCheckOn := Value;
+  if Key = 'CpuUsageOn' then
+    Options.CpuUsageOn := Value;
   if Key = 'civ2patchEnable' then
     Options.civ2patchEnable := Value;
   if Key = 'HostileAiOn' then

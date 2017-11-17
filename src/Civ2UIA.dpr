@@ -1151,6 +1151,8 @@ begin
     WriteMemory(HProcess, $0056467A, [$EB, $12]);
     WriteMemory(HProcess, $005646A7, [$80]);
   end;
+  if UIAOPtions^.CpuUsageOn then
+    C2PatchIdleCpu(HProcess);
   if UIAOPtions.civ2patchEnable then
   begin
     C2Patches(HProcess);
