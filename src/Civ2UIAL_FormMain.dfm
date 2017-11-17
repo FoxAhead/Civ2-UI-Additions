@@ -1,6 +1,6 @@
 object Form1: TForm1
-  Left = 638
-  Top = 214
+  Left = 485
+  Top = 313
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'Civilization II UI Additions Launcher'
@@ -116,9 +116,9 @@ object Form1: TForm1
         'rect CD Music playing; Alt+Tab icon; '
       '64-bit patch; no-CD patch.'
       
-        'Also some enhancements from civ2patch project included. Those pa' +
-        'tches affect some game rules and '
-      'limitations.'
+        'Also some enhancements from civ2patch project included: fix for ' +
+        'CPU usage and patches that affect '
+      'some game rules and limitations.'
       'Features can be switched in '#39'Options...'#39' dialog.'
       ''
       
@@ -130,8 +130,7 @@ object Form1: TForm1
         'paths are saved in shortcut.'
       
         'Game version Multiplayer Gold Edition 5.4.0f (Patch 3) is suppor' +
-        'ted only.'
-      ' ')
+        'ted only.')
     ParentFont = False
     ReadOnly = True
     ScrollBars = ssVertical
@@ -163,7 +162,7 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     ReadOnly = True
-    TabOrder = 5
+    TabOrder = 6
   end
   object ButtonStart: TButton
     Left = 300
@@ -199,7 +198,7 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     ReadOnly = True
-    TabOrder = 6
+    TabOrder = 7
   end
   object ButtonBrowseDll: TButton
     Tag = 1
@@ -218,7 +217,7 @@ object Form1: TForm1
     Height = 25
     Anchors = [akBottom]
     Caption = 'Create shortcut...'
-    TabOrder = 4
+    TabOrder = 5
     OnClick = ButtonShortcutClick
   end
   object ButtonOptions: TButton
@@ -228,7 +227,7 @@ object Form1: TForm1
     Height = 25
     Anchors = [akBottom]
     Caption = 'Options...'
-    TabOrder = 7
+    TabOrder = 4
     OnClick = ButtonOptionsClick
   end
   object OpenDialogExe: TOpenDialog

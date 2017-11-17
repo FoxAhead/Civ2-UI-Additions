@@ -29,7 +29,9 @@ This launcher will add some enhancements to Sid Meier's Civilization II: Multipl
  - 64-bit patch included
  - No-CD patch included
 
-Also some enhancements from [civ2patch project](https://github.com/vinceho/civ2patch) included. Those patches affect some game rules and limitations:
+Also some enhancements from [civ2patch project](https://github.com/vinceho/civ2patch) included:
+ - reducing CPU usage when the application is idle
+and patches that affect some game rules and limitations:
  - AI hostility
  - Retirement year
  - Population limit

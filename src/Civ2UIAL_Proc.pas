@@ -289,7 +289,6 @@ var
   i: Integer;
 begin
   try
-    Log('');
     DllLoaded := False;
     FileName := ExeName;
     Path := ExtractFilePath(ExeName);
@@ -368,6 +367,7 @@ var
   PI: TProcessInformation;
 begin
   Result := False;
+  Log('');
   try
     Check();
     LoadOptionsFromINI();

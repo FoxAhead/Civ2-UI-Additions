@@ -16,7 +16,8 @@ These patches do not change any original game rules or limitations.">
 These patches do not change any original game rules or limitations.">
 		<boolean key="Patch64BitOn" name="64-bit patch" description="This eliminates game crashes on 64-bit systems when the game tries to display edit controls (input fields) for entering text (like city name, emperor name, world sizes etc.)."/>
 		<boolean key="DisableCDCheckOn" name="Disable CD Check" description="When enabled, allow the application to run without the game CD."/>
-		<boolean key="CpuUsageOn" name="Fix Cpu Usage" description="When enabled, reduce CPU usage when the application is idle."/>
+		<boolean key="CpuUsageOn" name="Fix Cpu Usage" description="When enabled, reduce CPU usage when the application is idle.
+This patch is adapted from civ2patch project."/>
 	</section>
 	<section name="civ2patch" description="Section of some fixes and enhancements from civ2patch project by vinceho
 https://github.com/vinceho/civ2patch
