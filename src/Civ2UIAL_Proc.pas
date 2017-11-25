@@ -543,6 +543,8 @@ begin
     Result := Options.DisableCDCheckOn;
   if Key = 'CpuUsageOn' then
     Result := Options.CpuUsageOn;
+  if Key = 'SocketBufferOn' then
+    Result := Options.SocketBufferOn;
   if Key = 'civ2patchEnable' then
     Result := Options.civ2patchEnable;
   if Key = 'HostileAiOn' then
@@ -581,6 +583,8 @@ begin
     Options.DisableCDCheckOn := Value;
   if Key = 'CpuUsageOn' then
     Options.CpuUsageOn := Value;
+  if Key = 'SocketBufferOn' then
+    Options.SocketBufferOn := Value;
   if Key = 'civ2patchEnable' then
     Options.civ2patchEnable := Value;
   if Key = 'HostileAiOn' then

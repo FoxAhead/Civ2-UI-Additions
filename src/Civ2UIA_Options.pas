@@ -12,6 +12,7 @@ type
     Patch64bitOn: Boolean;
     DisableCDCheckOn: Boolean;
     CpuUsageOn: Boolean;
+    SocketBufferOn: Boolean;
     // civ2patch
     civ2patchEnable: Boolean;
     HostileAiOn: Boolean;
@@ -33,7 +34,8 @@ var
     UIAEnable: True;
     Patch64bitOn: True;
     DisableCDCheckOn: True;
-    CpuUsageOn: True;     
+    CpuUsageOn: True;
+    SocketBufferOn: True;
     // civ2patch
     civ2patchEnable: True;
     HostileAiOn: True;

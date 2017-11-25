@@ -11,14 +11,15 @@ library Civ2UIA;
   using PChar or ShortString parameters. }
 
 uses
-  Graphics,
-  SysUtils,
   Classes,
+  Graphics,
+  Math,
   Messages,
   MMSystem,
-  Windows,
   ShellAPI,
-  Math,
+  SysUtils,
+  Windows,
+  WinSock,
   Civ2Types in 'Civ2Types.pas',
   Civ2UIA_Types in 'Civ2UIA_Types.pas',
   Civ2UIA_Options in 'Civ2UIA_Options.pas',
@@ -1114,6 +1115,30 @@ begin
   SetClassLong(ThisWindowInfo^.WindowStructure^.HWindow, GCL_HICON, ThisWindowInfo^.WindowStructure^.Icon);
 end;
 
+function PatchSocketBuffer(af, Struct, protocol: Integer): TSocket; stdcall;
+var
+  Val: Integer;
+  Len: Integer;
+begin
+  Result := socket(af, Struct, protocol);
+  if Result <> INVALID_SOCKET then
+  begin
+    Len := SizeOf(Integer);
+    getsockopt(Result, SOL_SOCKET, SO_SNDBUF, @Val, Len);
+    if Val > $2000 then
+    begin
+      Val := $2000;
+      setsockopt(Result, SOL_SOCKET, SO_SNDBUF, PChar(@Val), Len);
+    end;
+    getsockopt(Result, SOL_SOCKET, SO_RCVBUF, @Val, Len);
+    if Val > $2000 then
+    begin
+      Val := $2000;
+      setsockopt(Result, SOL_SOCKET, SO_RCVBUF, PChar(@Val), Len);
+    end;
+  end;
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -1153,6 +1178,15 @@ begin
   end;
   if UIAOPtions^.CpuUsageOn then
     C2PatchIdleCpu(HProcess);
+  if UIAOPtions^.SocketBufferOn then
+  begin
+    WriteMemory(HProcess, $10003673, [OP_CALL], @PatchSocketBuffer);
+    WriteMemory(HProcess, $100044F9, [OP_CALL], @PatchSocketBuffer);
+    WriteMemory(HProcess, $10004BAB, [OP_CALL], @PatchSocketBuffer);
+    WriteMemory(HProcess, $10004BD1, [OP_CALL], @PatchSocketBuffer);
+    WriteMemory(HProcess, $10004E29, [OP_CALL], @PatchSocketBuffer);
+    WriteMemory(HProcess, $10004E4F, [OP_CALL], @PatchSocketBuffer);
+  end;
   if UIAOPtions.civ2patchEnable then
   begin
     C2Patches(HProcess);
