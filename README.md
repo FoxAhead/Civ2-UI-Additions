@@ -28,6 +28,7 @@ This launcher will add some enhancements to Sid Meier's Civilization II: Multipl
  - Game icon fix (visible in Alt+Tab popup)
  - 64-bit patch included
  - No-CD patch included
+ - Enable multiplayer for Windows 8, 10 (must work on older OS also)
 
 Also some enhancements from [civ2patch project](https://github.com/vinceho/civ2patch) included:
  - reducing CPU usage when the application is idle
