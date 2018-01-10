@@ -26,6 +26,7 @@ This launcher will add some enhancements to Sid Meier's Civilization II: Multipl
 
 ![Screenshot](Screenshots/CDAudioTrackProgress.png?raw=true "Screenshot")
  - Game icon fix (visible in Alt+Tab popup)
+ - Resetting city name prompts, when restarting a new game without closing program
  - 64-bit patch included
  - No-CD patch included
  - Enable multiplayer for Windows 8, 10 (must work on older OS also)

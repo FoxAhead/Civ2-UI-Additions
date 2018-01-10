@@ -61,6 +61,7 @@ var
   CurrPopupInfo: PPCurrPopupInfo = Pointer($006CEC84);
   MapGraphicsInfo: PGraphicsInfo = Pointer($0066C7A8);
   MainWindowInfo: PWindowInfo = Pointer($006553D8);
+  Leaders: ^TLeaders = Pointer($006554F8);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -1115,6 +1116,19 @@ begin
   SetClassLong(ThisWindowInfo^.WindowStructure^.HWindow, GCL_HICON, ThisWindowInfo^.WindowStructure^.Icon);
 end;
 
+function PatchInitNewGameParameters(): Integer; stdcall;
+var
+  i: Integer;
+begin
+  for i := 1 to 21 do
+    Leaders[i].CitiesBuilt := 0;
+  asm
+    mov   eax, A_Q_InitNewGameParameters_sub_4AA9C0
+    call  eax
+    mov   Result, eax
+  end;
+end;
+
 function PatchSocketBuffer(af, Struct, protocol: Integer): TSocket; stdcall;
 var
   Val: Integer;
@@ -1167,6 +1181,7 @@ begin
     WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchCheckCDStatus);
     WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
     WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
+    WriteMemory(HProcess, $0040284C, [OP_JMP], @PatchInitNewGameParameters);
   end;
   if UIAOPtions.Patch64bitOn then
     WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);

@@ -300,6 +300,25 @@ type
 
   TShieldTop = array[0..$3E] of Integer;  // 642B48
 
+  TLeader = packed record                 // Size = 0x30
+    Attack: Byte;
+    Expand: Byte;
+    Civilize: Byte;
+    Female: Byte;
+    byte_6554FC: Byte;
+    CitiesBuilt: Byte;
+    Color: Word;
+    Style: Word;
+    word_655502: Word;
+    word_655504: Word;
+    word_655506: Word;
+    word_655508: Word;
+    word_65550A: Word;
+    word_65550C: array[1..14] of Word;
+  end;
+
+  TLeaders = array[1..21] of TLeader;     // 6554F8
+
 const
   AThisCitySprites = $006A9490;
   A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85 = $00403D00;
@@ -311,6 +330,8 @@ const
   A_j_Q_GetNumberOfUnitsInStack_sub_5B50AD = $004029E1;
   A_Q_PopupListOfUnits_sub_5B6AEA = $005B6AEA;
   A_j_Q_CreateScrollbar_sub_40FC50 = $0040FC50;
+  A_Q_InitNewGameParameters_sub_4AA9C0 = $004AA9C0;
+
 implementation
 
 end.
