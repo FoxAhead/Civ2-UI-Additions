@@ -39,9 +39,9 @@ var
     // civ2patch
     civ2patchEnable: True;
     HostileAiOn: True;
-    RetirementYearOn: True;
-    RetirementWarningYear: 3000;          // Default = 2000
-    RetirementYear: 3020;                 // Default = 2020
+    RetirementYearOn: False;
+    RetirementWarningYear: 2000;          // Default = 2000
+    RetirementYear: 2020;                 // Default = 2020
     PopulationLimitOn: True;
     PopulationLimit: $3FFFFFFF;           // Default = 32000 (0x7D00)
     GoldLimitOn: True;
