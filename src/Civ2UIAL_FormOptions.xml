@@ -11,7 +11,8 @@ These patches do not change any original game rules or limitations.">
 - Current research numbers are displayed in Science Advisor
 - CD Music: correct CD-tracks looping and play progress display
 - Game icon fix (visible in Alt+Tab popup)
-- Resetting city name prompts, when restarting a new game without closing program"/>
+- Resetting city name prompts, when restarting a new game without closing program
+- Show buildings even with zero maintenance cost in Trade Advisor"/>
 	</section>
 	<section name="Common" description="Section of common patches.
 These patches do not change any original game rules or limitations.">

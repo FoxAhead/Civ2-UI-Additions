@@ -1182,6 +1182,7 @@ begin
     WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
     WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
     WriteMemory(HProcess, $0040284C, [OP_JMP], @PatchInitNewGameParameters);
+    WriteMemory(HProcess, $0042C107, [$00, $00, $00, $00]); // Show buildings even with zero maintenance cost in Trade Advisor
   end;
   if UIAOPtions.Patch64bitOn then
     WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
