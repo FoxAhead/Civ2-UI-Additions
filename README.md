@@ -31,7 +31,7 @@ This launcher will add some enhancements to Sid Meier's Civilization II: Multipl
  
 ![Screenshot](Screenshots/TradeAdvisorZeroCost.png?raw=true "Screenshot")
  - 64-bit patch included
- - No-CD patch included
+ - No-CD patch included (note that this disables intro/wonders movies and High Council movies)
  - Enable multiplayer for Windows 8, 10 (must work on older OS also)
 
 Also some enhancements from [civ2patch project](https://github.com/vinceho/civ2patch) included:

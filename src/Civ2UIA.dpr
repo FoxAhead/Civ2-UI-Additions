@@ -820,16 +820,16 @@ procedure PatchCallPopupListOfUnits(); register;
 asm
     mov   ListOfUnits.Start, 0
     push  2
-    push  [ebp - $1C]      // UnitIndex
+    push  [esp + $08]      // UnitIndex
     mov   eax, A_j_Q_GetNumberOfUnitsInStack_sub_5B50AD
     call  eax
     add   esp, 8
     mov   ListOfUnits.Length, eax
 
 @@LABEL_POPUP:
-    push  [ebp - $14]
-    push  [ebp - $18]
-    push  [ebp - $1C]      // UnitIndex
+    push  [esp + $0C]
+    push  [esp + $0C]
+    push  [esp + $0C]      // UnitIndex
     mov   eax, A_Q_PopupListOfUnits_sub_5B6AEA
     call  eax
     add   esp, $0C
