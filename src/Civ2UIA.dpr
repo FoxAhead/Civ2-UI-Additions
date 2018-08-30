@@ -21,6 +21,7 @@ uses
   Windows,
   WinSock,
   Civ2Types in 'Civ2Types.pas',
+  Civ2Proc in 'Civ2Proc.pas',
   Civ2UIA_Types in 'Civ2UIA_Types.pas',
   Civ2UIA_Options in 'Civ2UIA_Options.pas',
   Civ2UIA_c2p in 'Civ2UIA_c2p.pas',
@@ -326,31 +327,31 @@ var
   PCitySprites: ^TCitySprites;
   PCityWindow: ^TCityWindow;
   DeltaX: Integer;
-  //  Canvas: TBitMap;
-  //  CursorPoint: TPoint;
-  //  HandleWindow: HWND;
+  Canvas: Graphics.TBitMap;
+  CursorPoint: TPoint;
+  HandleWindow: HWND;
 begin
   asm
     mov   This, ecx;
   end;
 
-  {  if GetCursorPos(CursorPoint) then
-      HandleWindow := WindowFromPoint(CursorPoint)
-    else
-      HandleWindow := 0;}
-    //Canvas := TBitMap.Create();               // In VM Windows 10 disables city window redraw
-    //Canvas.Canvas.Handle := GetDC(HandleWindow);
-    //Canvas.Canvas.Pen.Color := RGB(255, 0, 255);
-    //Canvas.Canvas.Brush.Style := bsClear;
+  if GetCursorPos(CursorPoint) then
+    HandleWindow := WindowFromPoint(CursorPoint)
+  else
+    HandleWindow := 0;
+  Canvas := Graphics.TBitMap.Create();    // In VM Windows 10 disables city window redraw
+  Canvas.Canvas.Handle := GetDC(HandleWindow);
+  Canvas.Canvas.Pen.Color := RGB(255, 0, 255);
+  Canvas.Canvas.Brush.Style := bsClear;
 
   v6 := -1;
   PCitySprites := Pointer(This);
   PCityWindow := Pointer(Cardinal(PCitySprites) - $2D8);
   for i := 0 to PInteger(This + $12C0)^ - 1 do
   begin
-    //Canvas.Canvas.Rectangle(PCitySprites^[i].X1, PCitySprites^[i].Y1, PCitySprites^[i].X2, PCitySprites^[i].Y2);
-    //Canvas.Canvas.Font.Color := RGB(255, 0, 255);
-    //Canvas.Canvas.TextOut(PCitySprites^[i].X1, PCitySprites^[i].Y1, IntToStr(PCitySprites^[i].SType));
+    Canvas.Canvas.Rectangle(PCitySprites^[i].X1, PCitySprites^[i].Y1, PCitySprites^[i].X2, PCitySprites^[i].Y2);
+    Canvas.Canvas.Font.Color := RGB(255, 0, 255);
+    Canvas.Canvas.TextOut(PCitySprites^[i].X1, PCitySprites^[i].Y1, IntToStr(PCitySprites^[i].SIndex));
     DeltaX := 0;
     if (PCitySprites^[i].X1 + DeltaX <= X) and (PCitySprites^[i].X2 + DeltaX > X) and (PCitySprites^[i].Y1 <= Y) and (PCitySprites^[i].Y2 > Y) then
     begin
@@ -364,15 +365,15 @@ begin
     A4 := PCitySprites^[v6].SIndex;
     A5 := PCitySprites^[v6].SType;
     Result := v6;
-    //Canvas.Canvas.Pen.Color := RGB(128, 255, 128);
-    //Canvas.Canvas.Rectangle(PCitySprites^[v6].X1, PCitySprites^[v6].Y1, PCitySprites^[v6].X2, PCitySprites^[v6].Y2);
+    Canvas.Canvas.Pen.Color := RGB(128, 255, 128);
+    Canvas.Canvas.Rectangle(PCitySprites^[v6].X1, PCitySprites^[v6].Y1, PCitySprites^[v6].X2, PCitySprites^[v6].Y2);
   end
   else
   begin
     Result := v6;
   end;
 
-  //Canvas.Free;
+  Canvas.Free;
 end;
 
 function PatchCalcCitizensSpritesStart(Size: Integer): Integer; stdcall;
@@ -410,7 +411,7 @@ var
   HWndScrollBar: HWND;
   SIndex: Integer;
   SType: Integer;
-  ScrollBarData: PScrollBarData;
+  ControlInfoScroll: PControlInfoScroll;
   nPrevPos: Integer;
   nPos: Integer;
   Delta: Integer;
@@ -498,18 +499,18 @@ begin
       wtCivilopedia:
         ScrollLines := 1;
     end;
-    ScrollBarData := Pointer(GetWindowLongA(HWndScrollBar, GetClassLongA(HWndScrollBar, GCL_CBWNDEXTRA) - 8));
-    nPrevPos := ScrollBarData^.CurrentPosition;
+    ControlInfoScroll := Pointer(GetWindowLongA(HWndScrollBar, GetClassLongA(HWndScrollBar, GCL_CBWNDEXTRA) - 8));
+    nPrevPos := ControlInfoScroll^.CurrentPosition;
     SetScrollPos(HWndScrollBar, SB_CTL, nPrevPos - Delta * ScrollLines, True);
     nPos := GetScrollPos(HWndScrollBar, SB_CTL);
-    ScrollBarData^.CurrentPosition := nPos;
-    WindowInfo := ScrollBarData^.WindowInfo;
+    ControlInfoScroll^.CurrentPosition := nPos;
+    WindowInfo := ControlInfoScroll^.WindowInfo;
     asm
     mov   eax, WindowInfo
     mov   [$00637EA4], eax
     mov   eax, nPos
     push  eax
-    mov   ecx, ScrollBarData
+    mov   ecx, ControlInfoScroll
     mov   eax, $005CD640    // Call CallRedrawAfterScroll
     call  eax
     end;
@@ -855,20 +856,9 @@ asm
 end;
 
 var
-  ScrollBarControlInfo: TControlInfo;
+  ScrollBarControlInfo: TControlInfoScroll;
 
-procedure j_Q_CreateScrollbar_sub_40FC50(This, A1: Pointer; A2: Integer; A3: Pointer; A4: Integer); stdcall;
-asm
-    mov   ecx, [esp + 8]
-    push  [esp + $18]
-    push  [esp + $18]
-    push  [esp + $18]
-    push  [esp + $18]
-    mov   eax, A_j_Q_CreateScrollbar_sub_40FC50
-    call  eax
-end;
-
-procedure PatchCallCreateScollBar(); stdcall;
+procedure PatchCallCreateScrollBar(); stdcall;
 begin
   if (CurrPopupInfo^^.NumberOfItems >= 9) and (ListOfUnits.Length > 9) then
   begin
@@ -877,7 +867,7 @@ begin
     ScrollBarControlInfo.Rect.Top := 36;
     ScrollBarControlInfo.Rect.Right := CurrPopupInfo^^.Width - 9;
     ScrollBarControlInfo.Rect.Bottom := CurrPopupInfo^^.Height - 45;
-    j_Q_CreateScrollbar_sub_40FC50(@ScrollBarControlInfo, @CurrPopupInfo^^.GraphicsInfo^.WindowInfo, $0B, @ScrollBarControlInfo.Rect, 1);
+    TCiv2.CreateScrollbar(@ScrollBarControlInfo, @CurrPopupInfo^^.GraphicsInfo^.WindowInfo, $0B, @ScrollBarControlInfo.Rect, 1);
     SetScrollRange(ScrollBarControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
     SetScrollPos(ScrollBarControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
   end;
@@ -885,8 +875,8 @@ end;
 
 procedure PatchCreateUnitsListPopupParts(); register;
 asm
-    mov   [ebp - $108], eax
-    call  PatchCallCreateScollBar
+    mov   [ebp - $108], eax        // saved instruction "mov     [ebp+var_108], eax"
+    call  PatchCallCreateScrollBar
     push  $005A3397
     ret
 end;
@@ -1153,6 +1143,55 @@ begin
   end;
 end;
 
+function PatchDrawCityWindowImprove(A2: Integer): PCityWindow; stdcall; // __thiscall
+var
+  ACityWindow: PCityWindow;
+  HandleWindow: HWND;
+  Bitmap: Graphics.TBitMap;
+begin
+  asm
+    mov   ACityWindow, ecx;
+    push  A2
+    mov   eax, $00505FFA
+    call  eax
+  end;
+
+  {HandleWindow := PGraphicsInfo(ACityWindow).WindowInfo.WindowStructure.HWindow;
+  Bitmap := Graphics.TBitMap.Create();    // In VM Windows 10 disables city window redraw
+  Bitmap.Canvas.Handle := GetDC(HandleWindow);
+  Bitmap.Canvas.Pen.Color := RGB(255, 0, 255);
+  Bitmap.Canvas.Brush.Style := bsClear;
+  Bitmap.Canvas.Font.Color := RGB(255, 0, 255);
+
+  Bitmap.Canvas.TextOut(ACityWindow.Rect0.Left, ACityWindow.Rect0.Top, '0');
+
+  Bitmap.Canvas.Rectangle(ACityWindow.Rect0);
+
+  Bitmap.Canvas.Handle := 0;
+  Bitmap.Free;}
+
+  //SendMessageToLoader(Integer(HandleWindow), 0);
+  Result := ACityWindow;
+
+end;
+
+var
+  CityWindowSuportControlInfoScroll: TControlInfoScroll;
+
+procedure PatchCityWindowCreateControls(); stdcall; // __thiscall
+var
+  ACityWindow: PCityWindow;
+begin
+  asm
+    mov   ACityWindow, ecx;
+    mov   eax, $0050CF06
+    call  eax
+  end;
+  TCiv2.DestroyScrollBar(@CityWindowSuportControlInfoScroll, False);
+  CityWindowSuportControlInfoScroll.Rect := Rect(200 - 8, 236, 200, 313);
+  TCiv2.CreateScrollbar(@CityWindowSuportControlInfoScroll, @PGraphicsInfo(ACityWindow).WindowInfo, $62, @CityWindowSuportControlInfoScroll.Rect, 1);
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -1183,6 +1222,10 @@ begin
     WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
     WriteMemory(HProcess, $0040284C, [OP_JMP], @PatchInitNewGameParameters);
     WriteMemory(HProcess, $0042C107, [$00, $00, $00, $00]); // Show buildings even with zero maintenance cost in Trade Advisor
+
+    WriteMemory(HProcess, $00401EDD, [OP_JMP], @PatchDrawCityWindowImprove);
+    WriteMemory(HProcess, $0040105F, [OP_JMP], @PatchCityWindowCreateControls);
+
   end;
   if UIAOPtions.Patch64bitOn then
     WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
