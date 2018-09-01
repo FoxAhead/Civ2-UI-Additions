@@ -65,8 +65,8 @@ var
   Leaders: ^TLeaders = Pointer($006554F8);
   GCityWindow: PCityWindow = Pointer($006A91B8);
   GGameParameters: PGameParameters = Pointer($00655AE8);
-
   CityWindowEx: TCityWindowEx;
+  GChText: PChar = Pointer($00679640);
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -422,10 +422,12 @@ var
   WindowInfo: Pointer;
   WindowType: TWindowType;
   ScrollLines: Integer;
+  CityWindowScrollLines: Integer;
 label
   EndOfFunction;
 begin
   Result := True;
+  CityWindowScrollLines := 3;
 
   if Msg <> WM_MOUSEWHEEL then
     goto EndOfFunction;
@@ -475,10 +477,12 @@ begin
     if PtInRect(GCityWindow^.RectSupportOut, CursorPoint) then
     begin
       HWndScrollBar := CityWindowEx.Support.ControlInfoScroll.HWindow;
+      CityWindowScrollLines := 1;
     end;
     if PtInRect(GCityWindow^.RectImproveOut, CursorPoint) then
     begin
       HWndScrollBar := GCityWindow^.ControlInfoScroll^.HWindow;
+      CityWindowScrollLines := 3;
     end;
   end;
 
@@ -511,6 +515,8 @@ begin
         end;
       wtCivilopedia:
         ScrollLines := 1;
+      wtCityWindow:
+        ScrollLines := CityWindowScrollLines;
     end;
     ControlInfoScroll := Pointer(GetWindowLongA(HWndScrollBar, GetClassLongA(HWndScrollBar, GCL_CBWNDEXTRA) - 8));
     nPrevPos := ControlInfoScroll^.CurrentPosition;
@@ -1183,12 +1189,13 @@ begin
 
   case ACityWindow.WindowSize of
     1:
-      ScrollBarWidth := 8;
+      ScrollBarWidth := 10;
     2:
-      ScrollBarWidth := 12;
+      ScrollBarWidth := 16;
   else
     ScrollBarWidth := 16;
   end;
+
   CityWindowEx.Support.ControlInfoScroll.Rect := ACityWindow.RectSupportOut;
   CityWindowEx.Support.ControlInfoScroll.Rect.Left := CityWindowEx.Support.ControlInfoScroll.Rect.Right - ScrollBarWidth - 1;
   CityWindowEx.Support.ControlInfoScroll.Rect.Top := CityWindowEx.Support.ControlInfoScroll.Rect.Top + 1;
@@ -1204,23 +1211,55 @@ begin
   Result := ThisResult;
 end;
 
+procedure PatchDrawCityWindowSupportEx1(CityWindow: PCityWindow; SupportedUnits, Rows, Columns: Integer; var DeltaX: Integer); stdcall;
+begin
+  CityWindowEx.Support.Counter := 0;
+  if SupportedUnits > Rows * Columns then
+  begin
+    DeltaX := DeltaX - CityWindow^.WindowSize;
+  end;
+end;
+
 procedure PatchDrawCityWindowSupport1; register;
 asm
-    mov   CityWindowEx.Support.Counter, 0
+// Before loop 'for ( i = 0; ; ++i )'
+    lea   eax, [ebp - $44] // vDeltaX
+    push  eax
+    mov   eax, [ebp - $14] // vColumns
+    push  eax
+    mov   eax, [ebp - $24] // vRows
+    push  eax
+    mov   eax, [ebp - $3C] // vSupportedUnits
+    push  eax
+    mov   eax, [ebp - $C0] // vCityWindow
+    push  eax
+    call  PatchDrawCityWindowSupportEx1
     push  $0050598F
     ret
 end;
 
+function PatchDrawCityWindowSupportEx2(SupportedUnits, Rows, Columns: Integer): LongBool; stdcall;
+begin
+  CityWindowEx.Support.Counter := CityWindowEx.Support.Counter + 1;
+  Result := ((CityWindowEx.Support.Counter - 1) div Columns) >= CityWindowEx.Support.ListStart;
+end;
+
 procedure PatchDrawCityWindowSupport2; register;
 asm
-    inc   CityWindowEx.Support.Counter
-    mov   eax, CityWindowEx.Support.Counter
-    cmp   eax, CityWindowEx.Support.ListStart
-    jg    @@LABEL1
+// In loop, if ( stru_6560F0[i].HomeCity == vCityWindow->CityIndex )
+    mov   eax, [ebp - $14] // vColumns
+    push  eax
+    mov   eax, [ebp - $24] // vRows
+    push  eax
+    mov   eax, [ebp - $3C] // vSupportedUnits
+    push  eax
+    call  PatchDrawCityWindowSupportEx2
+    cmp   eax, 0
+    jne   @@LABEL_CAN_SHOW
     push  $005059D7
     ret
 
-@@LABEL1:
+@@LABEL_CAN_SHOW:
     push  $005059DC
     ret
 end;
@@ -1229,7 +1268,7 @@ procedure PatchDrawCityWindowSupportEx3(SupportedUnits, Rows, Columns: Integer);
 begin
   CityWindowEx.Support.ListTotal := SupportedUnits;
   CityWindowEx.Support.Columns := Columns;
-  TCiv2.InitControlScrollRange(@CityWindowEx.Support.ControlInfoScroll, 0, Math.Max(0, SupportedUnits - Rows * Columns));
+  TCiv2.InitControlScrollRange(@CityWindowEx.Support.ControlInfoScroll, 0, Math.Max(0, (SupportedUnits - 1) div Columns) - Rows + 1);
   TCiv2.SetScrollPageSize(@CityWindowEx.Support.ControlInfoScroll, 4);
   TCiv2.SetScrollPosition(@CityWindowEx.Support.ControlInfoScroll, CityWindowEx.Support.ListStart);
   if SupportedUnits <= Rows * Columns then
@@ -1238,6 +1277,7 @@ end;
 
 procedure PatchDrawCityWindowSupport3; register;
 asm
+// After loop 'for ( i = 0; ; ++i )'
     mov   eax, [ebp - $14] // vColumns
     push  eax
     mov   eax, [ebp - $24] // vRows
@@ -1246,6 +1286,37 @@ asm
     push  eax
     call  PatchDrawCityWindowSupportEx3
     push  $00505D10
+    ret
+end;
+
+procedure PatchDrawCityWindowResourcesEx(CityWindow: PCityWindow); stdcall;
+var
+  HomeUnits: Integer;
+  i: Integer;
+  Text: string;
+begin
+  HomeUnits := 0;
+  for i := 0 to GGameParameters^.TotalUnits - 1 do
+  begin
+    if GUnits[i].ID > 0 then
+      if GUnits[i].HomeCity = CityWindow^.CityIndex then
+        HomeUnits := HomeUnits + 1;
+  end;
+  if HomeUnits > 0 then
+  begin
+    Text := string(GChText);
+    Text := Text + ' / ' + IntToStr(HomeUnits);
+    StrCopy(GChText, PChar(Text));
+  end;
+end;
+
+procedure PatchDrawCityWindowResources; register;
+asm
+// Before call    Q_DrawString_sub_401E0B
+    mov   eax, [ebp - $20C]
+    push  eax
+    call  PatchDrawCityWindowResourcesEx
+    push  $00401E0B
     ret
 end;
 
@@ -1286,6 +1357,8 @@ begin
     WriteMemory(HProcess, $005059D1 + 2, [], @PatchDrawCityWindowSupport2);
     WriteMemory(HProcess, $00505999 + 2, [], @PatchDrawCityWindowSupport3);
     WriteMemory(HProcess, $00505D06, [OP_JMP], @PatchDrawCityWindowSupport3);
+
+    WriteMemory(HProcess, $00503D7F, [OP_CALL], @PatchDrawCityWindowResources);
 
   end;
   if UIAOPtions.Patch64bitOn then
