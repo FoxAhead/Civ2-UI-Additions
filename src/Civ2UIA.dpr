@@ -45,7 +45,7 @@ var
   ShieldLeft: ^TShieldLeft = Pointer($642C48);
   ShieldTop: ^TShieldTop = Pointer($642B48);
   ShieldFontInfo: ^TFontInfo = Pointer($006AC090);
-  AllUnits: ^TUnits = Pointer($006560F0);
+  GUnits: ^TUnits = Pointer($006560F0);
   UnitTypes: ^TUnitTypes = Pointer($0064B1B8);
   GameTurn: PWord = Pointer($00655AF8);
   HumanCivIndex: PInteger = Pointer($006D1DA0);
@@ -63,6 +63,10 @@ var
   MapGraphicsInfo: PGraphicsInfo = Pointer($0066C7A8);
   MainWindowInfo: PWindowInfo = Pointer($006553D8);
   Leaders: ^TLeaders = Pointer($006554F8);
+  GCityWindow: PCityWindow = Pointer($006A91B8);
+  GGameParameters: PGameParameters = Pointer($00655AE8);
+
+  CityWindowEx: TCityWindowEx;
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -185,34 +189,34 @@ asm
     bswap eax
 end;
 
-function CDGetTrackLength(Id: MCIDEVICEID; TrackN: Cardinal): Cardinal;
+function CDGetTrackLength(ID: MCIDEVICEID; TrackN: Cardinal): Cardinal;
 var
   StatusParms: TMCI_Status_Parms;
 begin
   Result := 0;
   StatusParms.dwItem := MCI_STATUS_LENGTH;
   StatusParms.dwTrack := TrackN;
-  if mciSendCommand(Id, MCI_STATUS, MCI_STATUS_ITEM + MCI_TRACK, LongInt(@StatusParms)) = 0 then
+  if mciSendCommand(ID, MCI_STATUS, MCI_STATUS_ITEM + MCI_TRACK, LongInt(@StatusParms)) = 0 then
     Result := FastSwap(StatusParms.dwReturn shl 8);
 end;
 
-function CDGetPosition(Id: MCIDEVICEID): Cardinal;
+function CDGetPosition(ID: MCIDEVICEID): Cardinal;
 var
   StatusParms: TMCI_Status_Parms;
 begin
   Result := 0;
   StatusParms.dwItem := MCI_STATUS_POSITION;
-  if mciSendCommand(Id, MCI_STATUS, MCI_STATUS_ITEM, LongInt(@StatusParms)) = 0 then
+  if mciSendCommand(ID, MCI_STATUS, MCI_STATUS_ITEM, LongInt(@StatusParms)) = 0 then
     Result := FastSwap(StatusParms.dwReturn);
 end;
 
-function CDGetMode(Id: MCIDEVICEID): Cardinal;
+function CDGetMode(ID: MCIDEVICEID): Cardinal;
 var
   StatusParms: TMCI_Status_Parms;
 begin
   Result := 0;
   StatusParms.dwItem := MCI_STATUS_MODE;
-  if mciSendCommand(Id, MCI_STATUS, MCI_STATUS_ITEM, LongInt(@StatusParms)) = 0 then
+  if mciSendCommand(ID, MCI_STATUS, MCI_STATUS_ITEM, LongInt(@StatusParms)) = 0 then
     Result := StatusParms.dwReturn;
 end;
 
@@ -466,6 +470,15 @@ begin
       ChangeSpecialistDown := False;
       Result := False;
       goto EndOfFunction;
+    end;
+    HWndScrollBar := 0;
+    if PtInRect(GCityWindow^.RectSupportOut, CursorPoint) then
+    begin
+      HWndScrollBar := CityWindowEx.Support.ControlInfoScroll.HWindow;
+    end;
+    if PtInRect(GCityWindow^.RectImproveOut, CursorPoint) then
+    begin
+      HWndScrollBar := GCityWindow^.ControlInfoScroll^.HWindow;
     end;
   end;
 
@@ -906,10 +919,10 @@ begin
     mov   Result, eax
   end;
 
-  UnitType := AllUnits^[UnitIndex].UnitType;
-  if (UnitTypes^[UnitType].Role = 5) and (AllUnits^[UnitIndex].CivIndex = HumanCivIndex^) and (AllUnits^[UnitIndex].Counter > 0) then
+  UnitType := GUnits^[UnitIndex].UnitType;
+  if (UnitTypes^[UnitType].Role = 5) and (GUnits^[UnitIndex].CivIndex = HumanCivIndex^) and (GUnits^[UnitIndex].Counter > 0) then
   begin
-    TextOut := IntToStr(AllUnits^[UnitIndex].Counter);
+    TextOut := IntToStr(GUnits^[UnitIndex].Counter);
     DC := PCardinal(PCardinal(Cardinal(thisWayToWindowInfo) + $40)^ + $4)^;
     SavedDC := SaveDC(DC);
     Canvas := TCanvas.Create();
@@ -1067,7 +1080,7 @@ end;
 function PatchCheckCDStatus(): Integer; stdcall;
 var
   Position: Cardinal;
-  Id: Cardinal;
+  ID: Cardinal;
 begin
   Result := 0;
   Inc(MCICDCheckThrottle);
@@ -1082,11 +1095,11 @@ begin
         DrawCDPositon(Position);
         if ((Position and $00FFFFFF) >= MCIPlayLength) or ((Position shr 24) <> MCIPlayTrack) then
         begin
-          Id := MCIPlayId;
+          ID := MCIPlayId;
           MCIPlayId := 0;
-          mciSendCommand(Id, MCI_STOP, 0, 0);
-          mciSendCommand(Id, MCI_CLOSE, 0, 0);
-          PostMessage(PCardinal($006E4FF8)^, MM_MCINOTIFY, MCI_NOTIFY_SUCCESSFUL, Id);
+          mciSendCommand(ID, MCI_STOP, 0, 0);
+          mciSendCommand(ID, MCI_CLOSE, 0, 0);
+          PostMessage(PCardinal($006E4FF8)^, MM_MCINOTIFY, MCI_NOTIFY_SUCCESSFUL, ID);
         end;
       end;
     end;
@@ -1143,53 +1156,97 @@ begin
   end;
 end;
 
-function PatchDrawCityWindowImprove(A2: Integer): PCityWindow; stdcall; // __thiscall
-var
-  ACityWindow: PCityWindow;
-  HandleWindow: HWND;
-  Bitmap: Graphics.TBitMap;
+//------------------------------------------------
+//     CityWindow
+//------------------------------------------------
+
+procedure CallBackCityWindowSupportScroll(A1: Integer); cdecl;
 begin
-  asm
-    mov   ACityWindow, ecx;
-    push  A2
-    mov   eax, $00505FFA
-    call  eax
-  end;
-
-  {HandleWindow := PGraphicsInfo(ACityWindow).WindowInfo.WindowStructure.HWindow;
-  Bitmap := Graphics.TBitMap.Create();    // In VM Windows 10 disables city window redraw
-  Bitmap.Canvas.Handle := GetDC(HandleWindow);
-  Bitmap.Canvas.Pen.Color := RGB(255, 0, 255);
-  Bitmap.Canvas.Brush.Style := bsClear;
-  Bitmap.Canvas.Font.Color := RGB(255, 0, 255);
-
-  Bitmap.Canvas.TextOut(ACityWindow.Rect0.Left, ACityWindow.Rect0.Top, '0');
-
-  Bitmap.Canvas.Rectangle(ACityWindow.Rect0);
-
-  Bitmap.Canvas.Handle := 0;
-  Bitmap.Free;}
-
-  //SendMessageToLoader(Integer(HandleWindow), 0);
-  Result := ACityWindow;
-
+  CityWindowEx.Support.ListStart := A1;
+  TCiv2.DrawCityWindowSupport(GCityWindow, True);
 end;
 
-var
-  CityWindowSuportControlInfoScroll: TControlInfoScroll;
-
-procedure PatchCityWindowCreateControls(); stdcall; // __thiscall
+function PatchCityWindowInitRectangles(): LongBool; stdcall; // __thiscall
 var
   ACityWindow: PCityWindow;
+  ScrollBarWidth: Integer;
+  ThisResult: LongBool;
 begin
   asm
     mov   ACityWindow, ecx;
-    mov   eax, $0050CF06
+    mov   eax, $00508D24 // Q_CityWindowInitRectangles_sub_508D24
     call  eax
+    mov   ThisResult, eax
   end;
-  TCiv2.DestroyScrollBar(@CityWindowSuportControlInfoScroll, False);
-  CityWindowSuportControlInfoScroll.Rect := Rect(200 - 8, 236, 200, 313);
-  TCiv2.CreateScrollbar(@CityWindowSuportControlInfoScroll, @PGraphicsInfo(ACityWindow).WindowInfo, $62, @CityWindowSuportControlInfoScroll.Rect, 1);
+
+  TCiv2.DestroyScrollBar(@CityWindowEx.Support.ControlInfoScroll, False);
+
+  case ACityWindow.WindowSize of
+    1:
+      ScrollBarWidth := 8;
+    2:
+      ScrollBarWidth := 12;
+  else
+    ScrollBarWidth := 16;
+  end;
+  CityWindowEx.Support.ControlInfoScroll.Rect := ACityWindow.RectSupportOut;
+  CityWindowEx.Support.ControlInfoScroll.Rect.Left := CityWindowEx.Support.ControlInfoScroll.Rect.Right - ScrollBarWidth - 1;
+  CityWindowEx.Support.ControlInfoScroll.Rect.Top := CityWindowEx.Support.ControlInfoScroll.Rect.Top + 1;
+  CityWindowEx.Support.ControlInfoScroll.Rect.Bottom := CityWindowEx.Support.ControlInfoScroll.Rect.Bottom - 1;
+  CityWindowEx.Support.ControlInfoScroll.Rect.Right := CityWindowEx.Support.ControlInfoScroll.Rect.Right - 1;
+
+  TCiv2.CreateScrollbar(@CityWindowEx.Support.ControlInfoScroll, @PGraphicsInfo(ACityWindow).WindowInfo, $62, @CityWindowEx.Support.ControlInfoScroll.Rect, 1);
+  CityWindowEx.Support.ControlInfoScroll.ProcRedraw := @CallBackCityWindowSupportScroll;
+  CityWindowEx.Support.ControlInfoScroll.ProcTrack := @CallBackCityWindowSupportScroll;
+
+  CityWindowEx.Support.ListStart := 0;
+
+  Result := ThisResult;
+end;
+
+procedure PatchDrawCityWindowSupport1; register;
+asm
+    mov   CityWindowEx.Support.Counter, 0
+    push  $0050598F
+    ret
+end;
+
+procedure PatchDrawCityWindowSupport2; register;
+asm
+    inc   CityWindowEx.Support.Counter
+    mov   eax, CityWindowEx.Support.Counter
+    cmp   eax, CityWindowEx.Support.ListStart
+    jg    @@LABEL1
+    push  $005059D7
+    ret
+
+@@LABEL1:
+    push  $005059DC
+    ret
+end;
+
+procedure PatchDrawCityWindowSupportEx3(SupportedUnits, Rows, Columns: Integer); stdcall;
+begin
+  CityWindowEx.Support.ListTotal := SupportedUnits;
+  CityWindowEx.Support.Columns := Columns;
+  TCiv2.InitControlScrollRange(@CityWindowEx.Support.ControlInfoScroll, 0, Math.Max(0, SupportedUnits - Rows * Columns));
+  TCiv2.SetScrollPageSize(@CityWindowEx.Support.ControlInfoScroll, 4);
+  TCiv2.SetScrollPosition(@CityWindowEx.Support.ControlInfoScroll, CityWindowEx.Support.ListStart);
+  if SupportedUnits <= Rows * Columns then
+    ShowWindow(CityWindowEx.Support.ControlInfoScroll.HWindow, 0);
+end;
+
+procedure PatchDrawCityWindowSupport3; register;
+asm
+    mov   eax, [ebp - $14] // vColumns
+    push  eax
+    mov   eax, [ebp - $24] // vRows
+    push  eax
+    mov   eax, [ebp - $3C] // vSupportedUnits
+    push  eax
+    call  PatchDrawCityWindowSupportEx3
+    push  $00505D10
+    ret
 end;
 
 {$O+}
@@ -1223,8 +1280,12 @@ begin
     WriteMemory(HProcess, $0040284C, [OP_JMP], @PatchInitNewGameParameters);
     WriteMemory(HProcess, $0042C107, [$00, $00, $00, $00]); // Show buildings even with zero maintenance cost in Trade Advisor
 
-    WriteMemory(HProcess, $00401EDD, [OP_JMP], @PatchDrawCityWindowImprove);
-    WriteMemory(HProcess, $0040105F, [OP_JMP], @PatchCityWindowCreateControls);
+    // CityWindow
+    WriteMemory(HProcess, $004013A2, [OP_JMP], @PatchCityWindowInitRectangles);
+    WriteMemory(HProcess, $00505987, [OP_JMP], @PatchDrawCityWindowSupport1);
+    WriteMemory(HProcess, $005059D1 + 2, [], @PatchDrawCityWindowSupport2);
+    WriteMemory(HProcess, $00505999 + 2, [], @PatchDrawCityWindowSupport3);
+    WriteMemory(HProcess, $00505D06, [OP_JMP], @PatchDrawCityWindowSupport3);
 
   end;
   if UIAOPtions.Patch64bitOn then

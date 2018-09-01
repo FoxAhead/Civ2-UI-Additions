@@ -3,7 +3,8 @@ unit Civ2UIA_Types;
 interface
 
 uses
-  Types;
+  Types,
+  Civ2Types;
 
 type
   TWindowType = (wtUnknown, wtCityStatus, //F1
@@ -32,10 +33,24 @@ type
     StartMapMean: TPoint;
   end;
 
+  TCityWindowSupport = record
+    ControlInfoScroll: TControlInfoScroll;
+    ListTotal: Integer;
+    ListStart: Integer;
+    Counter: Integer;
+    Columns: Integer;
+  end;
+  TCityWindowEx = record
+    Support: TCityWindowSupport;
+  end;
+
 const
   OP_NOP: Byte = $90;
   OP_CALL: Byte = $E8;
   OP_JMP: Byte = $E9;
+  OP_0F: Byte = $0F;
+  OP_JZ: Byte = $84;
+
   SHADOW_NONE = $00;
   SHADOW_TL = $01;
   SHADOW_T_ = $02;
@@ -51,4 +66,3 @@ const
 implementation
 
 end.
-

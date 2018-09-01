@@ -6,6 +6,26 @@ uses
   Windows;
 
 type
+  PCityWindow = ^TCityWindow;
+
+  PWindowInfo = ^TWindowInfo;
+
+  PButtonInfo = ^TButtonInfo;
+
+  PControlInfoScroll = ^TControlInfoScroll;
+
+  PGraphicsInfo = ^TGraphicsInfo;
+
+  PWindowStructure = ^TWindowStructure;
+
+  PCurrPopupInfo = ^TCurrPopupInfo;
+
+  PPCurrPopupInfo = ^PCurrPopupInfo;
+
+  PDrawInfo = ^TDrawInfo;
+
+  PGameParameters = ^TGameParameters;
+
   TCitySprite = packed record
     X1: Integer;
     Y1: Integer;
@@ -49,26 +69,10 @@ type
     RectSupportIn: TRect;                 //
     RectInfoIn: TRect;                    //
     RectImproveScroll: TRect;             //
-    Unknown10: array[$16AE..$16DF] of Byte; //
+    Unknown10: array[$16AE..$16B5] of Byte; //
+    ControlInfo: array[1..10] of Pointer; //
+    ControlInfoScroll: PControlInfoScroll; //
   end;
-
-  PCityWindow = ^TCityWindow;
-
-  PWindowInfo = ^TWindowInfo;
-
-  PButtonInfo = ^TButtonInfo;
-
-  PControlInfoScroll = ^TControlInfoScroll;
-
-  PGraphicsInfo = ^TGraphicsInfo;
-
-  PWindowStructure = ^TWindowStructure;
-
-  PCurrPopupInfo = ^TCurrPopupInfo;
-
-  PPCurrPopupInfo = ^PCurrPopupInfo;
-
-  PDrawInfo = ^TDrawInfo;
 
   TControlInfo = packed record            // Size = $40
     ControlType: Integer;                 //  8-Scrollbar, 7-ListBox, 6-Button, 4-EditBox, 3-RadioButton(Group), 2-CheckBox, 1-ListItem
@@ -109,7 +113,7 @@ type
     HWindow: HWND;                        // + 0x1C
     _Unknown3: array[$20..$2B] of Byte;   // + 0x20
     ProcRedraw: Pointer;                  // + 0x2C
-    ProcTrack: Integer;                   // + 0x30
+    ProcTrack: Pointer;                   // + 0x30
     PageSize: Integer;                    // + 0x34
     _Unknown5: Integer;                   // + 0x38
     CurrentPosition: Integer;             // + 0x3C
@@ -192,8 +196,8 @@ type
     ClientSize: TSize;
     Unknown6: array[$134..$2DF] of Byte;
     MapCenter: TSmallPoint;               // + 0x2E0
-    MapZoom: SmallInt;                    // + 0x2E4
-    Unknown7: SmallInt;                   // + 0x2E6
+    MapZoom: Smallint;                    // + 0x2E4
+    Unknown7: Smallint;                   // + 0x2E6
     MapRect: TRect;                       // + 0x2E8
     MapHalf: TSize;                       // + 0x2F8
     Unknown8: array[$300..$307] of Byte;
@@ -231,6 +235,46 @@ type
   TFontInfo = packed record
     Handle: PPHFONT;
     Height: Longint;
+  end;
+
+  TGameParameters = packed record
+    word_655AE8: Word;
+    dword_655AEA: Integer;
+    word_655AEE: Word;
+    MapFlags: Word;
+    word_655AF2: Word;
+    word_655AF4: Word;
+    word_655AF6: Word;
+    Turn: Word;
+    Year: Word;
+    word_655AFC: Word;
+    word_655AFE: Word;
+    word_655B00: Word;
+    PlayerTribeNumber: Byte;
+    byte_655B03: Byte;
+    byte_655B04: Byte;
+    byte_655B05: Byte;
+    byte_655B06: Byte;
+    byte_655B07: Byte;
+    DifficultyLevel: Byte;
+    BarbarianActivity: Byte;
+    TribesLeftInPlay: Byte;
+    HumanPlayers: Byte;
+    byte_655B0C: Byte;
+    byte_655B0D: Byte;
+    byte_655B0E: Byte;
+    byte_655B0F: Byte;
+    word_655B10: Word;
+    word_655B12: Word;
+    word_655B14: Word;
+    TotalUnits: Word;
+    TotalCities: Word;
+    word_655B1A: Word;
+    word_655B1C: Word;
+    byte_655B1E: array[1..34] of Byte;
+    byte_655B40: Byte;
+    byte_655B41: array[1..3] of Byte;
+    byte_655B44: Byte;
   end;
 
   TUnitType = packed record               // Size = 0x14
@@ -279,22 +323,22 @@ type
   TUnits = array[0..$800] of TUnit;       // 6560F0
 
   TCity = packed record                   // Size = 0x58
-    X: SmallInt;                          //
-    Y: SmallInt;                          // + 0x02
+    X: Smallint;                          //
+    Y: Smallint;                          // + 0x02
     byte_64F344: Byte;                    // + 0x04
     unk_64F345: Byte;                     // + 0x05
     byte_64F346: Byte;                    // + 0x06
     byte_64F347: Byte;                    // + 0x07
     Owner: Byte;                          // + 0x08
-    Size: Byte;                           // + 0x09
+    SIZE: Byte;                           // + 0x09
     Founder: Byte;                        // + 0x0A
     TurnsCaptured: Byte;                  // + 0x0B
     byte_64F34C: Byte;
     RevealedSize: array[1..9] of Byte;
     dword_64F356: Integer;
-    word_64F35A: SmallInt;
-    word_64F35C: SmallInt;
-    word_64F35E: SmallInt;
+    word_64F35A: Smallint;
+    word_64F35C: Smallint;
+    word_64F35E: Smallint;
     Name: array[0..15] of Char;
     dword_64F370: Integer;
     byte_64F374: array[1..5] of Byte;
@@ -306,11 +350,11 @@ type
     byte_64F37F: array[1..2] of Byte;
     byte_64F381: Byte;
     byte_64F382: array[1..2] of Byte;
-    word_64F384: SmallInt;
-    word_64F386: array[1..2] of SmallInt;
-    word_64F38A: SmallInt;
-    word_64F38C: SmallInt;
-    word_64F38E: SmallInt;
+    word_64F384: Smallint;
+    word_64F386: array[1..2] of Smallint;
+    word_64F38A: Smallint;
+    word_64F38C: Smallint;
+    word_64F38E: Smallint;
     byte_64F390: Byte;
     byte_64F391: Byte;
     byte_64F392: Byte;
