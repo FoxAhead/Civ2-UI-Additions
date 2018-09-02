@@ -30,8 +30,8 @@ This launcher will add some enhancements to Sid Meier's Civilization II: Multipl
  - Show buildings even with zero maintenance cost in Trade Advisor
  
 ![Screenshot](Screenshots/TradeAdvisorZeroCost.png?raw=true "Screenshot")
-
  - Scrollbar for supported units in the city window. And a number of total supported units.
+ 
 ![Screenshot](Screenshots/CityWindowSupport.png?raw=true "Screenshot")
  - 64-bit patch included
  - No-CD patch included (note that this disables intro/wonders movies and High Council movies)
