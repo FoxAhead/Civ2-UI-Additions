@@ -410,9 +410,11 @@ end;
 
 function PatchMouseWheelHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 var
-  CursorPoint: TPoint;
+  CursorScreen: TPoint;
+  CursorClient: TPoint;
   HWndCursor: HWND;
   HWndScrollBar: HWND;
+  HWndParent: HWND;
   SIndex: Integer;
   SType: Integer;
   ControlInfoScroll: PControlInfoScroll;
@@ -431,34 +433,31 @@ begin
 
   if Msg <> WM_MOUSEWHEEL then
     goto EndOfFunction;
-  if not GetCursorPos(CursorPoint) then
+  if not GetCursorPos(CursorScreen) then
     goto EndOfFunction;
-  HWndCursor := WindowFromPoint(CursorPoint);
+  HWndCursor := WindowFromPoint(CursorScreen);
   if HWndCursor = 0 then
     goto EndOfFunction;
   HWndScrollBar := FindScrolBar(HWndCursor);
   if HWndScrollBar = 0 then
     HWndScrollBar := FindScrolBar(HWindow);
+  if HWndScrollBar = 0 then
+    HWndParent := HWindow
+  else
+    HWndParent := GetParent(HWndScrollBar);
+  if HWndParent = 0 then
+    goto EndOfFunction;
+  CursorClient := CursorScreen;
+  ScreenToClient(HWndParent, CursorClient);
   Delta := Smallint(HiWord(WParam)) div WHEEL_DELTA;
   if Abs(Delta) > 10 then
     goto EndOfFunction;                   // Filtering
-  WindowType := GuessWindowType(HWndCursor);
+  WindowType := GuessWindowType(HWndParent);
 
   if WindowType = wtCityWindow then
   begin
-    ScreenToClient(HWndCursor, CursorPoint);
-    asm
-    mov   ecx, AThisCitySprites // $006A9490
-    lea   eax, SType
-    push  eax
-    lea   eax, SIndex
-    push  eax
-    push  CursorPoint.Y
-    push  CursorPoint.X
-    mov   eax, A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85
-    call  eax
-    end;
-    //PatchGetInfoOfClickedCitySprite(CursorPoint.X, CursorPoint.Y, SIndex, SType);
+    TCiv2.GetInfoOfClickedCitySprite(@GCityWindow^.CitySpritesInfo, CursorClient.X, CursorClient.Y, SIndex, SType);
+    SendMessageToLoader(Sindex,SType);
     if SType = 2 then
     begin
       ChangeSpecialistDown := (Delta = -1);
@@ -474,27 +473,24 @@ begin
       goto EndOfFunction;
     end;
     HWndScrollBar := 0;
-    if PtInRect(GCityWindow^.RectSupportOut, CursorPoint) then
+    if PtInRect(GCityWindow^.RectSupportOut, CursorClient) then
     begin
       HWndScrollBar := CityWindowEx.Support.ControlInfoScroll.HWindow;
       CityWindowScrollLines := 1;
     end;
-    if PtInRect(GCityWindow^.RectImproveOut, CursorPoint) then
+    if PtInRect(GCityWindow^.RectImproveOut, CursorClient) then
     begin
       HWndScrollBar := GCityWindow^.ControlInfoScroll^.HWindow;
       CityWindowScrollLines := 3;
     end;
   end;
 
-  if GuessWindowType(HWindow) = wtUnitsListPopup then
+  if WindowType = wtUnitsListPopup then
   begin
     if ChangeListOfUnitsStart(Sign(Delta) * -3) then
     begin
       CurrPopupInfo^^.SelectedItem := $FFFFFFFC;
-      asm
-    mov   eax, $005A3C58  // Call ClearPopupActive
-    call  eax
-      end;
+      TCiv2.ClearPopupActive;
     end;
     Result := False;
     goto EndOfFunction;
@@ -503,7 +499,7 @@ begin
   if (HWndScrollBar > 0) and IsWindowVisible(HWndScrollBar) then
   begin
     ScrollLines := 3;
-    case GuessWindowType(GetParent(HWndScrollBar)) of
+    case WindowType of
       wtScienceAdvisor, wtIntelligenceReport:
         ScrollLines := 1;
       wtTaxRate:
@@ -576,10 +572,7 @@ begin
     begin
       SetScrollPos(LParam, SB_CTL, ListOfUnits.Start, True);
       CurrPopupInfo^^.SelectedItem := $FFFFFFFC;
-      asm
-    mov   eax, $005A3C58  // Call ClearPopupActive
-    call  eax
-      end;
+      TCiv2.ClearPopupActive;
       Result := False;
     end;
   end;
@@ -1238,7 +1231,7 @@ asm
     ret
 end;
 
-function PatchDrawCityWindowSupportEx2(SupportedUnits, Rows, Columns: Integer): LongBool; stdcall;
+function PatchDrawCityWindowSupportEx2(Columns: Integer): LongBool; stdcall;
 begin
   CityWindowEx.Support.Counter := CityWindowEx.Support.Counter + 1;
   Result := ((CityWindowEx.Support.Counter - 1) div Columns) >= CityWindowEx.Support.ListStart;
@@ -1248,10 +1241,6 @@ procedure PatchDrawCityWindowSupport2; register;
 asm
 // In loop, if ( stru_6560F0[i].HomeCity == vCityWindow->CityIndex )
     mov   eax, [ebp - $14] // vColumns
-    push  eax
-    mov   eax, [ebp - $24] // vRows
-    push  eax
-    mov   eax, [ebp - $3C] // vSupportedUnits
     push  eax
     call  PatchDrawCityWindowSupportEx2
     cmp   eax, 0

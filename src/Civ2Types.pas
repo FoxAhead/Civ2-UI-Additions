@@ -8,6 +8,8 @@ uses
 type
   PCityWindow = ^TCityWindow;
 
+  PCitySpritesInfo = ^TCitySpritesInfo;
+
   PWindowInfo = ^TWindowInfo;
 
   PButtonInfo = ^TButtonInfo;
@@ -421,3 +423,4 @@ const
 implementation
 
 end.
+

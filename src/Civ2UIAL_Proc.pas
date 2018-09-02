@@ -317,7 +317,7 @@ begin
     Log('BytesWritten ' + IntToStr(BytesWritten));
     if ResumeThread(ProcessInformation.hThread) = $FFFFFFFF then
       raise Exception.Create('ResumeThread: ' + IntToStr(GetLastError()));
-    for i := 1 to 200 do
+    for i := 1 to 600 do
     begin
       Application.ProcessMessages();
       if DllLoaded then
