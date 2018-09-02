@@ -12,7 +12,8 @@ These patches do not change any original game rules or limitations.">
 - CD Music: correct CD-tracks looping and play progress display
 - Game icon fix (visible in Alt+Tab popup)
 - Resetting city name prompts, when restarting a new game without closing program
-- Show buildings even with zero maintenance cost in Trade Advisor"/>
+- Show buildings even with zero maintenance cost in Trade Advisor
+- Scrollbar for supported units in the city window. And a number of total supported units."/>
 	</section>
 	<section name="Common" description="Section of common patches.
 These patches do not change any original game rules or limitations.">
