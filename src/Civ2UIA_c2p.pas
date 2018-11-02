@@ -13,6 +13,7 @@ procedure C2PatchIdleCpu(HProcess: THandle);
 implementation
 
 uses
+  Math,
   MMSystem,
   SysUtils,
   Windows,
@@ -22,15 +23,26 @@ uses
 
 var
   g_dwMessageWaitTimeout: DWORD = 1;
+  g_dwMessageWaitTimeoutMin: DWORD = 1;
+  g_dwMessageWaitTimeoutMax: DWORD = 10;
+  g_dwMessageWaitTimeoutInc: DWORD = 1;
+  g_dMessageWaitTimeoutThreshold: Double = 1000000.0;
   g_dLastMessagePurgeTime: Double = 0.0;
   g_dPurgeMessagesInterval: Double = 3000000.0;
-  g_dStartTime: Double = 0.0;
   g_dTotalSleepTime: Double = 0.0;
-  g_dSleepRatio: Double = 0.5;
-  g_dCpuSamplingInterval: Double = 1000000.0;
   g_dTimerFrequency: Double;
   g_dTimerStart: Double;
   g_bTimerHighResolution: Boolean = False;
+
+procedure C2PatchInitializeOptions();
+begin
+  g_dPurgeMessagesInterval := UIAOPtions^.PurgeMessagesIntervalMs * 1000.0;
+  g_dMessageWaitTimeoutThreshold := UIAOPtions^.MessageWaitTimeoutThresholdMs * 1000.0;
+  g_dwMessageWaitTimeoutMin := UIAOPtions^.MessageWaitTimeoutMinMs;
+  g_dwMessageWaitTimeoutMax := UIAOPtions^.MessageWaitTimeoutMaxMs;
+  g_dwMessageWaitTimeout := g_dwMessageWaitTimeoutMin;
+  g_dwMessageWaitTimeoutInc := Max(1, Trunc((g_dwMessageWaitTimeoutMax - g_dwMessageWaitTimeoutMin) / 10));
+end;
 
 function C2PatchInitializeTimer(): Boolean;
 var
@@ -82,7 +94,6 @@ const
   MWMO_INPUTAVAILABLE = $0004;
 var
   dBeginTime: Double;
-  dElapsed: Double;
   dNow: Double;
   msg: TMsg;
 begin
@@ -90,45 +101,33 @@ begin
   // Civilization 2 uses filter value 957 as a spinning wait.
   if (wMsgFilterMin = 957) then
   begin
-    dElapsed := dBeginTime - g_dStartTime;
-    if (g_dTotalSleepTime < 1.0) or (dElapsed < 1.0) then
+    // Wait for user input.
+    if MsgWaitForMultipleObjectsEx(0, Pointer(nil)^, g_dwMessageWaitTimeout, QS_ALLINPUT, MWMO_INPUTAVAILABLE) = WAIT_TIMEOUT then
     begin
-      MsgWaitForMultipleObjectsEx(0, Pointer(nil)^, g_dwMessageWaitTimeout, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
       dNow := C2PatchGetTimerCurrentTime();
-      // Prime the counters.
-      g_dStartTime := dBeginTime;
-      if (dNow > dBeginTime) then
-        g_dTotalSleepTime := (dNow - dBeginTime)
-      else
-        g_dTotalSleepTime := 1000.0;
-    end
-    else if (((dElapsed - g_dTotalSleepTime) / g_dTotalSleepTime) >= g_dSleepRatio) then
-    begin
-      MsgWaitForMultipleObjectsEx(0, Pointer(nil)^, g_dwMessageWaitTimeout, QS_ALLINPUT, MWMO_INPUTAVAILABLE);
-      dNow := C2PatchGetTimerCurrentTime();
-      // Overflow check.
-      if (dNow >= dBeginTime) then
+
+      if (dNow <= dBeginTime) then
       begin
-        if (dNow = dBeginTime) then
-        begin
-          // Low resolution timer. Add 1 milliseconds to make up for poor precision.
-          g_dTotalSleepTime := g_dTotalSleepTime + 1000.0;
-        end
-        else
-        begin
-          g_dTotalSleepTime := g_dTotalSleepTime + (dNow - dBeginTime);
-        end;
+        // Low resolution timer. Add 0.5 milliseconds to make up for poor precision.
+        g_dTotalSleepTime := g_dTotalSleepTime + 500.0;
       end
       else
       begin
-        g_dTotalSleepTime := 0.0;
+        g_dTotalSleepTime := g_dTotalSleepTime + (dNow - dBeginTime);
       end;
-      // Reset
-      if (dElapsed >= g_dCpuSamplingInterval) then
+
+      if (g_dTotalSleepTime >= g_dMessageWaitTimeoutThreshold) then
       begin
         g_dTotalSleepTime := 0.0;
+        g_dwMessageWaitTimeout := Min(g_dwMessageWaitTimeoutMax, g_dwMessageWaitTimeout + g_dwMessageWaitTimeoutInc);
       end;
+    end
+    else
+    begin
+      g_dTotalSleepTime := 0.0;
+      g_dwMessageWaitTimeout := g_dwMessageWaitTimeoutMin;
     end;
+
     // Prime last purge time.
     if (g_dLastMessagePurgeTime < 1.0) then
     begin
@@ -197,6 +196,7 @@ end;
 
 procedure C2PatchIdleCpu(HProcess: THandle);
 begin
+  C2PatchInitializeOptions();
   C2PatchInitializeTimer();
   WriteMemory(HProcess, $005BBA64, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
   WriteMemory(HProcess, $005BBB91, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
