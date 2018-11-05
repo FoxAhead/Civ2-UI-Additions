@@ -298,16 +298,16 @@ type
 
   TUnitTypes = array[0..$3D] of TUnitType; // 64B1B8
 
-  TUnit = packed record
+  TUnit = packed record                   // Size = 0x20
     X: Word;                              // X
     Y: Word;                              // Y
     Attributes: Word;                     // 00V0 0000 0000 0000 - V-Veteran
     UnitType: Byte;                       // 0x6560F6
     CivIndex: Byte;                       // 0x6560F7
-    byte_6560F8: Byte;
+    MovePoints: Byte;                     // 0x6560F8 (Move * Road movement multiplier)
     byte_6560F9: Byte;
     byte_6560FA: Byte;
-    byte_6560FB: Byte;
+    MoveDirection: Byte;                  // 0x6560FB
     byte_6560FC: Byte;
     Counter: Byte;                        // 0x6560FD
     byte_6560FE: Byte;
