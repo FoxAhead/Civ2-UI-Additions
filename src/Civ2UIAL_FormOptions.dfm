@@ -67,6 +67,7 @@ object FormOptions: TFormOptions
     Height = 205
     TabStop = False
     ReadOnly = True
+    ScrollBars = ssVertical
     TabOrder = 3
   end
 end

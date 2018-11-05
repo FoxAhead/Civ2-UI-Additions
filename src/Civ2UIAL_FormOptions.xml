@@ -20,8 +20,22 @@ These patches do not change any original game rules or limitations.">
 		<boolean key="Patch64BitOn" name="64-bit patch" description="This eliminates game crashes on 64-bit systems when the game tries to display edit controls (input fields) for entering text (like city name, emperor name, world sizes etc.)."/>
 		<boolean key="DisableCDCheckOn" name="Disable CD Check" description="When enabled, allow the application to run without the game CD.
 Note that this disables intro/wonders movies and High Council movies."/>
-		<boolean key="CpuUsageOn" name="Fix Cpu Usage" description="When enabled, reduce CPU usage when the application is idle.
-This patch is adapted from civ2patch project."/>
+		<boolean key="CpuUsageOn" name="Fix CPU Usage" description="When enabled, reduce CPU usage when the application is idle.
+This patch is adapted from civ2patch project.
+
+Purge input buffer interval is the time to wait until the game purges all buffered user inputs. A low interval eliminates temporary lock ups during long AI turns.
+
+Input wait time is the amount of time to sleep when waiting for user inputs. Higher wait time decreases CPU usage, but may introduce input lag.
+
+Input wait time threshold is the period of time with no user inputs before increasing the sleep time.
+
+Input processing time threshold is the time taken to process user inputs before increasing CPU usage. Lower threshold can reduce input lag during heavy processing.">
+				<integer key="MessagesPurgeIntervalMs" name="Purge input buffer interval in milliseconds"/>
+				<integer key="MessageWaitTimeMinMs" name="Minimum input wait time in milliseconds"/>
+				<integer key="MessageWaitTimeMaxMs" name="Maximum input wait time in milliseconds"/>
+				<integer key="MessageWaitTimeThresholdMs" name="Input wait time threshold in milliseconds"/>
+				<integer key="MessageProcessingTimeThresholdMs" name="Input processing time threshold in milliseconds"/>
+		</boolean>
 		<boolean key="SocketBufferOn" name="Fix Multiplayer" description="Fix for multiplayer game by limiting socket buffer length to old default 0x2000 bytes. This is relevant for Windows 10, in which the default length is now 0x10000 which doesn't fit into 2 bytes used by the game to handle this value."/>
 	</section>
 	<section name="civ2patch" description="Section of some fixes and enhancements from civ2patch project by vinceho

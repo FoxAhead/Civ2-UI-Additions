@@ -27,6 +27,12 @@ type
     MapXLimit: Word;
     MapYLimit: Word;
     MapSizeLimit: Word;
+    // CPU Throttling Tweaks
+    MessagesPurgeIntervalMs: Cardinal;
+    MessageWaitTimeMinMs: Cardinal;
+    MessageWaitTimeMaxMs: Cardinal;
+    MessageWaitTimeThresholdMs: Cardinal;
+    MessageProcessingTimeThresholdMs: Cardinal;
   end;
 
 var
@@ -50,6 +56,12 @@ var
     MapXLimit: $1FF;                      // Default = 250   (0xFA)
     MapYLimit: $1FF;                      // Default = 250   (0xFA)
     MapSizeLimit: $7FFF;                  // Default = 10000 (0x2710)
+    // CPU Throttling Tweaks
+    MessagesPurgeIntervalMs: 3000;
+    MessageWaitTimeMinMs: 1;
+    MessageWaitTimeMaxMs: 10;
+    MessageWaitTimeThresholdMs: 250;
+    MessageProcessingTimeThresholdMs: 50;
     );
   UIAOPtions: PUIAOptions = Pointer($006560F0);
 
