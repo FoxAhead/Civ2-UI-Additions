@@ -50,6 +50,7 @@ const
   OP_JMP: Byte = $E9;
   OP_0F: Byte = $0F;
   OP_JZ: Byte = $84;
+  OP_JG: Byte = $8F;
 
   SHADOW_NONE = $00;
   SHADOW_TL = $01;

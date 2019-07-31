@@ -457,7 +457,7 @@ begin
   if WindowType = wtCityWindow then
   begin
     TCiv2.GetInfoOfClickedCitySprite(@GCityWindow^.CitySpritesInfo, CursorClient.X, CursorClient.Y, SIndex, SType);
-    SendMessageToLoader(Sindex,SType);
+    //SendMessageToLoader(Sindex,SType);
     if SType = 2 then
     begin
       ChangeSpecialistDown := (Delta = -1);
@@ -606,9 +606,9 @@ begin
       end
       else if (LoWord(WParam) and MK_SHIFT) <> 0 then
       begin
-        SendMessageToLoader(MapGraphicsInfo^.MapCenter.X, MapGraphicsInfo^.MapCenter.Y);
-        SendMessageToLoader(MapGraphicsInfo^.MapHalf.cx, MapGraphicsInfo^.MapHalf.cy);
-        SendMessageToLoader(MapGraphicsInfo^.MapRect.Left, MapGraphicsInfo^.MapRect.Top);
+        //SendMessageToLoader(MapGraphicsInfo^.MapCenter.X, MapGraphicsInfo^.MapCenter.Y);
+        //SendMessageToLoader(MapGraphicsInfo^.MapHalf.cx, MapGraphicsInfo^.MapHalf.cy);
+        //SendMessageToLoader(MapGraphicsInfo^.MapRect.Left, MapGraphicsInfo^.MapRect.Top);
         Result := False;
       end
       else
@@ -639,8 +639,8 @@ begin
           begin
             if (LoWord(WParam) and MK_SHIFT) <> 0 then
             begin
-              SendMessageToLoader(Delta.X, Delta.Y);
-              SendMessageToLoader(MapDelta.X, MapDelta.Y);
+              //SendMessageToLoader(Delta.X, Delta.Y);
+              //SendMessageToLoader(MapDelta.X, MapDelta.Y);
             end;
             Xc := MouseDrag.StartMapMean.X - MapDelta.X;
             Yc := MouseDrag.StartMapMean.Y - MapDelta.Y;
@@ -1348,6 +1348,9 @@ begin
     WriteMemory(HProcess, $00505D06, [OP_JMP], @PatchDrawCityWindowSupport3);
 
     WriteMemory(HProcess, $00503D7F, [OP_CALL], @PatchDrawCityWindowResources);
+
+    // Some minor patches
+    WriteMemory(HProcess, $00569EC7, [OP_JG]); // Fix crash in hotseat game (V_HumanCivIndex_dword_6D1DA0 = 0xFFFFFFFF, must be JG instead of JNZ)
 
   end;
   if UIAOPtions.Patch64bitOn then
