@@ -36,6 +36,7 @@ This launcher will add some enhancements to Sid Meier's Civilization II: Multipl
  - 64-bit patch included
  - No-CD patch included (note that this disables intro/wonders movies and High Council movies)
  - Enable multiplayer for Windows 8, 10 (must work on older OS also)
+ - Option for enabling Simultaneous moves in multiplayer. This is the same as writing 'Simultaneous=1' string to the CIV.INI file. With this option enabled, the multiplayer feature 'Humans Move Units at the Same Time' should be available when setting up a new multiplayer game.
 
 Also some enhancements from [civ2patch project](https://github.com/vinceho/civ2patch) included:
  - reducing CPU usage when the application is idle
