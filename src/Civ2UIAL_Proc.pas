@@ -555,6 +555,8 @@ begin
     Result := Options.MessageProcessingTimeThresholdMs;
   if Key = 'SocketBufferOn' then
     Result := Options.SocketBufferOn;
+  if Key = 'SimultaneousOn' then
+    Result := Options.SimultaneousOn;
   if Key = 'civ2patchEnable' then
     Result := Options.civ2patchEnable;
   if Key = 'HostileAiOn' then
@@ -605,6 +607,8 @@ begin
     Options.MessageProcessingTimeThresholdMs := Value;
   if Key = 'SocketBufferOn' then
     Options.SocketBufferOn := Value;
+  if Key = 'SimultaneousOn' then
+    Options.SimultaneousOn := Value;
   if Key = 'civ2patchEnable' then
     Options.civ2patchEnable := Value;
   if Key = 'HostileAiOn' then

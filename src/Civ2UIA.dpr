@@ -1372,6 +1372,10 @@ begin
     WriteMemory(HProcess, $10004E29, [OP_CALL], @PatchSocketBuffer);
     WriteMemory(HProcess, $10004E4F, [OP_CALL], @PatchSocketBuffer);
   end;
+  if UIAOPtions^.SimultaneousOn then
+  begin
+    WriteMemory(HProcess, $0041FAF0, [$01]);
+  end;
   if UIAOPtions.civ2patchEnable then
   begin
     C2Patches(HProcess);

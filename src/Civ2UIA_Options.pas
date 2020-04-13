@@ -13,6 +13,7 @@ type
     DisableCDCheckOn: Boolean;
     CpuUsageOn: Boolean;
     SocketBufferOn: Boolean;
+    SimultaneousOn: Boolean;
     // civ2patch
     civ2patchEnable: Boolean;
     HostileAiOn: Boolean;
@@ -42,6 +43,7 @@ var
     DisableCDCheckOn: True;
     CpuUsageOn: True;
     SocketBufferOn: True;
+    SimultaneousOn: False;
     // civ2patch
     civ2patchEnable: True;
     HostileAiOn: True;
