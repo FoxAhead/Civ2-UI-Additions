@@ -403,6 +403,7 @@ type
 
 const
   AThisCitySprites = $006A9490;
+  AUnits = $6560F0;
   A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85 = $00403D00;
   A_j_Q_ScreenToMap_sub_47A540 = $00402B2B;
   A_j_Q_RedrawMap_sub_47CD51 = $00401F32;

@@ -25,7 +25,8 @@ uses
   Civ2UIA_Types in 'Civ2UIA_Types.pas',
   Civ2UIA_Options in 'Civ2UIA_Options.pas',
   Civ2UIA_c2p in 'Civ2UIA_c2p.pas',
-  Civ2UIA_Proc in 'Civ2UIA_Proc.pas';
+  Civ2UIA_Proc in 'Civ2UIA_Proc.pas',
+  Civ2UIA_UnitsLimit in 'Civ2UIA_UnitsLimit.pas';
 
 {$R *.res}
 
@@ -45,7 +46,7 @@ var
   ShieldLeft: ^TShieldLeft = Pointer($642C48);
   ShieldTop: ^TShieldTop = Pointer($642B48);
   ShieldFontInfo: ^TFontInfo = Pointer($006AC090);
-  GUnits: ^TUnits = Pointer($006560F0);
+  GUnits: ^TUnits = Pointer(AUnits);
   UnitTypes: ^TUnitTypes = Pointer($0064B1B8);
   GameTurn: PWord = Pointer($00655AF8);
   HumanCivIndex: PInteger = Pointer($006D1DA0);
@@ -1376,6 +1377,12 @@ begin
   begin
     WriteMemory(HProcess, $0041FAF0, [$01]);
   end;
+  // Experimental
+  if UIAOPtions^.bUnitsLimit then
+  begin
+    PatchUnitsLimit(HProcess);    
+  end;
+  // civ2patch
   if UIAOPtions.civ2patchEnable then
   begin
     C2Patches(HProcess);

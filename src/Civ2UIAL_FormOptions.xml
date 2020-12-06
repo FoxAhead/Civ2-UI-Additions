@@ -40,6 +40,13 @@ Input processing time threshold is the time taken to process user inputs before 
 		<boolean key="SimultaneousOn" name="Simultaneous MP" description="Enable simultaneous moves in multiplayer.
 Same as writing 'Simultaneous=1' string to the CIV.INI file. With this option enabled, the multiplayer feature 'Humans Move Units at the Same Time' should be available when setting up a new multiplayer game."/>
 	</section>
+	<section name="Experimental" description="Section of experimental patches.
+These patches do change some original game rules or limitations.
+Stability is not guaranteed.">
+			<boolean key="bUnitsLimit" name="Units limit" description="Change total units limit from default 2048. Don't use numbers greater than 32767. Saves with number of units greater than default should be loaded only with this patch.">
+				<integer key="iUnitsLimit" name="Units limit"/>
+			</boolean>
+	</section>
 	<section name="civ2patch" description="Section of some fixes and enhancements from civ2patch project by vinceho
 https://github.com/vinceho/civ2patch
 These patches change some game rules or limitations.">

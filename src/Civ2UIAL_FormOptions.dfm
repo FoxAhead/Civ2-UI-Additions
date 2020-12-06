@@ -4,7 +4,7 @@ object FormOptions: TFormOptions
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
   Caption = 'Options'
-  ClientHeight = 245
+  ClientHeight = 269
   ClientWidth = 513
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -18,22 +18,23 @@ object FormOptions: TFormOptions
   OnCreate = FormCreate
   DesignSize = (
     513
-    245)
+    269)
   PixelsPerInch = 96
   TextHeight = 13
   object CheckListBox1: TCheckListBox
     Left = 4
     Top = 4
     Width = 133
-    Height = 205
+    Height = 229
     OnClickCheck = CheckListBox1ClickCheck
+    Anchors = [akLeft, akTop, akBottom]
     ItemHeight = 13
     TabOrder = 0
     OnClick = CheckListBox1Click
   end
   object ButtonOK: TButton
     Left = 152
-    Top = 216
+    Top = 240
     Width = 101
     Height = 25
     Anchors = [akLeft, akBottom]
@@ -51,7 +52,7 @@ object FormOptions: TFormOptions
   end
   object ButtonCancel: TButton
     Left = 260
-    Top = 216
+    Top = 240
     Width = 101
     Height = 25
     Anchors = [akLeft, akBottom]
@@ -64,8 +65,9 @@ object FormOptions: TFormOptions
     Left = 144
     Top = 4
     Width = 365
-    Height = 205
+    Height = 229
     TabStop = False
+    Anchors = [akLeft, akTop, akBottom]
     ReadOnly = True
     ScrollBars = ssVertical
     TabOrder = 3

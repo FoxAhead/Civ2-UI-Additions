@@ -14,6 +14,9 @@ type
     CpuUsageOn: Boolean;
     SocketBufferOn: Boolean;
     SimultaneousOn: Boolean;
+    // Experimental
+    bUnitsLimit: Boolean;
+    iUnitsLimit: Word;
     // civ2patch
     civ2patchEnable: Boolean;
     HostileAiOn: Boolean;
@@ -44,6 +47,9 @@ var
     CpuUsageOn: True;
     SocketBufferOn: True;
     SimultaneousOn: False;
+    // Experimental
+    bUnitsLimit: False;
+    iUnitsLimit: 32000;                   // Default = 2048
     // civ2patch
     civ2patchEnable: True;
     HostileAiOn: True;

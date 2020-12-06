@@ -557,6 +557,10 @@ begin
     Result := Options.SocketBufferOn;
   if Key = 'SimultaneousOn' then
     Result := Options.SimultaneousOn;
+  if Key = 'bUnitsLimit' then
+    Result := Options.bUnitsLimit;
+  if Key = 'iUnitsLimit' then
+    Result := Options.iUnitsLimit;
   if Key = 'civ2patchEnable' then
     Result := Options.civ2patchEnable;
   if Key = 'HostileAiOn' then
@@ -609,6 +613,10 @@ begin
     Options.SocketBufferOn := Value;
   if Key = 'SimultaneousOn' then
     Options.SimultaneousOn := Value;
+  if Key = 'bUnitsLimit' then
+    Options.bUnitsLimit := Value;
+  if Key = 'iUnitsLimit' then
+    Options.iUnitsLimit := Value;
   if Key = 'civ2patchEnable' then
     Options.civ2patchEnable := Value;
   if Key = 'HostileAiOn' then
