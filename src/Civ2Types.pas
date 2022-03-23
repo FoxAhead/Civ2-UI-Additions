@@ -146,7 +146,7 @@ type
 
   TWindowInfo = packed record             // GetWindowLongA(hWnd, 4),  GetWindowLongA(hWnd, 8)
     _Unknown1: Integer;                   // = 0x00000C02 ...
-    _Unknown2: Integer;                   // + 0x04
+    Palette: Pointer;                     // + 0x04
     WindowStructure: PWindowStructure;    // + 0x08 (unknown_libname_6)
     _Unknown4: Integer;                   // + 0x0C
     WindowProcs: TWindowProcs;            // + 0x10
@@ -184,12 +184,13 @@ type
     ListItems: array of TControlInfo;     // + 0x280
   end;
 
-  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C)
+  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C), possible size 0x3F0
     Unknown1: array[$00..$13] of Byte;
     ClientRectangle: TRect;               // + 0x14
     WindowRectangle: TRect;               // + 0x24
     SpriteArea: Pointer;                  // + 0x34
-    Unknown3: array[$38..$3F] of Byte;
+    Unknown3a: Integer;
+    PrevPaletteID: Integer;
     DrawInfo: PDrawInfo;                  // + 0x40
     Unknown4: array[$44..$47] of Byte;
     WindowInfo: TWindowInfo;              // + 0x48
@@ -250,12 +251,12 @@ type
     Turn: Word;
     Year: Word;
     word_655AFC: Word;
-    word_655AFE: Word;
+    ActiveUnitIndex: Word;       // Current unit index
     word_655B00: Word;
-    PlayerTribeNumber: Byte;
-    byte_655B03: Byte;
+    PlayerTribeNumber: Byte; // not PlayerTribeNumber?
+    byte_655B03: Byte;       // PlayerTribeNumber?
     byte_655B04: Byte;
-    byte_655B05: Byte;
+    SomeCivIndex: Byte;      // Active Unit Civ index?
     byte_655B06: Byte;
     byte_655B07: Byte;
     DifficultyLevel: Byte;
@@ -301,7 +302,9 @@ type
   TUnit = packed record                   // Size = 0x20
     X: Word;                              // X
     Y: Word;                              // Y
-    Attributes: Word;                     // 00V0 0000 0000 0000 - V-Veteran
+    Attributes: Word;
+    // 0010 0000 0000 0000 - 0x2000 Veteran
+    // 0100 0000 0000 0000 - 0x4000 Unit issued with the 'wait' order
     UnitType: Byte;                       // 0x6560F6
     CivIndex: Byte;                       // 0x6560F7
     MovePoints: Byte;                     // 0x6560F8 (Move * Road movement multiplier)
@@ -309,9 +312,21 @@ type
     byte_6560FA: Byte;
     MoveDirection: Byte;                  // 0x6560FB
     byte_6560FC: Byte;
-    Counter: Byte;                        // 0x6560FD
-    byte_6560FE: Byte;
+    Counter: Byte;                        // 0x6560FD Settlers work / Caravan commodity / Air turn
+    MoveIteration: Byte;
     Orders: Byte;                         // 0x6560FF
+    // 0x01 Fortify
+    // 0x02 Fortified
+    // 0x03 Sleep
+    // 0x04 Build fortress
+    // 0x05 Build road/railroad
+    // 0x06 Build irrigation
+    // 0x07 Build mine
+    // 0x08 Transform terrain
+    // 0x09 Clean up pollution
+    // 0x0A Build airbase
+    // 0x0B, 0x1B Go to
+    // 0xFF No orders    
     HomeCity: Byte;                       // 0x656100
     byte_656101: Byte;
     GotoX: Word;                          // 0x656102
@@ -373,7 +388,16 @@ type
     Beakers: Word;                        // + 0x08 = 64C6A8
     Unknown3: array[$A..$14] of Byte;
     Government: Byte;
-    Unknown4: array[$16..$593] of Byte;
+    Unknown4: array[$16..$1F] of Byte;
+    Treaties: array[0..7] of Integer;
+    // 0x00000001 Contact
+    // 0x00000002 Cease Fire
+    // 0x00000004 Peace
+    // 0x00000008 Alliance
+    // 0x00000010 Vendetta
+    // 0x00000080 Embassy
+    // 0x00002000 War
+    Unknown5: array[$40..$593] of Byte;
   end;
 
   TCivs = array[1..8] of TCiv;            // 64C6A0
@@ -424,4 +448,3 @@ const
 implementation
 
 end.
-

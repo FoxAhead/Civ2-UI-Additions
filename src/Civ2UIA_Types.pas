@@ -63,6 +63,7 @@ const
   SHADOW_BR = $80;
   SHADOW_ALL = $FF;
   IDM_GITHUB = $FF01;
+  IDM_SETTINGS = $FF02;
 
 implementation
 

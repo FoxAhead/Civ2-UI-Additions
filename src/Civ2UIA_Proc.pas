@@ -2,12 +2,25 @@ unit Civ2UIA_Proc;
 
 interface
 
+procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 procedure WriteMemory(HProcess: THandle; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer = nil);
 
 implementation
 
 uses
+  Messages,
   Windows;
+
+procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
+var
+  HWindow: HWND;
+begin
+  HWindow := FindWindow('TForm1', 'Civilization II UI Additions Launcher');
+  if HWindow > 0 then
+  begin
+    PostMessage(HWindow, WM_APP + 1, WParam, LParam);
+  end;
+end;
 
 procedure WriteMemory(HProcess: THandle; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer);
 var
@@ -26,4 +39,3 @@ begin
 end;
 
 end.
-

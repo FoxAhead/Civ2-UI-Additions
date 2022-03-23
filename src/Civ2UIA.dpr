@@ -26,59 +26,11 @@ uses
   Civ2UIA_Options in 'Civ2UIA_Options.pas',
   Civ2UIA_c2p in 'Civ2UIA_c2p.pas',
   Civ2UIA_Proc in 'Civ2UIA_Proc.pas',
-  Civ2UIA_UnitsLimit in 'Civ2UIA_UnitsLimit.pas';
+  Civ2UIA_UnitsLimit in 'Civ2UIA_UnitsLimit.pas',
+  Civ2UIA_FormSettings in 'Civ2UIA_FormSettings.pas' {FormSettings},
+  Civ2UIA_Global in 'Civ2UIA_Global.pas';
 
 {$R *.res}
-
-var
-  ChangeSpecialistDown: Boolean;
-  RegisteredHWND: array[TWindowType] of HWND;
-  SavedReturnAddress1: Cardinal;
-  SavedReturnAddress2: Cardinal;
-  SavedThis: Cardinal;
-  ListOfUnits: TListOfUnits;
-  MouseDrag: TMouseDrag;
-  MCICDCheckThrottle: Integer;
-  MCIPlayId: MCIDEVICEID;
-  MCIPlayTrack: Cardinal;
-  MCIPlayLength: Cardinal;
-  MCITextSizeX: Integer;
-  ShieldLeft: ^TShieldLeft = Pointer($642C48);
-  ShieldTop: ^TShieldTop = Pointer($642B48);
-  ShieldFontInfo: ^TFontInfo = Pointer($006AC090);
-  GUnits: ^TUnits = Pointer(AUnits);
-  UnitTypes: ^TUnitTypes = Pointer($0064B1B8);
-  GameTurn: PWord = Pointer($00655AF8);
-  HumanCivIndex: PInteger = Pointer($006D1DA0);
-  CurrCivIndex: PInteger = Pointer($0063EF6C);
-  Civs: ^TCivs = Pointer($0064C6A0);
-  SideBarGraphicsInfo: PGraphicsInfo = Pointer($006ABC68);
-  ScienceAdvisorGraphicsInfo: PGraphicsInfo = Pointer($0063EB10);
-  SideBarClientRect: PRect = Pointer($006ABC28);
-  ScienceAdvisorClientRect: PRect = Pointer($0063EC34);
-  SideBarFontInfo: ^TFontInfo = Pointer($006ABF98);
-  TimesFontInfo: ^TFontInfo = Pointer($0063EAB8);
-  TimesBigFontInfo: ^TFontInfo = Pointer($0063EAC0);
-  MainMenu: ^HMENU = Pointer($006A64F8);
-  CurrPopupInfo: PPCurrPopupInfo = Pointer($006CEC84);
-  MapGraphicsInfo: PGraphicsInfo = Pointer($0066C7A8);
-  MainWindowInfo: PWindowInfo = Pointer($006553D8);
-  Leaders: ^TLeaders = Pointer($006554F8);
-  GCityWindow: PCityWindow = Pointer($006A91B8);
-  GGameParameters: PGameParameters = Pointer($00655AE8);
-  CityWindowEx: TCityWindowEx;
-  GChText: PChar = Pointer($00679640);
-
-procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
-var
-  HWindow: HWND;
-begin
-  HWindow := FindWindow('TForm1', 'Civilization II UI Additions Launcher');
-  if HWindow > 0 then
-  begin
-    PostMessage(HWindow, WM_APP + 1, WParam, LParam);
-  end;
-end;
 
 function FindScrolBar(HWindow: HWND): HWND; stdcall;
 var
@@ -197,7 +149,7 @@ begin
   Result := 0;
   StatusParms.dwItem := MCI_STATUS_LENGTH;
   StatusParms.dwTrack := TrackN;
-  if mciSendCommand(ID, MCI_STATUS, MCI_STATUS_ITEM + MCI_TRACK, LongInt(@StatusParms)) = 0 then
+  if mciSendCommand(ID, MCI_STATUS, MCI_STATUS_ITEM + MCI_TRACK, Longint(@StatusParms)) = 0 then
     Result := FastSwap(StatusParms.dwReturn shl 8);
 end;
 
@@ -207,7 +159,7 @@ var
 begin
   Result := 0;
   StatusParms.dwItem := MCI_STATUS_POSITION;
-  if mciSendCommand(ID, MCI_STATUS, MCI_STATUS_ITEM, LongInt(@StatusParms)) = 0 then
+  if mciSendCommand(ID, MCI_STATUS, MCI_STATUS_ITEM, Longint(@StatusParms)) = 0 then
     Result := FastSwap(StatusParms.dwReturn);
 end;
 
@@ -217,23 +169,23 @@ var
 begin
   Result := 0;
   StatusParms.dwItem := MCI_STATUS_MODE;
-  if mciSendCommand(ID, MCI_STATUS, MCI_STATUS_ITEM, LongInt(@StatusParms)) = 0 then
+  if mciSendCommand(ID, MCI_STATUS, MCI_STATUS_ITEM, Longint(@StatusParms)) = 0 then
     Result := StatusParms.dwReturn;
 end;
 
 function CDPosition_To_String(TMSF: Cardinal): string;
 begin
-  Result := Format('Track %.2d - %.2d:%.2d', [HiByte(HiWord(TMSF)), LoByte(HiWord(TMSF)), HiByte(LoWord(TMSF))]);
+  Result := Format('Track %.2d - %.2d:%.2d', [HiByte(HiWord(TMSF)), LOBYTE(HiWord(TMSF)), HiByte(LOWORD(TMSF))]);
 end;
 
 function CDLength_To_String(MSF: Cardinal): string;
 begin
-  Result := Format('%.2d:%.2d', [LoByte(HiWord(MSF)), HiByte(LoWord(MSF))]);
+  Result := Format('%.2d:%.2d', [LOBYTE(HiWord(MSF)), HiByte(LOWORD(MSF))]);
 end;
 
 function CDTime_To_Frames(TMSF: Cardinal): Integer;
 begin
-  Result := LoByte(HiWord(TMSF)) * 60 * 75 + HiByte(LoWord(TMSF)) * 75 + LoByte(LoWord(TMSF));
+  Result := LOBYTE(HiWord(TMSF)) * 60 * 75 + HiByte(LOWORD(TMSF)) * 75 + LOBYTE(LOWORD(TMSF));
 end;
 
 procedure DrawCDPositon(Position: Cardinal);
@@ -277,6 +229,33 @@ begin
   Canvas.Free;
   RestoreDC(DC, SavedDC);
   InvalidateRect(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow, @R, True);
+end;
+
+procedure GammaCorrection(var Value: Byte; Gamma, Exposure: Double);
+var
+  NewValue: Double;
+begin
+  NewValue := Value / 255;
+  if Exposure <> 0 then
+  begin
+    NewValue := Exp(Ln(NewValue) * 2.2);
+    NewValue := NewValue * Power(2, Exposure);
+    NewValue := Exp(Ln(NewValue) / 2.2);
+  end;
+  if Gamma <> 1 then
+  begin
+    NewValue := Exp(Ln(NewValue) / Gamma);
+  end;
+  Value := Byte(Min(Round(NewValue * 255), 255));
+end;
+
+procedure ShowSettingsDialog;
+var
+  FormProgress: TFormSettings;
+begin
+  FormProgress := TFormSettings.Create(nil);
+  FormProgress.ShowModal();
+  FormProgress.Free;
 end;
 
 //--------------------------------------------------------------------------------------------------
@@ -399,11 +378,15 @@ begin
   Result := True;
   if Msg = WM_COMMAND then
   begin
-    case LoWord(WParam) of
+    case LOWORD(WParam) of
       IDM_GITHUB:
         begin
           ShellExecute(0, 'open', 'https://github.com/FoxAhead/Civ2-UI-Additions', nil, nil, SW_SHOW);
           Result := False;
+        end;
+      IDM_SETTINGS:
+        begin
+          ShowSettingsDialog();
         end;
     end;
   end;
@@ -534,7 +517,7 @@ begin
     goto EndOfFunction;
   end;
 
-  if (LoWord(WParam) and MK_CONTROL) <> 0 then
+  if (LOWORD(WParam) and MK_CONTROL) <> 0 then
   begin
     if ChangeMapZoom(Sign(Delta)) then
     begin
@@ -557,7 +540,7 @@ begin
   Delta := 0;
   if GuessWindowType(HWindow) = wtUnitsListPopup then
   begin
-    case LoWord(WParam) of
+    case LOWORD(WParam) of
       SB_LINEUP:
         Delta := -1;
       SB_LINEDOWN:
@@ -591,13 +574,13 @@ begin
   Result := True;
   Screen.X := Smallint(LParam and $FFFF);
   Screen.Y := Smallint((LParam shr 16) and $FFFF);
-  MButtonIsDown := (LoWord(WParam) and MK_MBUTTON) <> 0;
+  MButtonIsDown := (LOWORD(WParam) and MK_MBUTTON) <> 0;
   IsMapWindow := False;
   if MapGraphicsInfo^.WindowInfo.WindowStructure <> nil then
     IsMapWindow := (HWindow = MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow);
   case Msg of
     WM_MBUTTONDOWN:
-      if (LoWord(WParam) and MK_CONTROL) <> 0 then
+      if (LOWORD(WParam) and MK_CONTROL) <> 0 then
       begin
         if ChangeMapZoom(-MapGraphicsInfo^.MapZoom) then
         begin
@@ -605,7 +588,7 @@ begin
           Result := False;
         end
       end
-      else if (LoWord(WParam) and MK_SHIFT) <> 0 then
+      else if (LOWORD(WParam) and MK_SHIFT) <> 0 then
       begin
         //SendMessageToLoader(MapGraphicsInfo^.MapCenter.X, MapGraphicsInfo^.MapCenter.Y);
         //SendMessageToLoader(MapGraphicsInfo^.MapHalf.cx, MapGraphicsInfo^.MapHalf.cy);
@@ -638,7 +621,7 @@ begin
           MapDelta.Y := (Delta.Y * 2 + MapGraphicsInfo^.MapCellSize2.cy) div (MapGraphicsInfo^.MapCellSize.cy - 1);
           if not Odd(MapDelta.X + MapDelta.Y) then
           begin
-            if (LoWord(WParam) and MK_SHIFT) <> 0 then
+            if (LOWORD(WParam) and MK_SHIFT) <> 0 then
             begin
               //SendMessageToLoader(Delta.X, Delta.Y);
               //SendMessageToLoader(MapDelta.X, MapDelta.Y);
@@ -920,7 +903,9 @@ begin
   end;
 
   UnitType := GUnits^[UnitIndex].UnitType;
-  if (UnitTypes^[UnitType].Role = 5) and (GUnits^[UnitIndex].CivIndex = HumanCivIndex^) and (GUnits^[UnitIndex].Counter > 0) then
+  if //(UnitTypes^[UnitType].Role = 5) and
+  //(GUnits^[UnitIndex].CivIndex = HumanCivIndex^) and
+  (GUnits^[UnitIndex].Counter > 0) then
   begin
     TextOut := IntToStr(GUnits^[UnitIndex].Counter);
     DC := PCardinal(PCardinal(Cardinal(thisWayToWindowInfo) + $40)^ + $4)^;
@@ -983,6 +968,27 @@ begin
   RestoreDC(DC, SavedDC);
 end;
 
+procedure PatchDrawSideBarV2Ex; stdcall;
+var
+  TextOut: string;
+  Top: Integer;
+begin
+  TextOut := 'Turn ' + IntToStr(GameTurn^);
+  StrCopy(GChText, PChar(TextOut));
+  Top := SideBarClientRect^.Top + (SideBarFontInfo^.Height - 1) * 2;
+  TCiv2.DrawStringRight(GChText, SideBarClientRect^.Right, Top, 0);
+end;
+
+procedure PatchDrawSideBarV2; register;
+asm
+    mov   eax, $00401E0B //Q_DrawString_sub_401E0B
+    call  eax
+    add   esp, $0C
+    call  PatchDrawSideBarV2Ex
+    push  $00569552
+    ret
+end;
+
 function PatchDrawProgressBar(GraphicsInfo: PGraphicsInfo; A2: Pointer; Left, Top, Current, Total, Height, Width, A9: Integer): Integer; cdecl;
 var
   DC: HDC;
@@ -1031,6 +1037,7 @@ var
 begin
   SubMenu := CreatePopupMenu();
   AppendMenu(SubMenu, MF_STRING, IDM_GITHUB, 'GitHub');
+  AppendMenu(SubMenu, MF_STRING, IDM_SETTINGS, 'Settings...');
   AppendMenu(MainMenu^, MF_POPUP, SubMenu, 'UI Additions');
   Result := MainMenu^;
 end;
@@ -1310,6 +1317,129 @@ asm
     ret
 end;
 
+procedure PatchPaletteGammaEx(A1: Pointer; A2: Integer; var A3, A4, A5: Byte); stdcall;
+var
+  Addr: PByte;
+  R, G, B: Integer;
+  Gamma, Exposure: Double;
+begin
+  Gamma := 1.1;
+  Exposure := 0.45;
+  GammaCorrection(A3, Gamma, Exposure);
+  GammaCorrection(A4, Gamma, Exposure);
+  GammaCorrection(A5, Gamma, Exposure);
+end;
+
+procedure PatchPaletteGammaExV2(A1: Pointer; A2: Integer; var A3, A4, A5: Byte); stdcall;
+var
+  Addr: PByte;
+  R, G, B: Integer;
+  Gamma, Exposure: Double;
+begin
+  Gamma := FormSettingsColorGamma;
+  Exposure := FormSettingsColorExposure;
+  GammaCorrection(A3, Gamma, Exposure);
+  GammaCorrection(A4, Gamma, Exposure);
+  GammaCorrection(A5, Gamma, Exposure);
+end;
+
+procedure PatchPaletteGamma; register;
+asm
+    push  ebp
+    mov   ebp, esp
+    sub   esp, 4
+    push  ebx
+    push  esi
+    push  edi
+    lea   eax, [ebp + $18]
+    push  eax
+    lea   eax, [ebp + $14]
+    push  eax
+    lea   eax, [ebp + $10]
+    push  eax
+    push  [ebp + $0C]
+    push  [ebp + $08]
+    call  PatchPaletteGammaEx
+    push  $005DEB1B
+    ret
+end;
+
+procedure PatchPaletteGammaV2; register;
+asm
+    push  [ebp + $18]
+    push  [ebp + $14]
+    push  [ebp + $10]
+    push  [ebp + $0C]
+    push  [ebp + $08]
+    call  PatchPaletteGammaExV2
+    push  $005DEAD6
+    ret
+end;
+
+procedure PatchCityChangeListUnitCostEx(A1, A2: Integer); stdcall;
+var
+  Text: string;
+begin
+  Text := string(GChText);
+  Text := Text + IntToStr(A1*A2) + ' Sh, ';
+  StrCopy(GChText, PChar(Text));
+end;
+
+procedure PatchCityChangeListUnitCost; register;
+asm
+    push  [$006A657C]
+    push  [ebp + $08]
+    call  PatchCityChangeListUnitCostEx
+    push  $3E7
+    push  $00509ACE
+    ret
+end;
+
+procedure PatchOnActivateUnitEx; stdcall;
+var
+  i: Integer;
+begin
+  for i := 0 to GGameParameters^.TotalUnits - 1 do
+  begin
+    if GUnits[i].ID > 0 then
+      if GUnits[i].CivIndex = GGameParameters.SomeCivIndex then
+        GUnits[i].Attributes := GUnits[i].Attributes and $BFFF;
+  end;
+
+end;
+
+procedure PatchOnActivateUnit; register;
+asm
+    call  PatchOnActivateUnitEx
+    mov   eax, $004016EF
+    call  eax
+    push  $0058D5D4
+    ret
+end;
+
+procedure PatchResetMoveIterationEx; stdcall;
+begin
+  GUnits[GGameParameters.ActiveUnitIndex].MoveIteration := 0;
+end;
+
+procedure PatchResetMoveIteration; register;
+asm
+    call  PatchResetMoveIterationEx
+    mov   eax, $00401145
+    call  eax
+    push  $0041141E
+    ret
+end;
+
+procedure PatchResetMoveIteration2; register;
+asm
+    call  PatchResetMoveIterationEx
+    mov   eax, $0058DDAA
+    call  eax
+    push  $0058DDA5
+    ret
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -1332,7 +1462,8 @@ begin
     WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
     WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
     WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
-    WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
+    //WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
+    WriteMemory(HProcess, $0056954A, [OP_JMP], @PatchDrawSideBarV2);
     WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
     WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
     WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchCheckCDStatus);
@@ -1380,8 +1511,29 @@ begin
   // Experimental
   if UIAOPtions^.bUnitsLimit then
   begin
-    PatchUnitsLimit(HProcess);    
+    PatchUnitsLimit(HProcess);
   end;
+
+  // Color correction
+  //WriteMemory(HProcess, $005DEB12, [OP_JMP], @PatchPaletteGamma);
+  WriteMemory(HProcess, $005DEAD1, [OP_JMP], @PatchPaletteGammaV2);
+  WriteMemory(HProcess, $0042DE86, [$72]); // Celebrating city color in Attitude Advisor (F4)
+
+  // Show Unit shields cost in City Change list
+  WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListUnitCost);
+
+  // Reset Units wait flag after activating
+  WriteMemory(HProcess, $0058D5CF, [OP_JMP], @PatchOnActivateUnit);
+
+  // Don't break unit movement
+  WriteMemory(HProcess, $004273A0, [$00]);
+
+  // Reset MoveIteration before start moving
+  WriteMemory(HProcess, $00411419, [OP_JMP], @PatchResetMoveIteration);
+  WriteMemory(HProcess, $0058DDA0, [OP_JMP], @PatchResetMoveIteration2);
+
+
+
   // civ2patch
   if UIAOPtions.civ2patchEnable then
   begin
