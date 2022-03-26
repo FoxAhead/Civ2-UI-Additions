@@ -28,6 +28,8 @@ type
 
   PGameParameters = ^TGameParameters;
 
+  PUnit = ^TUnit;
+
   TCitySprite = packed record
     X1: Integer;
     Y1: Integer;
@@ -44,7 +46,7 @@ type
     CitySpritesItems: Integer;            // + 12C0 = 6AA750
   end;
 
-  TCityWindow = packed record             // 6A91B8 (~TGraphicsInfo)
+  TCityWindow = packed record             // 6A91B8 (~TGraphicsInfo) Size = $16E0
     Unknown1: array[0..$2D7] of Byte;
     CitySpritesInfo: TCitySpritesInfo;    // + 2D8 = 6A9490
     CityIndex: Integer;                   // + 159C
@@ -210,9 +212,17 @@ type
 
   end;
 
-  TDrawInfo = packed record
+  TDrawInfo = packed record               //  Size = $28
     Unknown0: Integer;
     DeviceContext: HDC;                   // + 0x04
+    Unknown1: HGDIOBJ;
+    Unknown2: HGDIOBJ;
+    Unknown3: HGDIOBJ;
+    Unknown4: Integer;
+    Unknown5: Integer;
+    Unknown6: Integer;
+    Unknown7: Integer;
+    Unknown8: Integer;
   end;
 
   TDialogItem = packed record
@@ -227,7 +237,8 @@ type
   TWindowStructure = packed record
     Unknown1: Integer;
     HWindow: HWND;                        // + 0x04
-    Unknown2: array[$08..$1F] of Byte;
+    DeviceContext: HDC;
+    Unknown2: array[$0C..$1F] of Byte;
     Icon: HICON;                          // + 0x20
   end;
 
@@ -251,12 +262,12 @@ type
     Turn: Word;
     Year: Word;
     word_655AFC: Word;
-    ActiveUnitIndex: Word;       // Current unit index
+    ActiveUnitIndex: Word;                // Current unit index
     word_655B00: Word;
-    PlayerTribeNumber: Byte; // not PlayerTribeNumber?
-    byte_655B03: Byte;       // PlayerTribeNumber?
+    PlayerTribeNumber: Byte;              // not PlayerTribeNumber?
+    byte_655B03: Byte;                    // PlayerTribeNumber?
     byte_655B04: Byte;
-    SomeCivIndex: Byte;      // Active Unit Civ index?
+    SomeCivIndex: Byte;                   // Active Unit Civ index?
     byte_655B06: Byte;
     byte_655B07: Byte;
     DifficultyLevel: Byte;
@@ -285,15 +296,23 @@ type
     dword_64B1BC: Cardinal;
     byte_64B1C0: Byte;
     byte_64B1C1: Byte;
-    byte_64B1C2: Byte;
+    Domain: Byte;
     byte_64B1C3: Byte;
-    byte_64B1C4: Byte;
-    byte_64B1C5: Byte;
+    Att: Byte;
+    Def: Byte;
     byte_64B1C6: Byte;
     byte_64B1C7: Byte;
-    byte_64B1C8: Byte;
+    Cost: Byte;
     byte_64B1C9: Byte;
     Role: Byte;                           // 0x64B1CA
+    // 0 = Attack
+    // 1 = Defend
+    // 2 = Naval Superiority
+    // 3 = Air Superiority
+    // 4 = Sea Transport
+    // 5 = Settle
+    // 6 = Diplomacy
+    // 7 = Trade
     byte_64B1CB: Byte;
   end;
 
@@ -326,7 +345,7 @@ type
     // 0x09 Clean up pollution
     // 0x0A Build airbase
     // 0x0B, 0x1B Go to
-    // 0xFF No orders    
+    // 0xFF No orders
     HomeCity: Byte;                       // 0x656100
     byte_656101: Byte;
     GotoX: Word;                          // 0x656102

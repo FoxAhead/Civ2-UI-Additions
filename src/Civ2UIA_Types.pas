@@ -3,6 +3,7 @@ unit Civ2UIA_Types;
 interface
 
 uses
+  Classes,
   Types,
   Civ2Types;
 
@@ -39,6 +40,8 @@ type
     ListStart: Integer;
     Counter: Integer;
     Columns: Integer;
+    UnitsList: TList;
+    UnitsListCounter: Integer;
   end;
   TCityWindowEx = record
     Support: TCityWindowSupport;

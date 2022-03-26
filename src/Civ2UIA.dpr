@@ -231,6 +231,70 @@ begin
   InvalidateRect(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow, @R, True);
 end;
 
+var
+  DrawTestColor: TColor = clSkyBlue;
+  DrawTestCounter: Cardinal;
+  DrawTestCanvas: Graphics.TBitmap;
+  DrawTestDrawInfo: PDrawInfo;
+
+procedure DrawTest();
+var
+  DestDC: HDC;
+  SrcDC: HDC;
+  Canvas: TCanvas;
+  SavedDC: Integer;
+  R: TRect;
+  TextOut: string;
+  TextSize: TSize;
+  DrawTestThrottle: Integer;
+begin
+  Inc(DrawTestCounter);
+  DrawTestThrottle := DrawTestCounter mod 1;
+  //if DrawTestThrottle = 0 then
+  //begin
+
+  SrcDC := MapGraphicsInfo^.DrawInfo^.DeviceContext;
+  DestDC := MapGraphicsInfo^.WindowInfo.WindowStructure^.DeviceContext;
+  //SavedDC := SaveDC(SrcDC);
+  if DrawTestDrawInfo = nil then
+  begin
+    if MapGraphicsInfo^.DrawInfo <> nil then
+    begin
+      DrawTestDrawInfo := TCiv2.DrawInfoCreate(@(MapGraphicsInfo^.WindowRectangle));
+      SendMessageToLoader(Integer(DrawTestDrawInfo.DeviceContext), 2);
+    end;
+  end;
+  {
+    Canvas.Handle := SrcDC;
+    //
+
+    Canvas.Brush.Style := bsClear;
+    Canvas.Font.Style := [];
+    Canvas.Font.Size := 10;
+    Canvas.Font.Name := 'Arial';
+    //Canvas.Brush.Color := DrawTestColor;
+    //Canvas.Pen.Color := DrawTestColor;
+
+    TextOut := Format('%.2d', [DrawTestCounter]);
+    TextSize := Canvas.TextExtent(TextOut);
+
+    R := Rect(0, 0, TextSize.cx + 20, 20);
+    OffsetRect(R, 50, 50);
+    //DrawTestColor := DrawTestColor xor $00FFFFFF;
+
+    //Canvas.Rectangle(R);
+    TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 0, clBlack, clWhite, SHADOW_ALL);
+
+    //
+    Canvas.Handle := 0;
+    Canvas.Free;
+    //RestoreDC(SrcDC, SavedDC);
+    //end;
+    //InvalidateRect(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow, @R, True);
+    BitBlt(DestDC, 0, 0, 500, 500, SrcDC, 0, 0, SRCCOPY);
+  }
+end;
+
 procedure GammaCorrection(var Value: Byte; Gamma, Exposure: Double);
 var
   NewValue: Double;
@@ -311,7 +375,7 @@ var
   PCitySprites: ^TCitySprites;
   PCityWindow: ^TCityWindow;
   DeltaX: Integer;
-  Canvas: Graphics.TBitMap;
+  Canvas: Graphics.TBitmap;
   CursorPoint: TPoint;
   HandleWindow: HWND;
 begin
@@ -323,7 +387,7 @@ begin
     HandleWindow := WindowFromPoint(CursorPoint)
   else
     HandleWindow := 0;
-  Canvas := Graphics.TBitMap.Create();    // In VM Windows 10 disables city window redraw
+  Canvas := Graphics.TBitmap.Create();    // In VM Windows 10 disables city window redraw
   Canvas.Canvas.Handle := GetDC(HandleWindow);
   Canvas.Canvas.Pen.Color := RGB(255, 0, 255);
   Canvas.Canvas.Brush.Style := bsClear;
@@ -903,7 +967,7 @@ begin
   end;
 
   UnitType := GUnits^[UnitIndex].UnitType;
-  if //(UnitTypes^[UnitType].Role = 5) and
+  if                                      //(UnitTypes^[UnitType].Role = 5) and
   //(GUnits^[UnitIndex].CivIndex = HumanCivIndex^) and
   (GUnits^[UnitIndex].Counter > 0) then
   begin
@@ -1084,12 +1148,11 @@ begin
   end;
 end;
 
-function PatchCheckCDStatus(): Integer; stdcall;
+procedure PatchCheckCDStatus(); stdcall;
 var
   Position: Cardinal;
   ID: Cardinal;
 begin
-  Result := 0;
   Inc(MCICDCheckThrottle);
   if MCICDCheckThrottle > 5 then
   begin
@@ -1111,6 +1174,13 @@ begin
       end;
     end;
   end;
+end;
+
+function PatchAfterCallbackMrTimer(): Integer; stdcall;
+begin
+  Result := 0;
+  PatchCheckCDStatus();
+  //DrawTest();
 end;
 
 procedure PatchLoadMainIcon(IconName: PChar); stdcall;
@@ -1212,13 +1282,68 @@ begin
   Result := ThisResult;
 end;
 
-procedure PatchDrawCityWindowSupportEx1(CityWindow: PCityWindow; SupportedUnits, Rows, Columns: Integer; var DeltaX: Integer); stdcall;
+function CompareCityUnits(Item1: Pointer; Item2: Pointer): Integer;
+var
+  Unit1, Unit2: PUnit;
+  Weight1, Weight2: Integer;
+begin
+  Unit1 := PUnit(Item1);
+  Unit2 := PUnit(Item2);
+  if UnitTypes[Unit1^.UnitType].Role = 5 then
+    Weight1 := 2
+  else if UnitTypes[Unit1^.UnitType].Att > 0 then
+    Weight1 := 1
+  else
+    Weight1 := 0;
+  if UnitTypes[Unit2^.UnitType].Role = 5 then
+    Weight2 := 2
+  else if UnitTypes[Unit2^.UnitType].Att > 0 then
+    Weight2 := 1
+  else
+    Weight2 := 0;
+  if Weight1 = Weight2 then
+    Result := Unit2^.ID - Unit1^.ID
+  else
+    Result := Weight2 - Weight1;
+end;
+
+function PatchDrawCityWindowSupportGetIFromUnitsList(): Integer; stdcall;
+var
+  Addr: Pointer;
+begin
+  // Get i from UnitsList
+  if CityWindowEx.Support.UnitsListCounter >= CityWindowEx.Support.UnitsList.Count then
+    Result := GGameParameters^.TotalUnits
+  else
+  begin
+    Addr := CityWindowEx.Support.UnitsList[CityWindowEx.Support.UnitsListCounter];
+    Result := (Integer(Addr) - Integer(GUnits)) div SizeOf(TUnit);
+  end;
+  //SendMessageToLoader(1, Result);
+end;
+
+function PatchDrawCityWindowSupportEx1(CityWindow: PCityWindow; SupportedUnits, Rows, Columns: Integer; var DeltaX: Integer): Integer; stdcall;
+var
+  i: Integer;
 begin
   CityWindowEx.Support.Counter := 0;
   if SupportedUnits > Rows * Columns then
   begin
     DeltaX := DeltaX - CityWindow^.WindowSize;
   end;
+  if CityWindowEx.Support.UnitsList = nil then
+    CityWindowEx.Support.UnitsList := TList.Create();
+  CityWindowEx.Support.UnitsList.Clear();
+  for i := 0 to GGameParameters^.TotalUnits - 1 do
+  begin
+    if (GUnits[i].ID > 0) and (GUnits[i].HomeCity = CityWindow^.CityIndex) then
+    begin
+      CityWindowEx.Support.UnitsList.Add(@GUnits[i]);
+    end;
+  end;
+  CityWindowEx.Support.UnitsList.Sort(@CompareCityUnits);
+  CityWindowEx.Support.UnitsListCounter := 0;
+  Result := PatchDrawCityWindowSupportGetIFromUnitsList();
 end;
 
 procedure PatchDrawCityWindowSupport1; register;
@@ -1235,6 +1360,23 @@ asm
     mov   eax, [ebp - $C0] // vCityWindow
     push  eax
     call  PatchDrawCityWindowSupportEx1
+    mov   [ebp - $6C], eax
+    push  $0050598F
+    ret
+end;
+
+function PatchDrawCityWindowSupportEx1a(): Integer; stdcall;
+begin
+  // Get next i from UnitsList
+  Inc(CityWindowEx.Support.UnitsListCounter);
+  Result := PatchDrawCityWindowSupportGetIFromUnitsList();
+end;
+
+procedure PatchDrawCityWindowSupport1a(); register;
+asm
+// Instead of ++i
+    call  PatchDrawCityWindowSupportEx1a;
+    mov   [ebp - $6C], eax
     push  $0050598F
     ret
 end;
@@ -1381,7 +1523,7 @@ var
   Text: string;
 begin
   Text := string(GChText);
-  Text := Text + IntToStr(A1*A2) + ' Sh, ';
+  Text := Text + IntToStr(A1 * A2) + ' Sh, ';
   StrCopy(GChText, PChar(Text));
 end;
 
@@ -1440,6 +1582,40 @@ asm
     ret
 end;
 
+procedure PatchOnWmTimerDrawEx(); stdcall;
+begin
+  DrawTest();
+end;
+
+procedure PatchOnWmTimerDraw(); register;
+asm
+    mov   eax, $004131C0
+    call  eax
+    call  PatchOnWmTimerDrawEx
+end;
+
+procedure PatchCopyToScreenBitBlt(DestDC: HDC; X, Y, Width, Height: Integer; SrcDC: HDC; XSrc, YSrc: Integer; Rop: Cardinal); stdcall;
+var
+  VSrcDC: HDC;
+begin
+  VSrcDC := SrcDC;
+  if MapGraphicsInfo^.DrawInfo <> nil then
+  begin
+    if SrcDC = MapGraphicsInfo.DrawInfo.DeviceContext then
+    begin
+      if DrawTestDrawInfo = nil then
+      begin
+        DrawTestDrawInfo := TCiv2.DrawInfoCreate(@(MapGraphicsInfo^.WindowRectangle));
+        SendMessageToLoader(Integer(DrawTestDrawInfo.DeviceContext), 3);
+      end;
+      BitBlt(DrawTestDrawInfo.DeviceContext, X, Y, Width, Height, SrcDC, XSrc, YSrc, Rop);
+      //DrawIntoTestDrawInfo( );
+      VSrcDC := DrawTestDrawInfo.DeviceContext;
+    end;
+  end;
+  BitBlt(DestDC, X, Y, Width, Height, VSrcDC, XSrc, YSrc, Rop);
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -1466,7 +1642,7 @@ begin
     WriteMemory(HProcess, $0056954A, [OP_JMP], @PatchDrawSideBarV2);
     WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
     WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
-    WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchCheckCDStatus);
+    WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchAfterCallbackMrTimer);
     WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
     WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
     WriteMemory(HProcess, $0040284C, [OP_JMP], @PatchInitNewGameParameters);
@@ -1475,6 +1651,9 @@ begin
     // CityWindow
     WriteMemory(HProcess, $004013A2, [OP_JMP], @PatchCityWindowInitRectangles);
     WriteMemory(HProcess, $00505987, [OP_JMP], @PatchDrawCityWindowSupport1);
+    WriteMemory(HProcess, $005059B2, [OP_JMP], @PatchDrawCityWindowSupport1a);
+    WriteMemory(HProcess, $005059D7, [OP_JMP], @PatchDrawCityWindowSupport1a);
+    WriteMemory(HProcess, $00505D0B, [OP_JMP], @PatchDrawCityWindowSupport1a);
     WriteMemory(HProcess, $005059D1 + 2, [], @PatchDrawCityWindowSupport2);
     WriteMemory(HProcess, $00505999 + 2, [], @PatchDrawCityWindowSupport3);
     WriteMemory(HProcess, $00505D06, [OP_JMP], @PatchDrawCityWindowSupport3);
@@ -1532,7 +1711,10 @@ begin
   WriteMemory(HProcess, $00411419, [OP_JMP], @PatchResetMoveIteration);
   WriteMemory(HProcess, $0058DDA0, [OP_JMP], @PatchResetMoveIteration2);
 
-
+  // Test On_WM_TIMER Draw
+  //WriteMemory(HProcess, $0040364D, [OP_JMP], @PatchOnWmTimerDraw);
+  // Test CopyToScreen
+  //WriteMemory(HProcess, $005BCC7D, [OP_NOP, OP_CALL], @PatchCopyToScreenBitBlt);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

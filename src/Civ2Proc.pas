@@ -26,6 +26,7 @@ type
     class procedure Palette_SetRandomID(Palette: Pointer);
     class procedure SetTextIntToStr(A1: Integer);
     class procedure SetTextFromLabel(A1: Integer);
+    class function DrawInfoCreate(A1: PRect): PDrawInfo;
   published
   end;
 
@@ -169,6 +170,14 @@ asm
 // A1 + 0x11 = Line # in Labels.txt
     push  A1
     mov   eax, $0040BC10
+    call  eax
+    add   esp, 4
+end;
+
+class function TCiv2.DrawInfoCreate(A1: PRect): PDrawInfo;
+asm
+    push  A1
+    mov   eax, $005E35B0
     call  eax
     add   esp, 4
 end;
