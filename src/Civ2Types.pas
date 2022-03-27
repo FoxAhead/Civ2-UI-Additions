@@ -295,8 +295,11 @@ type
     dword_64B1B8: Cardinal;
     dword_64B1BC: Cardinal;
     byte_64B1C0: Byte;
-    byte_64B1C1: Byte;
     Domain: Byte;
+    // 0 = Ground
+    // 1 = Air
+    // 2 = Sea
+    byte_64B1C2: Byte;
     byte_64B1C3: Byte;
     Att: Byte;
     Def: Byte;
@@ -366,7 +369,7 @@ type
     byte_64F346: Byte;                    // + 0x06
     byte_64F347: Byte;                    // + 0x07
     Owner: Byte;                          // + 0x08
-    SIZE: Byte;                           // + 0x09
+    Size: Byte;                           // + 0x09
     Founder: Byte;                        // + 0x0A
     TurnsCaptured: Byte;                  // + 0x0B
     byte_64F34C: Byte;
@@ -398,7 +401,7 @@ type
     ID: Integer;
   end;
 
-  TCities = array[1..$100] of TCity;      // 64F340
+  TCities = array[0..$FF] of TCity;      // 64F340
 
   TCiv = packed record                    // Size = 0x594
     Unknown1: Word;                       //          64C6A0

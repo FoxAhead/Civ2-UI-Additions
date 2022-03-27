@@ -967,9 +967,7 @@ begin
   end;
 
   UnitType := GUnits^[UnitIndex].UnitType;
-  if                                      //(UnitTypes^[UnitType].Role = 5) and
-  //(GUnits^[UnitIndex].CivIndex = HumanCivIndex^) and
-  (GUnits^[UnitIndex].Counter > 0) then
+  if ((UnitTypes^[UnitType].Role = 5) or (UnitTypes^[UnitType].Domain = 1)) and (GUnits^[UnitIndex].CivIndex = HumanCivIndex^) and (GUnits^[UnitIndex].Counter > 0) then
   begin
     TextOut := IntToStr(GUnits^[UnitIndex].Counter);
     DC := PCardinal(PCardinal(Cardinal(thisWayToWindowInfo) + $40)^ + $4)^;
@@ -988,6 +986,13 @@ begin
     OffsetRect(R, Left, Top);
     OffsetRect(R, ScaleByZoom(32, Zoom) - TextSize.cx div 2, ScaleByZoom(32, Zoom) - TextSize.cy div 2);
     TextOutWithShadows(Canvas, TextOut, R.Left, R.Top, clYellow, clBlack, SHADOW_ALL);
+    //
+    //TextOut := IntToStr(UnitIndex) + '-' + IntToStr(GUnits^[UnitIndex].ID);
+    //TextOutWithShadows(Canvas, TextOut, Left, Top, clAqua, clBlack, SHADOW_ALL);
+    //
+    //TextOut := IntToStr(GUnits^[UnitIndex].MovePoints);
+    //TextOutWithShadows(Canvas, TextOut, Left, Top, clRed, clBlack, SHADOW_ALL);
+    //
     Canvas.Handle := 0;
     Canvas.Free;
     RestoreDC(DC, SavedDC);
@@ -1284,27 +1289,27 @@ end;
 
 function CompareCityUnits(Item1: Pointer; Item2: Pointer): Integer;
 var
-  Unit1, Unit2: PUnit;
-  Weight1, Weight2: Integer;
+  Units: array[1..2] of PUnit;
+  i: Integer;
+  Weights: array[1..2] of Integer;
+  UnitType: TUnitType;
 begin
-  Unit1 := PUnit(Item1);
-  Unit2 := PUnit(Item2);
-  if UnitTypes[Unit1^.UnitType].Role = 5 then
-    Weight1 := 2
-  else if UnitTypes[Unit1^.UnitType].Att > 0 then
-    Weight1 := 1
-  else
-    Weight1 := 0;
-  if UnitTypes[Unit2^.UnitType].Role = 5 then
-    Weight2 := 2
-  else if UnitTypes[Unit2^.UnitType].Att > 0 then
-    Weight2 := 1
-  else
-    Weight2 := 0;
-  if Weight1 = Weight2 then
-    Result := Unit2^.ID - Unit1^.ID
-  else
-    Result := Weight2 - Weight1;
+  Units[1] := PUnit(Item1);
+  Units[2] := PUnit(Item2);
+  for i := 1 to 2 do
+  begin
+    UnitType := UnitTypes[Units[i]^.UnitType];
+    if UnitType.Role = 5 then
+      Weights[i] := $00F00000
+    else if UnitType.Att > 0 then
+      Weights[i] := UnitType.Def * $100 + ($F - UnitType.Domain) * $10000 + UnitType.Att
+    else
+      Weights[i] := 0;
+    //SendMessageToLoader(Units[i]^.UnitType, UnitType.Domain);
+  end;
+  Result := Weights[2] - Weights[1];
+  if Result = 0 then
+    Result := Units[2]^.ID - Units[1]^.ID
 end;
 
 function PatchDrawCityWindowSupportGetIFromUnitsList(): Integer; stdcall;
@@ -1582,6 +1587,51 @@ asm
     ret
 end;
 
+procedure PatchResetEngineersOrderEx(AlreadyWorker: Integer); stdcall;
+begin
+  GUnits[AlreadyWorker].Counter := 0;
+  if GUnits[AlreadyWorker].CivIndex = HumanCivIndex^ then
+  begin
+    GUnits[AlreadyWorker].Orders := 0;
+  end;
+end;
+
+procedure PatchResetEngineersOrder(); register;
+asm
+    push  [ebp - $10]
+    call  PatchResetEngineersOrderEx
+    push  $004C452F
+    ret
+end;
+
+function PatchDrawCityWindowTopWLTKDEx(j: Integer): Integer; stdcall;
+var
+  CitySize: Integer;
+begin
+  CitySize := GCities[j].Size div 2;
+  if (GCities[j].byte_64F393 = 0) and ((GCities[j].Size - GCities[j].byte_64F392) <= CitySize) then
+    Result := $72
+  else if (GCities[j].byte_64F392 < GCities[j].byte_64F393) then
+    Result := $6A
+  else
+    Result := $7C;
+end;
+
+procedure PatchDrawCityWindowTopWLTKD(); register;
+asm
+    mov   eax, [ebp - $2C]
+    push  [eax + $159C] // CityIndex
+    call  PatchDrawCityWindowTopWLTKDEx
+    push  $01
+    push  $01
+    push  $12
+    push  eax
+    push  $00502111
+    ret
+end;
+
+// Tests
+
 procedure PatchOnWmTimerDrawEx(); stdcall;
 begin
   DrawTest();
@@ -1607,10 +1657,15 @@ begin
       begin
         DrawTestDrawInfo := TCiv2.DrawInfoCreate(@(MapGraphicsInfo^.WindowRectangle));
         SendMessageToLoader(Integer(DrawTestDrawInfo.DeviceContext), 3);
+        MapGraphicsInfo.DrawInfo := DrawTestDrawInfo;
       end;
-      BitBlt(DrawTestDrawInfo.DeviceContext, X, Y, Width, Height, SrcDC, XSrc, YSrc, Rop);
+      {      if not BitBlt(DrawTestDrawInfo.DeviceContext, X, Y, Width, Height, SrcDC, XSrc, YSrc, Rop) then
+            begin
+            end;}
+      SendMessageToLoader(Width, Height);
+
       //DrawIntoTestDrawInfo( );
-      VSrcDC := DrawTestDrawInfo.DeviceContext;
+      //VSrcDC := DrawTestDrawInfo.DeviceContext;
     end;
   end;
   BitBlt(DestDC, X, Y, Width, Height, VSrcDC, XSrc, YSrc, Rop);
@@ -1696,7 +1751,8 @@ begin
   // Color correction
   //WriteMemory(HProcess, $005DEB12, [OP_JMP], @PatchPaletteGamma);
   WriteMemory(HProcess, $005DEAD1, [OP_JMP], @PatchPaletteGammaV2);
-  WriteMemory(HProcess, $0042DE86, [$72]); // Celebrating city color in Attitude Advisor (F4)
+  // Celebrating city color in Attitude Advisor (F4)
+  WriteMemory(HProcess, $0042DE86, [$72]); // (Color index = Idx + 10)
 
   // Show Unit shields cost in City Change list
   WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListUnitCost);
@@ -1707,9 +1763,15 @@ begin
   // Don't break unit movement
   WriteMemory(HProcess, $004273A0, [$00]);
 
-  // Reset MoveIteration before start moving
+  // Reset MoveIteration before start moving to prevent wrong warning
   WriteMemory(HProcess, $00411419, [OP_JMP], @PatchResetMoveIteration);
   WriteMemory(HProcess, $0058DDA0, [OP_JMP], @PatchResetMoveIteration2);
+
+  // Reset Engineer's order after passing its work to coworker
+  WriteMemory(HProcess, $004C4528, [OP_JMP], @PatchResetEngineersOrder);
+
+  // Change color in City Window for We Love The King Day
+  WriteMemory(HProcess, $00502109, [OP_JMP], @PatchDrawCityWindowTopWLTKD);
 
   // Test On_WM_TIMER Draw
   //WriteMemory(HProcess, $0040364D, [OP_JMP], @PatchOnWmTimerDraw);

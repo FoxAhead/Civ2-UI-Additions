@@ -25,6 +25,7 @@ var
   ShieldTop: ^TShieldTop = Pointer($642B48);
   ShieldFontInfo: ^TFontInfo = Pointer($006AC090);
   GUnits: ^TUnits = Pointer(AUnits);
+  GCities: ^TCities = Pointer($0064F340);
   UnitTypes: ^TUnitTypes = Pointer($0064B1B8);
   GameTurn: PWord = Pointer($00655AF8);
   HumanCivIndex: PInteger = Pointer($006D1DA0);
