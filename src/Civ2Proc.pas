@@ -4,7 +4,8 @@ interface
 
 uses
   Civ2Types,
-  Windows;
+  Windows,
+  Civ2UIA_Global;
 
 type
   TCiv2 = class
@@ -23,10 +24,16 @@ type
     class procedure DrawStringRight(ChText: PChar; Right, Top, Shift: Integer);
     class procedure RedrawMap(); register;
     class procedure sub_5C0D12(ThisGraphicsInfo: PGraphicsInfo; Palette: Pointer);
+    class procedure SetDIBColorTableFromPalette(DrawInfo: PDrawInfo; Palette: Pointer);
     class procedure Palette_SetRandomID(Palette: Pointer);
     class procedure SetTextIntToStr(A1: Integer);
     class procedure SetTextFromLabel(A1: Integer);
     class function DrawInfoCreate(A1: PRect): PDrawInfo;
+    class procedure PopupSimpleMessage(A1, A2, A3: Integer);
+    class function ScreenToMap(var MapX, MapY: Integer; ScreenX, ScreenY: Integer): LongBool;
+    class procedure MapToWindow(var WindowX, WindowY: Integer; MapX, MapY: Integer);
+    class function GetCityIndexAtXY(X, Y: Integer): Integer;
+    class function GetStringInList(StringIndex: Integer): PChar;
   published
   end;
 
@@ -150,6 +157,15 @@ asm
     call  eax
 end;
 
+class procedure TCiv2.SetDIBColorTableFromPalette(DrawInfo: PDrawInfo; Palette: Pointer);
+asm
+    push  Palette
+    push  DrawInfo
+    mov   eax, $005E3BDC
+    call  eax
+    add   esp, 8
+end;
+
 class procedure TCiv2.Palette_SetRandomID(Palette: Pointer);
 asm
     mov   ecx, Palette
@@ -178,6 +194,57 @@ class function TCiv2.DrawInfoCreate(A1: PRect): PDrawInfo;
 asm
     push  A1
     mov   eax, $005E35B0
+    call  eax
+    add   esp, 4
+end;
+
+class procedure TCiv2.PopupSimpleMessage(A1, A2, A3: Integer);
+asm
+    push  A3
+    push  A2
+    push  A1
+    mov   eax, $00410030
+    call  eax
+    add   esp, $0C
+end;
+
+class function TCiv2.ScreenToMap(var MapX, MapY: Integer; ScreenX, ScreenY: Integer): LongBool;
+asm
+    push  ScreenY
+    push  ScreenX
+    push  MapY
+    push  MapX
+    mov   ecx, MapGraphicsInfo
+    mov   eax, A_j_Q_ScreenToMap_sub_47A540
+    call  eax
+    mov   @Result, eax
+end;
+
+class function TCiv2.GetCityIndexAtXY(X, Y: Integer): Integer;
+asm
+    push  Y
+    push  X
+    mov   eax, $0043CF76
+    call  eax
+    add   esp, 8
+    mov   @Result, eax
+end;
+
+class procedure TCiv2.MapToWindow(var WindowX, WindowY: Integer; MapX, MapY: Integer);
+asm
+    push  MapY
+    push  MapX
+    push  WindowY
+    push  WindowX
+    mov   ecx, MapGraphicsInfo
+    mov   eax, $0047A6B0
+    call  eax
+end;
+
+class function TCiv2.GetStringInList(StringIndex: Integer): PChar;
+asm
+    push  StringIndex
+    mov   eax, $00403387
     call  eax
     add   esp, 4
 end;

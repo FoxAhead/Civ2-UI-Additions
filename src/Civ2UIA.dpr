@@ -28,7 +28,8 @@ uses
   Civ2UIA_Proc in 'Civ2UIA_Proc.pas',
   Civ2UIA_UnitsLimit in 'Civ2UIA_UnitsLimit.pas',
   Civ2UIA_FormSettings in 'Civ2UIA_FormSettings.pas' {FormSettings},
-  Civ2UIA_Global in 'Civ2UIA_Global.pas';
+  Civ2UIA_Global in 'Civ2UIA_Global.pas',
+  Civ2UIA_MapMessage in 'Civ2UIA_MapMessage.pas';
 
 {$R *.res}
 
@@ -82,18 +83,21 @@ var
   dX: Integer;
   dY: Integer;
 begin
-  Canvas.Font.Color := ShadowColor;
-  for dY := -1 to 1 do
+  if Shadows <> SHADOW_NONE then
   begin
-    for dX := -1 to 1 do
+    Canvas.Font.Color := ShadowColor;
+    for dY := -1 to 1 do
     begin
-      if (dX = 0) and (dY = 0) then
-        Continue;
-      if (Shadows and 1) = 1 then
-        Canvas.TextOut(Left + dX, Top + dY, TextOut);
-      Shadows := Shadows shr 1;
-      if Shadows = 0 then
-        Break;
+      for dX := -1 to 1 do
+      begin
+        if (dX = 0) and (dY = 0) then
+          Continue;
+        if (Shadows and 1) = 1 then
+          Canvas.TextOut(Left + dX, Top + dY, TextOut);
+        Shadows := Shadows shr 1;
+        if Shadows = 0 then
+          Break;
+      end;
     end;
   end;
   Canvas.Font.Color := MainColor;
@@ -231,13 +235,39 @@ begin
   InvalidateRect(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow, @R, True);
 end;
 
+procedure DrawTestDrawInfoCreate();
 var
-  DrawTestColor: TColor = clSkyBlue;
-  DrawTestCounter: Cardinal;
-  DrawTestCanvas: Graphics.TBitmap;
-  DrawTestDrawInfo: PDrawInfo;
+  BufBitmap: HBITMAP;
+begin
+  if MapGraphicsInfo^.DrawInfo <> nil then
+  begin
+    if MapGraphicsInfo^.DrawInfo.DeviceContext <> 0 then
+    begin
+      //DrawTestDrawInfo := TCiv2.DrawInfoCreate(@(MapGraphicsInfo^.WindowRectangle));
+      //BufBitmap := CreateCompatibleBitmap(DrawTestDrawInfo.DeviceContext, MapGraphicsInfo^.WindowRectangle.Right, MapGraphicsInfo^.WindowRectangle.Bottom);
+      //SelectObject(DrawTestDrawInfo.DeviceContext, BufBitmap);
+      //SendMessageToLoader(Integer(DrawTestDrawInfo.DeviceContext), 2);
+      if DrawTestData.MapDeviceContext <> MapGraphicsInfo^.DrawInfo.DeviceContext then
+      begin
+        DrawTestData.MapDeviceContext := MapGraphicsInfo^.DrawInfo.DeviceContext;
+        if DrawTestData.DeviceContext <> 0 then
+        begin
+          DeleteDC(DrawTestData.DeviceContext);
+          DeleteObject(DrawTestData.BitmapHandle);
+        end;
+        DrawTestData.DeviceContext := CreateCompatibleDC(MapGraphicsInfo^.DrawInfo.DeviceContext);
+        DrawTestData.BitmapHandle := CreateCompatibleBitmap(MapGraphicsInfo^.DrawInfo.DeviceContext, MapGraphicsInfo^.DrawInfo.Width, MapGraphicsInfo^.DrawInfo.Height);
+        SelectObject(DrawTestData.DeviceContext, DrawTestData.BitmapHandle);
+      end;
+    end;
+  end;
+end;
 
-procedure DrawTest();
+var
+  DrawTestCityIndex: Integer;
+  DrawTestMapPoint: TPoint;
+
+procedure DrawTest(DeviceContext: HDC);
 var
   DestDC: HDC;
   SrcDC: HDC;
@@ -247,26 +277,85 @@ var
   TextOut: string;
   TextSize: TSize;
   DrawTestThrottle: Integer;
+  X1, Y1, X2, Y2: Integer;
+  i: Integer;
+  TextColor: TColor;
+  MapMessage: TMapMessage;
+  ScreenPoint: TPoint;
+  MapX, MapY: Integer;
+  CityIndex: Integer;
+  Width, Height: Integer;
+  StringList: TStringList;
+  vUnitTypes: array[0..61] of Integer;
 begin
-  Inc(DrawTestCounter);
-  DrawTestThrottle := DrawTestCounter mod 1;
+  DrawTestThrottle := DrawTestData.Counter mod 1;
   //if DrawTestThrottle = 0 then
   //begin
 
-  SrcDC := MapGraphicsInfo^.DrawInfo^.DeviceContext;
-  DestDC := MapGraphicsInfo^.WindowInfo.WindowStructure^.DeviceContext;
-  //SavedDC := SaveDC(SrcDC);
-  if DrawTestDrawInfo = nil then
+  if DeviceContext <> 0 then
   begin
-    if MapGraphicsInfo^.DrawInfo <> nil then
-    begin
-      DrawTestDrawInfo := TCiv2.DrawInfoCreate(@(MapGraphicsInfo^.WindowRectangle));
-      SendMessageToLoader(Integer(DrawTestDrawInfo.DeviceContext), 2);
-    end;
-  end;
-  {
-    Canvas.Handle := SrcDC;
+    SavedDC := SaveDC(DeviceContext);
+    Canvas := TCanvas.Create();
+
+    Canvas.Handle := DeviceContext;
     //
+    X1 := 100 - DrawTestData.Counter mod 20;
+    Y1 := 100 - DrawTestData.Counter mod 20;
+    X2 := 500 + DrawTestData.Counter mod 30;
+    Y2 := 500 + DrawTestData.Counter mod 30;
+    //R := Rect(X1, Y1, X2, Y2);
+
+    if DrawTestCityIndex >= 0 then
+    begin
+      StringList := TStringList.Create();
+      Width := 0;
+      Height := 7;
+      for i := 0 to GGameParameters^.TotalUnits - 1 do
+      begin
+        if (GUnits[i].ID > 0) and (GUnits[i].HomeCity = DrawTestCityIndex) then
+        begin
+          TextOut := string(TCiv2.GetStringInList(UnitTypes[GUnits[i].UnitType].dword_64B1B8));
+          //TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
+          //OffsetRect(R, 0, 12);
+          StringList.Add(TextOut);
+          Width := Max(Width, Canvas.TextExtent(TextOut).cx);
+          Height := Height + 12;
+        end;
+      end;
+      StringList.Sort();
+
+      Width := Width + 6;
+      Canvas.Brush.Style := bsSolid;
+      Canvas.Brush.Color := TColor($E1FFFF);
+      TCiv2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, DrawTestMapPoint.X + 2, DrawTestMapPoint.Y);
+      R := Bounds(ScreenPoint.X, ScreenPoint.Y - Height, Width, Height);
+      //Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, 8, 8);
+      Canvas.Rectangle(R);
+      {OffsetRect(R, -1, -1);
+      Canvas.Brush.Color := clWhite;
+      Canvas.FillRect(R);
+      OffsetRect(R, 2, 2);
+      Canvas.Brush.Color := clBlack;
+      Canvas.FillRect(R);
+      OffsetRect(R, -1, -1);
+      Canvas.Brush.Color := TColor($E1FFFF);
+      Canvas.FillRect(R);}
+      Canvas.Brush.Style := bsClear;
+      {TextOut := IntToStr(DrawTestCityIndex);
+      TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 2, clBlack, clWhite, SHADOW_NONE);
+      TextOut := Format('%.2d , %.2d', [DrawTestMapPoint.X, DrawTestMapPoint.Y]);
+      TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 22, clBlack, clWhite, SHADOW_NONE);
+      TextOut := Format('%.2d , %.2d', [ScreenPoint.X, ScreenPoint.Y]);
+      TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 42, clBlack, clWhite, SHADOW_NONE);}
+      for i := 0 to StringList.Count - 1 do
+      begin
+        TextOut := StringList[i];
+        TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
+        OffsetRect(R, 0, 12);
+      end;
+
+      StringList.Free();
+    end;
 
     Canvas.Brush.Style := bsClear;
     Canvas.Font.Style := [];
@@ -275,24 +364,39 @@ begin
     //Canvas.Brush.Color := DrawTestColor;
     //Canvas.Pen.Color := DrawTestColor;
 
-    TextOut := Format('%.2d', [DrawTestCounter]);
+    TextOut := Format('This is Test String %.2d', [DrawTestData.Counter]);
     TextSize := Canvas.TextExtent(TextOut);
 
-    R := Rect(0, 0, TextSize.cx + 20, 20);
-    OffsetRect(R, 50, 50);
+    R := Rect(0, Y1, TextSize.cx + 20, 20 + Y1);
+
+    // OffsetRect(R, 50, 50);
     //DrawTestColor := DrawTestColor xor $00FFFFFF;
 
     //Canvas.Rectangle(R);
-    TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 0, clBlack, clWhite, SHADOW_ALL);
+    TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 0, clWhite, clBlack, SHADOW_ALL);
+
+    //
+    for i := 0 to MapMessagesList.Count - 1 do
+    begin
+      if i > 9 then
+        Break;
+      MapMessage := TMapMessage(MapMessagesList.Items[i]);
+      X1 := Min(255, 512 div 50 * (MapMessage.Timer + 10));
+      TextColor := TColor(X1 * $10101);
+      TextSize := Canvas.TextExtent(MapMessage.TextOut);
+      Y1 := MapGraphicsInfo^.ClientRectangle.Right - TextSize.cx - 20;
+      TextOutWithShadows(Canvas, MapMessage.TextOut, Y1, 100 + i * 20, TextColor, clBlack, SHADOW_ALL);
+    end;
 
     //
     Canvas.Handle := 0;
     Canvas.Free;
-    //RestoreDC(SrcDC, SavedDC);
+    RestoreDC(DeviceContext, SavedDC);
     //end;
     //InvalidateRect(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow, @R, True);
-    BitBlt(DestDC, 0, 0, 500, 500, SrcDC, 0, 0, SRCCOPY);
-  }
+    //BitBlt(DestDC, 0, 0, 500, 500, SrcDC, 0, 0, SRCCOPY);
+  end;
+
 end;
 
 procedure GammaCorrection(var Value: Byte; Gamma, Exposure: Double);
@@ -346,18 +450,6 @@ asm
     mov   ecx, MapGraphicsInfo
     mov   eax, $00403404
     call  eax
-end;
-
-function j_Q_ScreenToMap(ScreenX, ScreenY: Integer; var MapX, MapY: Integer): LongBool; register;
-asm
-    push  ScreenY
-    push  ScreenX
-    push  MapY
-    push  MapX
-    mov   ecx, MapGraphicsInfo
-    mov   eax, A_j_Q_ScreenToMap_sub_47A540
-    call  eax
-    mov   @Result, eax
 end;
 
 function GetFontHeightWithExLeading(thisFont: Pointer): Integer;
@@ -476,6 +568,9 @@ var
 label
   EndOfFunction;
 begin
+  //
+  MapMessagesList.Add(TMapMessage.Create(IntToStr(DrawTestData.Counter)));
+
   Result := True;
   CityWindowScrollLines := 3;
 
@@ -727,7 +822,7 @@ begin
           MouseDrag.Active := False;
           if MouseDrag.Moved < 5 then
           begin
-            if not j_Q_ScreenToMap(MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y, Xc, Yc) then
+            if not TCiv2.ScreenToMap(Xc, Yc, MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y) then
             begin
               if ((MapGraphicsInfo^.MapCenter.X <> Xc) or (MapGraphicsInfo^.MapCenter.Y <> Yc)) then
               begin
@@ -952,6 +1047,7 @@ var
   TextSize: TSize;
 begin
   Result := 0;
+  // TODO: Move to TCiv2
   asm
     push  A7
     push  Zoom
@@ -1632,43 +1728,86 @@ end;
 
 // Tests
 
-procedure PatchOnWmTimerDrawEx(); stdcall;
+procedure PatchOnWmTimerDrawEx1(); stdcall;
+var
+  i: Integer;
+  MapMessage: TMapMessage;
+  KeyState: SHORT;
+  MousePoint: TPoint;
+  WindowHandle: HWND;
 begin
-  DrawTest();
+  Inc(DrawTestData.Counter);
+  //
+  for i := 0 to MapMessagesList.Count - 1 do
+  begin
+    if i > 9 then
+      Break;
+    MapMessage := TMapMessage(MapMessagesList.Items[i]);
+    Dec(MapMessage.Timer);
+    if MapMessage.Timer <= 0 then
+    begin
+      MapMessage.Free();
+      MapMessagesList.Items[i] := nil;
+    end;
+  end;
+  MapMessagesList.Pack();
+  //
+  DrawTestCityIndex := -1;
+  ZeroMemory(@DrawTestMapPoint, SizeOf(DrawTestMapPoint));
+  if GetAsyncKeyState(VK_SHIFT) <> 0 then
+  begin
+    GetCursorPos(MousePoint);
+    WindowHandle := WindowFromPoint(MousePoint);
+    if WindowHandle = MapGraphicsInfo.WindowInfo.WindowStructure.HWindow then
+    begin
+      ScreenToClient(WindowHandle, MousePoint);
+      TCiv2.ScreenToMap(DrawTestMapPoint.X, DrawTestMapPoint.Y, MousePoint.X, MousePoint.Y);
+      DrawTestCityIndex := TCiv2.GetCityIndexAtXY(DrawTestMapPoint.X, DrawTestMapPoint.Y);
+      if GCities[DrawTestCityIndex].Owner <> HumanCivIndex^ then
+      begin
+        DrawTestCityIndex := -1;
+      end;
+    end;
+  end;
+end;
+
+procedure PatchOnWmTimerDrawEx2(); stdcall;
+begin
+  //DrawTest();
 end;
 
 procedure PatchOnWmTimerDraw(); register;
 asm
+    call  PatchOnWmTimerDrawEx1
     mov   eax, $004131C0
     call  eax
-    call  PatchOnWmTimerDrawEx
+    call  PatchOnWmTimerDrawEx2
 end;
 
 procedure PatchCopyToScreenBitBlt(DestDC: HDC; X, Y, Width, Height: Integer; SrcDC: HDC; XSrc, YSrc: Integer; Rop: Cardinal); stdcall;
 var
   VSrcDC: HDC;
 begin
-  VSrcDC := SrcDC;
-  if MapGraphicsInfo^.DrawInfo <> nil then
+  if (MapGraphicsInfo^.DrawInfo <> nil) and (SrcDC = MapGraphicsInfo.DrawInfo.DeviceContext) then
   begin
-    if SrcDC = MapGraphicsInfo.DrawInfo.DeviceContext then
-    begin
-      if DrawTestDrawInfo = nil then
-      begin
-        DrawTestDrawInfo := TCiv2.DrawInfoCreate(@(MapGraphicsInfo^.WindowRectangle));
-        SendMessageToLoader(Integer(DrawTestDrawInfo.DeviceContext), 3);
-        MapGraphicsInfo.DrawInfo := DrawTestDrawInfo;
-      end;
-      {      if not BitBlt(DrawTestDrawInfo.DeviceContext, X, Y, Width, Height, SrcDC, XSrc, YSrc, Rop) then
-            begin
-            end;}
-      SendMessageToLoader(Width, Height);
+    DrawTestDrawInfoCreate();
+    VSrcDC := DrawTestData.DeviceContext;
+    BitBlt(VSrcDC, 0, 0, MapGraphicsInfo.DrawInfo.Width, MapGraphicsInfo.DrawInfo.Height, SrcDC, 0, 0, Rop);
+    DrawTest(VSrcDC);
+    BitBlt(DestDC, 0, 0, MapGraphicsInfo.DrawInfo.Width, MapGraphicsInfo.DrawInfo.Height, VSrcDC, 0, 0, Rop);
+  end
+  else
+    BitBlt(DestDC, X, Y, Width, Height, SrcDC, XSrc, YSrc, Rop);
+end;
 
-      //DrawIntoTestDrawInfo( );
-      //VSrcDC := DrawTestDrawInfo.DeviceContext;
-    end;
-  end;
-  BitBlt(DestDC, X, Y, Width, Height, VSrcDC, XSrc, YSrc, Rop);
+procedure PatchPopupSimpleMessageEx(A1, A2, A3: Integer); cdecl;
+begin
+  if A1 = $0062DE50 then
+  begin
+    MapMessagesList.Add(TMapMessage.Create('Test'));
+  end
+  else
+    TCiv2.PopupSimpleMessage(A1, A2, A3);
 end;
 
 {$O+}
@@ -1774,15 +1913,22 @@ begin
   WriteMemory(HProcess, $00502109, [OP_JMP], @PatchDrawCityWindowTopWLTKD);
 
   // Test On_WM_TIMER Draw
-  //WriteMemory(HProcess, $0040364D, [OP_JMP], @PatchOnWmTimerDraw);
+  WriteMemory(HProcess, $0040364D, [OP_JMP], @PatchOnWmTimerDraw);
   // Test CopyToScreen
-  //WriteMemory(HProcess, $005BCC7D, [OP_NOP, OP_CALL], @PatchCopyToScreenBitBlt);
+  WriteMemory(HProcess, $005BCC7D, [OP_NOP, OP_CALL], @PatchCopyToScreenBitBlt);
+  //
+  //WriteMemory(HProcess, $004034A9, [OP_JMP], @PatchPopupSimpleMessageEx);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then
   begin
     C2Patches(HProcess);
   end;
+end;
+
+procedure CreateGlobals();
+begin
+  MapMessagesList := TList.Create;
 end;
 
 procedure DllMain(Reason: Integer);
@@ -1794,6 +1940,7 @@ begin
       begin
         HProcess := OpenProcess(PROCESS_ALL_ACCESS, False, GetCurrentProcessId());
         Attach(HProcess);
+        CreateGlobals();
         CloseHandle(HProcess);
         SendMessageToLoader(0, 0);
       end;

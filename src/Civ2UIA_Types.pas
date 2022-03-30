@@ -5,6 +5,7 @@ interface
 uses
   Classes,
   Types,
+  Windows,
   Civ2Types;
 
 type
@@ -43,8 +44,16 @@ type
     UnitsList: TList;
     UnitsListCounter: Integer;
   end;
+
   TCityWindowEx = record
     Support: TCityWindowSupport;
+  end;
+
+  TDrawTestData = record
+    DeviceContext: HDC;
+    BitmapHandle: HBITMAP;
+    MapDeviceContext: HDC;
+    Counter: Cardinal;
   end;
 
 const
@@ -54,7 +63,6 @@ const
   OP_0F: Byte = $0F;
   OP_JZ: Byte = $84;
   OP_JG: Byte = $8F;
-
   SHADOW_NONE = $00;
   SHADOW_TL = $01;
   SHADOW_T_ = $02;
@@ -71,3 +79,4 @@ const
 implementation
 
 end.
+

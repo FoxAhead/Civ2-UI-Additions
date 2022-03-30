@@ -129,4 +129,12 @@ object FormSettings: TFormSettings
     TabOrder = 7
     OnClick = Button7Click
   end
+  object CheckBox1: TCheckBox
+    Left = 8
+    Top = 104
+    Width = 97
+    Height = 17
+    Caption = 'CheckBox1'
+    TabOrder = 8
+  end
 end

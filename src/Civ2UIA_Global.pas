@@ -3,6 +3,7 @@ unit Civ2UIA_Global;
 interface
 
 uses
+  Classes,
   MMSystem,
   Windows,
   Civ2Types,
@@ -41,14 +42,17 @@ var
   MainMenu: ^HMENU = Pointer($006A64F8);
   CurrPopupInfo: PPCurrPopupInfo = Pointer($006CEC84);
   MapGraphicsInfo: PGraphicsInfo = Pointer($0066C7A8);
+  MapGraphicsInfos: ^TGraphicsInfos = Pointer($0066C7A8);
   MainWindowInfo: PWindowInfo = Pointer($006553D8);
   Leaders: ^TLeaders = Pointer($006554F8);
   GCityWindow: PCityWindow = Pointer($006A91B8);
   GGameParameters: PGameParameters = Pointer($00655AE8);
-  CityWindowEx: TCityWindowEx;
   GChText: PChar = Pointer($00679640);
+  //
+  CityWindowEx: TCityWindowEx;
+  DrawTestData: TDrawTestData;
+  MapMessagesList: TList;
 
 implementation
 
 end.
-

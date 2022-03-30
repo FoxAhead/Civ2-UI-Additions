@@ -186,7 +186,7 @@ type
     ListItems: array of TControlInfo;     // + 0x280
   end;
 
-  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C), possible size 0x3F0
+  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C), Size = 0x3F0
     Unknown1: array[$00..$13] of Byte;
     ClientRectangle: TRect;               // + 0x14
     WindowRectangle: TRect;               // + 0x24
@@ -209,8 +209,12 @@ type
     MapCellSize: TSize;                   // + 0x308
     MapCellSize2: TSize;                  // + 0x310  1/2
     MapCellSize4: TSize;                  // + 0x318  1/4
-
+    Unknown10: array[1..32] of Integer;
+    DrawInfo2: PDrawInfo;
+    Unknown11: array[1..19] of Integer;
   end;
+
+  TGraphicsInfos = array[0..7] of TGraphicsInfo;
 
   TDrawInfo = packed record               //  Size = $28
     Unknown0: Integer;
@@ -219,8 +223,8 @@ type
     Unknown2: HGDIOBJ;
     Unknown3: HGDIOBJ;
     Unknown4: Integer;
-    Unknown5: Integer;
-    Unknown6: Integer;
+    Width: Integer;
+    Height: Integer;
     Unknown7: Integer;
     Unknown8: Integer;
   end;
@@ -359,7 +363,7 @@ type
     word_65610E: Word;
   end;
 
-  TUnits = array[0..$800] of TUnit;       // 6560F0
+  TUnits = array[0..$7FF] of TUnit;       // 6560F0
 
   TCity = packed record                   // Size = 0x58
     X: Smallint;                          //

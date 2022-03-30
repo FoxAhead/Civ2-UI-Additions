@@ -22,6 +22,7 @@ type
     Button5: TButton;
     Button6: TButton;
     Button7: TButton;
+    CheckBox1: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure ScrollBar1Change(Sender: TObject);
     procedure Button1Click(Sender: TObject);
@@ -75,6 +76,11 @@ begin
   TCiv2.Palette_SetRandomID(MapGraphicsInfo.WindowInfo.Palette);
   //MapGraphicsInfo.PrevPaletteID := 0;
   TCiv2.sub_5C0D12(MapGraphicsInfo, MapGraphicsInfo.WindowInfo.Palette);
+  //if CheckBox1.Checked then
+  //begin
+    TCiv2.SetDIBColorTableFromPalette(Pointer(Integer(@DrawTestData.DeviceContext) - 4), MapGraphicsInfo.WindowInfo.Palette);
+  //end;
+
   //SendMessageToLoader(Integer(MapGraphicsInfo), Integer(MapGraphicsInfo.WindowInfo.Palette));
   //TCiv2.RedrawMap();
   HWindow := GetParent(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow);
