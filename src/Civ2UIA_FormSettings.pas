@@ -73,20 +73,13 @@ begin
   Label2.Caption := FloatToStr(FormSettingsColorExposure);
   Label4.Caption := FloatToStr(FormSettingsColorGamma);
   //SendMessageToLoader(Integer(MapGraphicsInfo), MapGraphicsInfo.WindowInfo._Unknown2);
-  TCiv2.Palette_SetRandomID(MapGraphicsInfo.WindowInfo.Palette);
-  //MapGraphicsInfo.PrevPaletteID := 0;
-  TCiv2.sub_5C0D12(MapGraphicsInfo, MapGraphicsInfo.WindowInfo.Palette);
-  //if CheckBox1.Checked then
-  //begin
-    TCiv2.SetDIBColorTableFromPalette(Pointer(Integer(@DrawTestData.DeviceContext) - 4), MapGraphicsInfo.WindowInfo.Palette);
-  //end;
-
-  //SendMessageToLoader(Integer(MapGraphicsInfo), Integer(MapGraphicsInfo.WindowInfo.Palette));
-  //TCiv2.RedrawMap();
-  HWindow := GetParent(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow);
+  Civ2.Palette_SetRandomID(Civ2.MapGraphicsInfo.WindowInfo.Palette);
+  Civ2.UpdateDIBColorTableFromPalette(Civ2.MapGraphicsInfo, Civ2.MapGraphicsInfo.WindowInfo.Palette);
+  // Also set new palette to map overlay - to be consistent with the game look
+  Civ2.SetDIBColorTableFromPalette(Pointer(Integer(@DrawTestData.DeviceContext) - 4), Civ2.MapGraphicsInfo.WindowInfo.Palette);
+  // Redraw main window with all subwindows
+  HWindow := GetParent(Civ2.MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow);
   RedrawWindow(HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
-  //PostMessage(HWindow, WM_PAINT, 0, 0);
-  //SendMessageToLoader(HWindow, 0);
 end;
 
 procedure TFormSettings.Button1Click(Sender: TObject);

@@ -36,6 +36,12 @@ type
     X2: Integer;
     Y2: Integer;
     SType: Integer;
+    // 1 = Resource Map
+    // 2 = Citizens    
+    // 3 = Units Present    
+    // 4 = City Improvements    
+    // 5 = Construction    
+    // 6 = Units Supported   
     SIndex: Integer;
   end;
 
@@ -296,7 +302,7 @@ type
   end;
 
   TUnitType = packed record               // Size = 0x14
-    dword_64B1B8: Cardinal;
+    StringIndex: Cardinal;
     dword_64B1BC: Cardinal;
     byte_64B1C0: Byte;
     Domain: Byte;
@@ -452,17 +458,17 @@ type
   TLeaders = array[1..21] of TLeader;     // 6554F8
 
 const
-  AThisCitySprites = $006A9490;
+  //AThisCitySprites = $006A9490;
   AUnits = $6560F0;
-  A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85 = $00403D00;
-  A_j_Q_ScreenToMap_sub_47A540 = $00402B2B;
-  A_j_Q_RedrawMap_sub_47CD51 = $00401F32;
-  A_Q_GetFontHeightWithExLeading_sub_403819 = $00403819;
-  A_Q_On_WM_TIMER_sub_5D47D0 = $005D47D0;
+  //A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85 = $00403D00;
+  //A_j_Q_ScreenToMap_sub_47A540 = $00402B2B;
+  //A_j_Q_RedrawMap_sub_47CD51 = $00401F32;
+  //A_Q_GetFontHeightWithExLeading_sub_403819 = $00403819;
+  //A_Q_On_WM_TIMER_sub_5D47D0 = $005D47D0;
   A_Q_LoadMainIcon_sub_408050 = $00408050;
   A_j_Q_GetNumberOfUnitsInStack_sub_5B50AD = $004029E1;
   A_Q_PopupListOfUnits_sub_5B6AEA = $005B6AEA;
-  A_Q_CreateScrollbar_sub_40FC50 = $0040FC50;
+  //A_Q_CreateScrollbar_sub_40FC50 = $0040FC50;
   A_Q_InitNewGameParameters_sub_4AA9C0 = $004AA9C0;
   CST_RESOURCES: Integer = 1;
   CST_CITIZENS: Integer = 2;

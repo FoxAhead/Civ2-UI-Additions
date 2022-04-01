@@ -1,8 +1,0 @@
-[General]
-Name=Civ2UIA
-BaseDir=D:\Delphi\Civ2 UI Additions\src\
-Project=1
-[Classes]
-Count=2
-Class0="TCiv2","","Civ2Proc","9","D:\Delphi\Civ2 UI Additions\src\Civ2Proc.pas"
-Class1="TFormSettings","TForm","Civ2UIA_FormSettings","0","D:\Delphi\Civ2 UI Additions\src\Civ2UIA_FormSettings.pas"
