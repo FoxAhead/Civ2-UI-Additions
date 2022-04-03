@@ -30,6 +30,43 @@ type
 
   PUnit = ^TUnit;
 
+  TWindowProcs = packed record            // GetWindowLongA(hWnd, 4) + 0x10
+    MouseFirst: Pointer;
+    LButtonDown: Pointer;                 // + 0x04
+    LButtonUpEnd: Pointer;                // + 0x08
+    LButtonUp: Pointer;                   // + 0x0C
+    RButtonDown: Pointer;                 // + 0x10
+    RButtonUpEnd: Pointer;                // + 0x14
+    RButtonUp: Pointer;                   // + 0x18
+    LButtonDblClk: Pointer;               // + 0x1C
+    KeyDown1: Pointer;                    // + 0x20
+    KeyUp: Pointer;                       // + 0x24
+    KeyDown2: Pointer;                    // + 0x28
+    WM_CHAR: Pointer;                     // + 0x2C
+    _Unknown1: Pointer;                   // + 0x30
+    _Unknown2: Pointer;                   // + 0x34
+    _Unknown3: Pointer;                   // + 0x38
+    WM_SETFOCUS: Pointer;                 // + 0x3C
+    WM_SIZE: Pointer;                     // + 0x40
+    WM_MOVE: Pointer;                     // + 0x44
+    WM_COMMNOTIFY: Pointer;               // + 0x48
+    _Unknown8: Pointer;                   // + 0x4C
+  end;
+
+  TWindowInfo = packed record             // GetWindowLongA(hWnd, 4),  GetWindowLongA(hWnd, 8)
+    _Unknown1: Integer;                   // = 0x00000C02 ...
+    Palette: Pointer;                     // + 0x04
+    WindowStructure: PWindowStructure;    // + 0x08
+    _Unknown4: Integer;                   // + 0x0C
+    WindowProcs: TWindowProcs;            // + 0x10
+    _Unknown5: array[$10 + SizeOf(TWindowProcs)..$8B] of Byte; // + 0x60
+    PopupActive: Cardinal;                // + 0x8C
+    _Unknown6: array[$90..$BB] of Byte;   // + 0x90
+    ButtonInfoOK: PButtonInfo;            // + 0xBC
+    ButtonInfoCANCEL: PButtonInfo;        // + 0xC0
+    Unknown8: Byte;                       // + 0xC4
+  end;
+
   TCitySprite = packed record
     X1: Integer;
     Y1: Integer;
@@ -53,7 +90,16 @@ type
   end;
 
   TCityWindow = packed record             // 6A91B8 (~TGraphicsInfo) Size = $16E0
-    Unknown1: array[0..$2D7] of Byte;
+    Unknown1: array[0..$13] of Byte;
+    ClientRectangle: TRect;
+    WindowRectangle: TRect;
+    SpriteArea: Pointer;
+    Unknown1a: Integer;
+    PrevPaletteID: Integer;
+    DrawInfo: PDrawInfo;
+    Unknown1b: Integer;
+    WindowInfo: TWindowInfo;
+    Unknown1c: array[$48 + SizeOf(TWindowInfo)..$2D7] of Byte;
     CitySpritesInfo: TCitySpritesInfo;    // + 2D8 = 6A9490
     CityIndex: Integer;                   // + 159C
     Unknown2: Integer;
@@ -127,42 +173,6 @@ type
     PageSize: Integer;                    // + 0x34
     _Unknown5: Integer;                   // + 0x38
     CurrentPosition: Integer;             // + 0x3C
-  end;
-
-  TWindowProcs = packed record            // GetWindowLongA(hWnd, 4) + 0x10
-    MouseFirst: Pointer;
-    LButtonDown: Pointer;                 // + 0x04
-    LButtonUpEnd: Pointer;                // + 0x08
-    LButtonUp: Pointer;                   // + 0x0C
-    RButtonDown: Pointer;                 // + 0x10
-    RButtonUpEnd: Pointer;                // + 0x14
-    RButtonUp: Pointer;                   // + 0x18
-    LButtonDblClk: Pointer;               // + 0x1C
-    KeyDown1: Pointer;                    // + 0x20
-    KeyUp: Pointer;                       // + 0x24
-    KeyDown2: Pointer;                    // + 0x28
-    WM_CHAR: Pointer;                     // + 0x2C
-    _Unknown1: Pointer;                   // + 0x30
-    _Unknown2: Pointer;                   // + 0x34
-    _Unknown3: Pointer;                   // + 0x38
-    WM_SETFOCUS: Pointer;                 // + 0x3C
-    WM_SIZE: Pointer;                     // + 0x40
-    WM_MOVE: Pointer;                     // + 0x44
-    WM_COMMNOTIFY: Pointer;               // + 0x48
-    _Unknown8: Pointer;                   // + 0x4C
-  end;
-
-  TWindowInfo = packed record             // GetWindowLongA(hWnd, 4),  GetWindowLongA(hWnd, 8)
-    _Unknown1: Integer;                   // = 0x00000C02 ...
-    Palette: Pointer;                     // + 0x04
-    WindowStructure: PWindowStructure;    // + 0x08 (unknown_libname_6)
-    _Unknown4: Integer;                   // + 0x0C
-    WindowProcs: TWindowProcs;            // + 0x10
-    _Unknown5: array[$10 + SizeOf(TWindowProcs)..$8B] of Byte; // + 0x60
-    PopupActive: Cardinal;                // + 0x8C
-    _Unknown6: array[$90..$BB] of Byte;   // + 0x90
-    ButtonInfoOK: PButtonInfo;            // + 0xBC
-    ButtonInfoCANCEL: PButtonInfo;        // + 0xC0
   end;
 
   TCurrPopupInfo = packed record
@@ -244,7 +254,7 @@ type
     ItemText: array of Char;
   end;
 
-  TWindowStructure = packed record
+  TWindowStructure = packed record        // Size = $4C ?
     Unknown1: Integer;
     HWindow: HWND;                        // + 0x04
     DeviceContext: HDC;
@@ -392,10 +402,14 @@ type
     TurnsCaptured: Byte;                  // + 0x0B
     byte_64F34C: Byte;
     RevealedSize: array[1..9] of Byte;
-    dword_64F356: Integer;
-    word_64F35A: Smallint;
-    word_64F35C: Smallint;
-    word_64F35E: Smallint;
+    Specialists: Cardinal;
+    // 00 - No specialist
+    // 01 - Entertainer
+    // 10 - Taxman
+    // 11 - Scientist
+    FoodStorage: Smallint;
+    BuildProgress: Smallint;
+    BaseTrade: Smallint;
     Name: array[0..15] of Char;
     dword_64F370: Integer;
     Improvements: array[1..5] of Byte;
@@ -409,11 +423,11 @@ type
     byte_64F382: array[1..2] of Byte;
     word_64F384: Smallint;
     word_64F386: array[1..2] of Smallint;
-    word_64F38A: Smallint;
-    word_64F38C: Smallint;
-    word_64F38E: Smallint;
-    byte_64F390: Byte;
-    byte_64F391: Byte;
+    Science: Smallint;
+    Tax: Smallint;
+    Trade: Smallint;
+    TotalFood: Byte;
+    TotalShield: Byte;
     HappyCitizens: Byte;
     UnHappyCitizens: Byte;
     ID: Integer;
@@ -486,6 +500,9 @@ const
   CST_IMPROVEMENTS: Integer = 4;
   CST_BUILD: Integer = 5;
   CST_SUPPORTED_UNITS: Integer = 6;
+
+var
+  ANewUnitsAreaAddress: Pointer = nil;    // For Units Limit patch
 
 implementation
 

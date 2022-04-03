@@ -54,7 +54,7 @@ var
 begin
   Result := wtUnknown;
   v27 := GetWindowLongA(HWindow, 4);
-  if v27 = $006A9200 then
+  if v27 = $006A9200 then                 //TWindowInfo
     Result := wtCityWindow;
   if v27 = $006A66B0 then
     Result := wtCivilopedia;
@@ -303,7 +303,6 @@ begin
     X2 := 500 + DrawTestData.Counter mod 30;
     Y2 := 500 + DrawTestData.Counter mod 30;
     //R := Rect(X1, Y1, X2, Y2);
-
     // City Quickinfo
     if DrawTestCityIndex >= 0 then
     begin
@@ -335,6 +334,12 @@ begin
           StringIndex := Civ2.UnitTypes[Civ2.Cities[DrawTestCityIndex].Building].StringIndex;
         TextOut := ' ' + string(Civ2.GetStringInList(StringIndex));
         UnitTypesStrings.Append(TextOut);
+        {UnitTypesStrings.Append(' BuildProgress = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].BuildProgress));
+        UnitTypesStrings.Append(' Science = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].Science));
+        UnitTypesStrings.Append(' Tax = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].Tax));
+        UnitTypesStrings.Append(' Trade = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].Trade));
+        UnitTypesStrings.Append(' TotalFood = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].TotalFood));
+        UnitTypesStrings.Append(' TotalShield = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].TotalShield));}
         // Calculate max text size and rectangle bounds
         Width := 0;
         Height := 7;
@@ -505,7 +510,6 @@ begin
   HandleWindow2 := PGraphicsInfo^.WindowInfo.WindowStructure^.HWindow;
 
   //SendMessageToLoader(HandleWindow, HandleWindow2);
-
   //  Canvas := Graphics.TBitmap.Create();    // In VM Windows 10 disables city window redraw
   Canvas := TCanvas.Create();
   Canvas.Handle := GetDC(HandleWindow2);
@@ -1788,6 +1792,8 @@ end;
 procedure PatchOnWmTimerDrawEx2(); stdcall;
 begin
   //DrawTest();
+  if DrawTestData.Counter mod 10 = 0 then
+    SendMessageToLoader(1, GetFocus());
 end;
 
 procedure PatchOnWmTimerDraw(); register;
@@ -1822,6 +1828,23 @@ begin
   end
   else
     Civ2.PopupSimpleMessage(A1, A2, A3);
+end;
+
+procedure PatchFocusCityWindow(); stdcall; // __thiscall
+var
+  ACityWindow: PCityWindow;
+  HWindow: HWND;
+begin
+  asm
+    mov   ACityWindow, ecx
+    mov   eax, $004085F0
+    call  eax
+  end;
+  HWindow := ACityWindow^.WindowInfo.WindowStructure.HWindow;
+  if GuessWindowType(HWindow) = wtCityWindow then
+  begin
+    SetFocus(HWindow);
+  end;
 end;
 
 {$O+}
@@ -1927,8 +1950,12 @@ begin
   WriteMemory(HProcess, $0040364D, [OP_JMP], @PatchOnWmTimerDraw);
   // Test CopyToScreen
   WriteMemory(HProcess, $005BCC7D, [OP_NOP, OP_CALL], @PatchCopyToScreenBitBlt);
+  // Set focus on City Window when opened
+  WriteMemory(HProcess, $0040138E, [OP_JMP], @PatchFocusCityWindow);
+  //WriteMemory(HProcess, $0050CF2E, [$01]);
   //
   //WriteMemory(HProcess, $004034A9, [OP_JMP], @PatchPopupSimpleMessageEx);
+
   // civ2patch
   if UIAOPtions.civ2patchEnable then
   begin

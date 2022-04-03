@@ -107,9 +107,12 @@ begin
   SideBarGraphicsInfo := Pointer($006ABC68);
   TimesBigFontInfo := Pointer($0063EAC0);
   TimesFontInfo := Pointer($0063EAB8);
-  Units := Pointer(AUnits);
+  if ANewUnitsAreaAddress <> nil then
+    Units := ANewUnitsAreaAddress
+  else
+    Units := Pointer(AUnits);
   UnitTypes := Pointer($0064B1B8);
-  
+
   // Check structure sizes
   if SizeOf(TCityWindow) <> $16E0 then
     raise Exception.Create('Wrong size of TCityWindow');
