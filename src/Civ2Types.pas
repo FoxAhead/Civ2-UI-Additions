@@ -37,11 +37,11 @@ type
     Y2: Integer;
     SType: Integer;
     // 1 = Resource Map
-    // 2 = Citizens    
-    // 3 = Units Present    
-    // 4 = City Improvements    
-    // 5 = Construction    
-    // 6 = Units Supported   
+    // 2 = Citizens
+    // 3 = Units Present
+    // 4 = City Improvements
+    // 5 = Construction
+    // 6 = Units Supported
     SIndex: Integer;
   end;
 
@@ -301,6 +301,16 @@ type
     byte_655B44: Byte;
   end;
 
+  TImprovement = packed record            // Size = 0x08
+    StringIndex: Cardinal;
+    Cost: Byte;
+    Upkeep: Byte;
+    Unknown2: Byte;
+    Unknown3: Byte;
+  end;
+
+  TImprovements = array[0..66] of TImprovement; // 64C488
+
   TUnitType = packed record               // Size = 0x14
     StringIndex: Cardinal;
     dword_64B1BC: Cardinal;
@@ -374,10 +384,8 @@ type
   TCity = packed record                   // Size = 0x58
     X: Smallint;                          //
     Y: Smallint;                          // + 0x02
-    byte_64F344: Byte;                    // + 0x04
-    unk_64F345: Byte;                     // + 0x05
-    byte_64F346: Byte;                    // + 0x06
-    byte_64F347: Byte;                    // + 0x07
+    Attributes: Cardinal;                 // + 0x04
+    //
     Owner: Byte;                          // + 0x08
     Size: Byte;                           // + 0x09
     Founder: Byte;                        // + 0x0A
@@ -390,8 +398,8 @@ type
     word_64F35E: Smallint;
     Name: array[0..15] of Char;
     dword_64F370: Integer;
-    byte_64F374: array[1..5] of Byte;
-    byte_64F379: Byte;
+    Improvements: array[1..5] of Byte;
+    Building: Shortint;
     byte_64F37A: Byte;
     byte_64F37B: Byte;
     byte_64F37C: array[1..2] of Byte;
@@ -406,17 +414,17 @@ type
     word_64F38E: Smallint;
     byte_64F390: Byte;
     byte_64F391: Byte;
-    byte_64F392: Byte;
-    byte_64F393: Byte;
+    HappyCitizens: Byte;
+    UnHappyCitizens: Byte;
     ID: Integer;
   end;
 
-  TCities = array[0..$FF] of TCity;      // 64F340
+  TCities = array[0..$FF] of TCity;       // 64F340
 
   TCiv = packed record                    // Size = 0x594
     Unknown1: Word;                       //          64C6A0
     Gold: Integer;                        // + 0x02 = 64C6A2
-    Unknown2: Word;                       // + 0x06 = 64C6A6
+    Leader: Word;                         // + 0x06 = 64C6A6
     Beakers: Word;                        // + 0x08 = 64C6A8
     Unknown3: array[$A..$14] of Byte;
     Government: Byte;
@@ -429,7 +437,9 @@ type
     // 0x00000010 Vendetta
     // 0x00000080 Embassy
     // 0x00002000 War
-    Unknown5: array[$40..$593] of Byte;
+    Unknown9: array[$40..$153] of Byte;
+    DefMinUnitBuilding: array[0..61] of Byte;
+    Unknown10: array[$192..$593] of Byte;
   end;
 
   TCivs = array[1..8] of TCiv;            // 64C6A0

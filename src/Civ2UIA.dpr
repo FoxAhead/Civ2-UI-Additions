@@ -265,10 +265,10 @@ begin
 end;
 
 var
-  DrawTestCityIndex: Integer;
+  DrawTestCityIndex: Integer = -1;
   DrawTestMapPoint: TPoint;
 
-procedure DrawTest(DeviceContext: HDC);
+procedure DrawMapOverlay(DeviceContext: HDC);
 var
   DestDC: HDC;
   SrcDC: HDC;
@@ -277,8 +277,8 @@ var
   R: TRect;
   TextOut: string;
   TextSize: TSize;
-  DrawTestThrottle: Integer;
   X1, Y1, X2, Y2: Integer;
+  DX, DY: Integer;
   i: Integer;
   TextColor: TColor;
   MapMessage: TMapMessage;
@@ -286,12 +286,11 @@ var
   MapX, MapY: Integer;
   CityIndex: Integer;
   Width, Height: Integer;
-  UnitTypes: array[0..61] of Integer;
+  UnitTypesCount: array[0..61] of Integer;
+  UnitTypesStrings: TStringList;
+  UnitType: Integer;
+  StringIndex: Integer;
 begin
-  DrawTestThrottle := DrawTestData.Counter mod 1;
-  //if DrawTestThrottle = 0 then
-  //begin
-
   if DeviceContext <> 0 then
   begin
     SavedDC := SaveDC(DeviceContext);
@@ -305,53 +304,93 @@ begin
     Y2 := 500 + DrawTestData.Counter mod 30;
     //R := Rect(X1, Y1, X2, Y2);
 
+    // City Quickinfo
     if DrawTestCityIndex >= 0 then
     begin
-      Ex.UnitsListBuildSorted(DrawTestCityIndex);
-      Width := 0;
-      Height := 7;
-
-      for i := 0 to Ex.UnitsList.Count - 1 do
+      if Ex.UnitsListBuildSorted(DrawTestCityIndex) > 0 then
       begin
-        TextOut := string(Civ2.GetStringInList(Civ2.UnitTypes[PUnit(Ex.UnitsList[i])^.UnitType].StringIndex));
-        //TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
-        //OffsetRect(R, 0, 12);
-        //StringList.Add(TextOut);
-        Width := Max(Width, Canvas.TextExtent(TextOut).cx);
-        Height := Height + 12;
-      end;
-      //StringList.Sort();
+        ZeroMemory(@UnitTypesCount, SizeOf(UnitTypesCount));
+        for i := 0 to Ex.UnitsList.Count - 1 do
+        begin
+          UnitType := PUnit(Ex.UnitsList[i])^.UnitType;
+          Inc(UnitTypesCount[UnitType]);
+          if UnitTypesCount[UnitType] > 1 then
+          begin
+            Ex.UnitsList[i] := nil;
+          end;
+        end;
+        Ex.UnitsList.Pack();
+        UnitTypesStrings := TStringList.Create();
+        UnitTypesStrings.Append('Units Supported');
+        for i := 0 to Ex.UnitsList.Count - 1 do
+        begin
+          UnitType := PUnit(Ex.UnitsList[i])^.UnitType;
+          TextOut := ' ' + IntToStr(UnitTypesCount[UnitType]) + ' x ' + string(Civ2.GetStringInList(Civ2.UnitTypes[UnitType].StringIndex));
+          UnitTypesStrings.Append(TextOut);
+        end;
+        UnitTypesStrings.Append('Building');
+        if Civ2.Cities[DrawTestCityIndex].Building < 0 then
+          StringIndex := Civ2.Improvements[-Civ2.Cities[DrawTestCityIndex].Building].StringIndex
+        else
+          StringIndex := Civ2.UnitTypes[Civ2.Cities[DrawTestCityIndex].Building].StringIndex;
+        TextOut := ' ' + string(Civ2.GetStringInList(StringIndex));
+        UnitTypesStrings.Append(TextOut);
+        // Calculate max text size and rectangle bounds
+        Width := 0;
+        Height := 7;
+        for i := 0 to UnitTypesStrings.Count - 1 do
+        begin
+          if UnitTypesStrings.Strings[i][1] <> ' ' then
+            Canvas.Font.Style := [fsBold]
+          else
+            Canvas.Font.Style := [];
+          Width := Max(Width, Canvas.TextExtent(UnitTypesStrings.Strings[i]).cx + 6);
+          Height := Height + 12;
+        end;
 
-      Width := Width + 6;
-      Canvas.Brush.Style := bsSolid;
-      Canvas.Brush.Color := TColor($E1FFFF);
-      Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, DrawTestMapPoint.X + 2, DrawTestMapPoint.Y);
-      R := Bounds(ScreenPoint.X, ScreenPoint.Y - Height, Width, Height);
-      //Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, 8, 8);
-      Canvas.Rectangle(R);
-      {OffsetRect(R, -1, -1);
-      Canvas.Brush.Color := clWhite;
-      Canvas.FillRect(R);
-      OffsetRect(R, 2, 2);
-      Canvas.Brush.Color := clBlack;
-      Canvas.FillRect(R);
-      OffsetRect(R, -1, -1);
-      Canvas.Brush.Color := TColor($E1FFFF);
-      Canvas.FillRect(R);}
-      Canvas.Brush.Style := bsClear;
-      {TextOut := IntToStr(DrawTestCityIndex);
-      TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 2, clBlack, clWhite, SHADOW_NONE);
-      TextOut := Format('%.2d , %.2d', [DrawTestMapPoint.X, DrawTestMapPoint.Y]);
-      TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 22, clBlack, clWhite, SHADOW_NONE);
-      TextOut := Format('%.2d , %.2d', [ScreenPoint.X, ScreenPoint.Y]);
-      TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 42, clBlack, clWhite, SHADOW_NONE);}
-      for i := 0 to Ex.UnitsList.Count - 1 do
-      begin
-        TextOut := string(Civ2.GetStringInList(Civ2.UnitTypes[PUnit(Ex.UnitsList[i])^.UnitType].StringIndex));
-        TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
-        OffsetRect(R, 0, 12);
-      end;
+        Canvas.Brush.Style := bsSolid;
+        Canvas.Brush.Color := TColor($E1FFFF);
+        Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, DrawTestMapPoint.X + 2, DrawTestMapPoint.Y);
+        R := Bounds(ScreenPoint.X, ScreenPoint.Y - Height, Width, Height);
+        // Move Rect into viewport
+        DX := Civ2.MapGraphicsInfo^.ClientRectangle.Right - R.Right;
+        DY := Civ2.MapGraphicsInfo^.ClientRectangle.Top - R.Top;
+        if DX > 0 then
+          DX := 0;
+        if DY < 0 then
+          DY := 0;
+        OffsetRect(R, DX, DY);
 
+        //Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, 8, 8);
+        Canvas.Rectangle(R);
+        {OffsetRect(R, -1, -1);
+        Canvas.Brush.Color := clWhite;
+        Canvas.FillRect(R);
+        OffsetRect(R, 2, 2);
+        Canvas.Brush.Color := clBlack;
+        Canvas.FillRect(R);
+        OffsetRect(R, -1, -1);
+        Canvas.Brush.Color := TColor($E1FFFF);
+        Canvas.FillRect(R);}
+        Canvas.Brush.Style := bsClear;
+        {TextOut := IntToStr(DrawTestCityIndex);
+        TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 2, clBlack, clWhite, SHADOW_NONE);
+        TextOut := Format('%.2d , %.2d', [DrawTestMapPoint.X, DrawTestMapPoint.Y]);
+        TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 22, clBlack, clWhite, SHADOW_NONE);
+        TextOut := Format('%.2d , %.2d', [ScreenPoint.X, ScreenPoint.Y]);
+        TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 42, clBlack, clWhite, SHADOW_NONE);}
+        for i := 0 to UnitTypesStrings.Count - 1 do
+        begin
+          if UnitTypesStrings.Strings[i][1] <> ' ' then
+            Canvas.Font.Style := [fsBold]
+          else
+            Canvas.Font.Style := [];
+          TextOut := UnitTypesStrings.Strings[i];
+          TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
+          OffsetRect(R, 0, 12);
+        end;
+        UnitTypesStrings.Free();
+      end;
     end;
 
     Canvas.Brush.Style := bsClear;
@@ -371,7 +410,7 @@ begin
     //Canvas.Rectangle(R);
     TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 0, clWhite, clBlack, SHADOW_ALL);
 
-    //
+    // Message Queue
     for i := 0 to MapMessagesList.Count - 1 do
     begin
       if i > 9 then
@@ -1677,13 +1716,13 @@ end;
 
 function PatchDrawCityWindowTopWLTKDEx(j: Integer): Integer; stdcall;
 var
-  CitySize: Integer;
+  HalfCitySize: Integer;
 begin
-  CitySize := Civ2.Cities[j].Size div 2;
-  if (Civ2.Cities[j].byte_64F393 = 0) and ((Civ2.Cities[j].Size - Civ2.Cities[j].byte_64F392) <= CitySize) then
-    Result := $72
-  else if (Civ2.Cities[j].byte_64F392 < Civ2.Cities[j].byte_64F393) then
-    Result := $6A
+  HalfCitySize := Civ2.Cities[j].Size div 2;
+  if (Civ2.Cities[j].UnHappyCitizens = 0) and ((Civ2.Cities[j].Size - Civ2.Cities[j].HappyCitizens) <= HalfCitySize) then
+    Result := $72                         // Yellow
+  else if (Civ2.Cities[j].HappyCitizens < Civ2.Cities[j].UnHappyCitizens) then
+    Result := $6A                         // Red
   else
     Result := $7C;
 end;
@@ -1768,7 +1807,7 @@ begin
     DrawTestDrawInfoCreate();
     VSrcDC := DrawTestData.DeviceContext;
     BitBlt(VSrcDC, 0, 0, Civ2.MapGraphicsInfo.DrawInfo.Width, Civ2.MapGraphicsInfo.DrawInfo.Height, SrcDC, 0, 0, Rop);
-    DrawTest(VSrcDC);
+    DrawMapOverlay(VSrcDC);
     BitBlt(DestDC, 0, 0, Civ2.MapGraphicsInfo.DrawInfo.Width, Civ2.MapGraphicsInfo.DrawInfo.Height, VSrcDC, 0, 0, Rop);
   end
   else

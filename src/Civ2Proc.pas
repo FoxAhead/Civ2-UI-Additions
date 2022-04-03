@@ -20,6 +20,7 @@ type
     GameParameters: PGameParameters;
     GameTurn: PWord;
     HumanCivIndex: PInteger;
+    Improvements: ^TImprovements;
     Leaders: ^TLeaders;
     MainMenu: ^HMENU;
     MainWindowInfo: PWindowInfo;
@@ -90,6 +91,7 @@ begin
   GameParameters := Pointer($00655AE8);
   GameTurn := Pointer($00655AF8);
   HumanCivIndex := Pointer($006D1DA0);
+  Improvements := Pointer($0064C488);
   Leaders := Pointer($006554F8);
   MainMenu := Pointer($006A64F8);
   MainWindowInfo := Pointer($006553D8);
@@ -107,11 +109,16 @@ begin
   TimesFontInfo := Pointer($0063EAB8);
   Units := Pointer(AUnits);
   UnitTypes := Pointer($0064B1B8);
+  
   // Check structure sizes
   if SizeOf(TCityWindow) <> $16E0 then
     raise Exception.Create('Wrong size of TCityWindow');
   if SizeOf(TGraphicsInfo) <> $3F0 then
     raise Exception.Create('Wrong size of TGraphicsInfo');
+  if SizeOf(TCity) <> $58 then
+    raise Exception.Create('Wrong size of TCity');
+  if SizeOf(TCiv) <> $594 then
+    raise Exception.Create('Wrong size of TCiv');
 end;
 
 destructor TCiv2.Destroy;

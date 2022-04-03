@@ -16,7 +16,7 @@ type
     UnitsListCursor: Integer;
     constructor Create;
     destructor Destroy; override;
-    procedure UnitsListBuildSorted(CityIndex: Integer);
+    function UnitsListBuildSorted(CityIndex: Integer): Integer;
     function UnitsListGetNextUnitIndex(CursorIncrement: Integer): Integer;
 
   published
@@ -71,7 +71,7 @@ begin
   inherited;
 end;
 
-procedure TEx.UnitsListBuildSorted(CityIndex: Integer);
+function TEx.UnitsListBuildSorted(CityIndex: Integer): Integer;
 var
   i: Integer;
 begin
@@ -81,11 +81,12 @@ begin
     if (Civ2.Units[i].ID > 0) and (Civ2.Units[i].HomeCity = CityIndex) then
     begin
       UnitsList.Add(@Civ2.Units[i]);
-      SendMessageToLoader(1, Integer(@Civ2.Units[i]));
+      //SendMessageToLoader(1, Integer(@Civ2.Units[i]));
     end;
   end;
   UnitsList.Sort(@CompareCityUnits);
   UnitsListCursor := 0;
+  Result := UnitsList.Count;
 end;
 
 function TEx.UnitsListGetNextUnitIndex(CursorIncrement: Integer): Integer;
