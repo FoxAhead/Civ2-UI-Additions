@@ -202,7 +202,8 @@ type
     ListItems: array of TControlInfo;     // + 0x280
   end;
 
-  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C), Size = 0x3F0
+  // TODO: Rename to T_GraphicsInfoMap (Size = 0x3F0)
+  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C), Size = 0x114 (sub_5DEE28) + ... = T_GraphicsInfoMap Size = 0x3F0 
     Unknown1: array[$00..$13] of Byte;
     ClientRectangle: TRect;               // + 0x14
     WindowRectangle: TRect;               // + 0x24
@@ -232,6 +233,8 @@ type
 
   TGraphicsInfos = array[0..7] of TGraphicsInfo;
 
+  // T_GraphicsInfoEx Size = 0xA28 (sub_4D5B21)
+  
   TDrawInfo = packed record               //  Size = $28
     Unknown0: Integer;
     DeviceContext: HDC;                   // + 0x04

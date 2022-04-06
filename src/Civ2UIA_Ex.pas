@@ -3,7 +3,9 @@ unit Civ2UIA_Ex;
 interface
 
 uses
-  Classes;
+  Classes,
+  Contnrs,
+  Windows;
 
 type
   TEx = class
@@ -12,13 +14,14 @@ type
   protected
 
   public
+    ShowWindowStack: TStack;
     UnitsList: TList;
     UnitsListCursor: Integer;
     constructor Create;
     destructor Destroy; override;
     function UnitsListBuildSorted(CityIndex: Integer): Integer;
     function UnitsListGetNextUnitIndex(CursorIncrement: Integer): Integer;
-
+    procedure AfterShowWindow(HWindow: HWND; nCmdShow: Integer);
   published
 
   end;
@@ -29,9 +32,12 @@ var
 implementation
 
 uses
+  SysUtils,
   Civ2Proc,
   Civ2Types,
-  Civ2UIA_Proc;
+  Civ2UIA_Proc,
+  Civ2UIA_Global,
+  Civ2UIA_MapMessage;
 
 function CompareCityUnits(Item1, Item2: Pointer): Integer;
 var
@@ -62,11 +68,13 @@ end;
 constructor TEx.Create;
 begin
   inherited;
-  UnitsList := TList.Create;
+  UnitsList := TList.Create();
+  ShowWindowStack := TStack.Create();
 end;
 
 destructor TEx.Destroy;
 begin
+  ShowWindowStack.Free();
   UnitsList.Free();
   inherited;
 end;
@@ -101,6 +109,32 @@ begin
     Addr := UnitsList[UnitsListCursor];
     Result := (Integer(Addr) - Integer(Civ2.Units)) div SizeOf(TUnit);
   end;
+end;
+
+procedure TEx.AfterShowWindow(HWindow: HWND; nCmdShow: Integer);
+var
+  PrevWindow: HWND;
+begin
+  if nCmdShow = 5 then
+  begin
+    ShowWindowStack.Push(Pointer(HWindow));
+    MapMessagesList.Add(TMapMessage.Create(Format('SetFocus(%.8x)', [HWindow])));
+    SetFocus(HWindow);
+  end;
+  if nCmdShow = 0 then
+  begin
+    while ShowWindowStack.AtLeast(1) do
+    begin
+      ShowWindowStack.Pop();
+      if not ShowWindowStack.AtLeast(1) then
+        Break;
+      PrevWindow := HWND(ShowWindowStack.Peek());
+      MapMessagesList.Add(TMapMessage.Create(Format('SetFocus(%.8x)', [PrevWindow])));
+      if SetFocus(PrevWindow) <> 0 then
+        Break;
+    end;
+  end;
+
 end;
 
 end.

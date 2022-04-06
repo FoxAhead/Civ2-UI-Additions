@@ -1,0 +1,31 @@
+[General]
+Name=Civ2UIA
+BaseDir=D:\Delphi\Civ2 UI Additions\src\
+Project=1
+Version=2
+[Classes]
+Count=4
+Class0.Name=TCiv2
+Class0.ObjectType=Class
+Class0.DerivedFrom=TObject
+Class0.SourceName=Civ2Proc
+Class0.LineNo=0
+Class0.Filename=D:\Delphi\Civ2 UI Additions\src\Civ2Proc.pas
+Class1.Name=TFormSettings
+Class1.ObjectType=Class
+Class1.DerivedFrom=TForm
+Class1.SourceName=Civ2UIA_FormSettings
+Class1.LineNo=0
+Class1.Filename=D:\Delphi\Civ2 UI Additions\src\Civ2UIA_FormSettings.pas
+Class2.Name=TMapMessage
+Class2.ObjectType=Class
+Class2.DerivedFrom=TObject
+Class2.SourceName=Civ2UIA_MapMessage
+Class2.LineNo=0
+Class2.Filename=D:\Delphi\Civ2 UI Additions\src\Civ2UIA_MapMessage.pas
+Class3.Name=TEx
+Class3.ObjectType=Class
+Class3.DerivedFrom=TObject
+Class3.SourceName=Civ2UIA_Ex
+Class3.LineNo=0
+Class3.Filename=D:\Delphi\Civ2 UI Additions\src\Civ2UIA_Ex.pas

@@ -64,6 +64,7 @@ type
     procedure UpdateDIBColorTableFromPalette(ThisGraphicsInfo: PGraphicsInfo; Palette: Pointer);
     procedure CenterView(X, Y: Integer);
     function GetFontHeightWithExLeading(thisFont: Pointer): Integer;
+    procedure SetFocusAndBringToTop(WindowInfo: PWindowInfo);
   published
   end;
 
@@ -352,6 +353,13 @@ function TCiv2.GetFontHeightWithExLeading(thisFont: Pointer): Integer;
 asm
     mov   ecx, thisFont
     mov   eax, $00403819
+    call  eax
+end;
+
+procedure TCiv2.SetFocusAndBringToTop(WindowInfo: PWindowInfo);
+asm
+    mov   ecx, WindowInfo
+    mov   eax, $0040325B
     call  eax
 end;
 

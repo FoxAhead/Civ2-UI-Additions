@@ -354,7 +354,6 @@ begin
         end;
 
         Canvas.Brush.Style := bsSolid;
-        Canvas.Brush.Color := TColor($E1FFFF);
         Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, DrawTestMapPoint.X + 2, DrawTestMapPoint.Y);
         R := Bounds(ScreenPoint.X, ScreenPoint.Y - Height, Width, Height);
         // Move Rect into viewport
@@ -366,6 +365,9 @@ begin
           DY := 0;
         OffsetRect(R, DX, DY);
 
+        // Draw Rectangle
+        Canvas.Brush.Color := TColor($909090);
+        Canvas.Pen.Color := TColor($F0F0F0);
         //Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, 8, 8);
         Canvas.Rectangle(R);
         {OffsetRect(R, -1, -1);
@@ -384,6 +386,9 @@ begin
         TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 22, clBlack, clWhite, SHADOW_NONE);
         TextOut := Format('%.2d , %.2d', [ScreenPoint.X, ScreenPoint.Y]);
         TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 42, clBlack, clWhite, SHADOW_NONE);}
+        
+        // Draw Rectangle Contents
+        //Canvas.Brush.Color := TColor($FFFFFF);
         for i := 0 to UnitTypesStrings.Count - 1 do
         begin
           if UnitTypesStrings.Strings[i][1] <> ' ' then
@@ -391,7 +396,8 @@ begin
           else
             Canvas.Font.Style := [];
           TextOut := UnitTypesStrings.Strings[i];
-          TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
+          //TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
+          TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, TColor($FFFFFF), TColor($101010), SHADOW_BR);
           OffsetRect(R, 0, 12);
         end;
         UnitTypesStrings.Free();
@@ -418,7 +424,7 @@ begin
     // Message Queue
     for i := 0 to MapMessagesList.Count - 1 do
     begin
-      if i > 9 then
+      if i > 35 then
         Break;
       MapMessage := TMapMessage(MapMessagesList.Items[i]);
       X1 := Min(255, 512 div 50 * (MapMessage.Timer + 10));
@@ -603,7 +609,7 @@ label
   EndOfFunction;
 begin
   //
-  MapMessagesList.Add(TMapMessage.Create(IntToStr(DrawTestData.Counter)));
+  //MapMessagesList.Add(TMapMessage.Create(IntToStr(DrawTestData.Counter)));
 
   Result := True;
   CityWindowScrollLines := 3;
@@ -1758,7 +1764,7 @@ begin
   //
   for i := 0 to MapMessagesList.Count - 1 do
   begin
-    if i > 9 then
+    if i > 35 then
       Break;
     MapMessage := TMapMessage(MapMessagesList.Items[i]);
     Dec(MapMessage.Timer);
@@ -1772,7 +1778,7 @@ begin
   //
   DrawTestCityIndex := -1;
   ZeroMemory(@DrawTestMapPoint, SizeOf(DrawTestMapPoint));
-  if GetAsyncKeyState(VK_SHIFT) <> 0 then
+  if GetAsyncKeyState(VK_CONTROL) <> 0 then
   begin
     GetCursorPos(MousePoint);
     WindowHandle := WindowFromPoint(MousePoint);
@@ -1789,11 +1795,21 @@ begin
   end;
 end;
 
+var
+  PrevGetFocus: HWND;
+
 procedure PatchOnWmTimerDrawEx2(); stdcall;
+var
+  CurrGetFocus: HWND;
 begin
   //DrawTest();
-  if DrawTestData.Counter mod 10 = 0 then
-    SendMessageToLoader(1, GetFocus());
+  CurrGetFocus := GetFocus();
+  if (CurrGetFocus <> PrevGetFocus) and (CurrGetFocus <> 0) then
+  begin
+    PrevGetFocus := CurrGetFocus;
+    //SendMessageToLoader($FFFF, CurrGetFocus);
+    //MapMessagesList.Add(TMapMessage.Create(Format('GetFocus() = %.8x', [CurrGetFocus])));
+  end;
 end;
 
 procedure PatchOnWmTimerDraw(); register;
@@ -1844,6 +1860,107 @@ begin
   if GuessWindowType(HWindow) = wtCityWindow then
   begin
     SetFocus(HWindow);
+  end;
+end;
+
+var
+  OriginalAddresses: array[1..10] of Integer;
+
+function PatchSetFocus(HWindow: HWND): Integer; stdcall;
+var
+  CallerAddress: Integer;
+  OriginalAddress: Integer;
+begin
+  asm
+    mov eax, [ebp + 4]
+    mov CallerAddress, eax
+  end;
+  SendMessageToLoader(1, 0);
+  SendMessageToLoader(CallerAddress, HWindow);
+  OriginalAddress := OriginalAddresses[1];
+  MapMessagesList.Add(TMapMessage.Create(Format('%.6x SetFocus(%.8x)', [CallerAddress, HWindow])));
+  asm
+    push HWindow
+    mov   eax, OriginalAddress
+    call  eax
+    mov @Result, eax
+  end
+end;
+
+function PatchDestroyWindow(HWindow: HWND): Integer; stdcall;
+var
+  CallerAddress: Integer;
+  OriginalAddress: Integer;
+begin
+  asm
+    mov eax, [ebp + 4]
+    mov CallerAddress, eax
+  end;
+  SendMessageToLoader(2, 0);
+  SendMessageToLoader(CallerAddress, HWindow);
+  OriginalAddress := OriginalAddresses[2];
+  MapMessagesList.Add(TMapMessage.Create(Format('%.6x DestroyWindow(%.8x)', [CallerAddress, HWindow])));
+  asm
+    push HWindow
+    mov   eax, OriginalAddress
+    call  eax
+    mov @Result, eax
+  end
+end;
+
+function PatchShowWindow(HWindow: HWND; nCmdShow: Integer): Integer; stdcall;
+var
+  CallerAddress: Integer;
+  OriginalAddress: Integer;
+  CurrGetFocusBefore: HWND;
+  CurrGetFocusAfter: HWND;
+begin
+  asm
+    mov eax, [ebp + 4]
+    mov CallerAddress, eax
+  end;
+  CurrGetFocusBefore := GetFocus();
+  //SendMessageToLoader(3, nCmdShow);
+  //SendMessageToLoader(CallerAddress, HWindow);
+  OriginalAddress := OriginalAddresses[3];
+  asm
+    push nCmdShow
+    push HWindow
+    mov   eax, OriginalAddress
+    call  eax
+    mov @Result, eax
+  end;
+  Ex.AfterShowWindow(HWindow, nCmdShow);
+  CurrGetFocusAfter := GetFocus();
+  //MapMessagesList.Add(TMapMessage.Create(Format('%.8x => %.6x ShowWindow(%.8x, %.d) => %.8x', [CurrGetFocusBefore,CallerAddress, HWindow, nCmdShow,CurrGetFocusAfter])));
+//  if nCmdShow = 5 then
+//    SetFocus(HWindow);
+end;
+
+procedure HookFunction(Index: Integer; HProcess: THandle; Address: Integer; ProcAddress: Pointer);
+var
+  BytesRead: Cardinal;
+  PatchedAddress: LongRec;
+begin
+  ReadProcessMemory(HProcess, Pointer(Address), @OriginalAddresses[Index], 4, BytesRead);
+  PatchedAddress := LongRec(ProcAddress);
+  WriteMemory(HProcess, Address, [PatchedAddress.Bytes[0], PatchedAddress.Bytes[1], PatchedAddress.Bytes[2], PatchedAddress.Bytes[3]]);
+end;
+
+procedure HookSetFocus(HProcess: THandle);
+begin
+  HookFunction(1, HProcess, $006E7D94, @PatchSetFocus);
+  //HookFunction(2, HProcess, $006E7E1C, @PatchDestroyWindow);
+  HookFunction(3, HProcess, $006E7E24, @PatchShowWindow);
+  //SendMessageToLoader(3, OriginalAddresses[2]);
+end;
+
+function PatchAfterCityWindowClose(): Integer; stdcall;
+begin
+  Result := 0;
+  if PInteger($0063EF60)^ > 0 then
+  begin
+    Civ2.SetFocusAndBringToTop(@PGraphicsInfo($63EB10)^.WindowInfo);
   end;
 end;
 
@@ -1953,8 +2070,11 @@ begin
   // Set focus on City Window when opened
   WriteMemory(HProcess, $0040138E, [OP_JMP], @PatchFocusCityWindow);
   //WriteMemory(HProcess, $0050CF2E, [$01]);
+  WriteMemory(HProcess, $00509985, [OP_CALL], @PatchAfterCityWindowClose);
+
   //
   //WriteMemory(HProcess, $004034A9, [OP_JMP], @PatchPopupSimpleMessageEx);
+  //HookSetFocus(HProcess);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then
