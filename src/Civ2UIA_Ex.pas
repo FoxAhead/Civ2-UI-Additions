@@ -52,7 +52,7 @@ begin
   begin
     UnitType := Civ2.UnitTypes[Units[i]^.UnitType];
     if UnitType.Role = 5 then
-      Weights[i] := $00F00000
+      Weights[i] := $00100000 * (Units[i]^.UnitType + 1)
     else if UnitType.Att > 0 then
       Weights[i] := UnitType.Def * $100 + ($F - UnitType.Domain) * $10000 + UnitType.Att
     else
@@ -111,7 +111,7 @@ begin
   end;
 end;
 
-procedure TEx.AfterShowWindow(HWindow: HWND; nCmdShow: Integer);
+procedure TEx.AfterShowWindow(HWindow: HWND; nCmdShow: Integer); //Obsolete, Remove
 var
   PrevWindow: HWND;
 begin

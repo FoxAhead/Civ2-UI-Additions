@@ -12,11 +12,19 @@ type
 
   PWindowInfo = ^TWindowInfo;
 
-  PButtonInfo = ^TButtonInfo;
+  PControlBlock = ^TControlBlock;
+
+  PControlInfo = ^TControlInfo;
+
+  PControlInfoButton = ^TControlInfoButton;
 
   PControlInfoScroll = ^TControlInfoScroll;
 
+  PDrawPort = ^TDrawPort;
+
   PGraphicsInfo = ^TGraphicsInfo;
+
+  PGraphicsInfoMap = ^TGraphicsInfoMap;
 
   PWindowStructure = ^TWindowStructure;
 
@@ -26,7 +34,13 @@ type
 
   PDrawInfo = ^TDrawInfo;
 
+  PAdvisorWindow = ^TAdvisorWindow;
+
   PGameParameters = ^TGameParameters;
+
+  PSprite = ^TSprite;
+
+  PSprites = ^TSprites;
 
   PUnit = ^TUnit;
 
@@ -62,8 +76,8 @@ type
     _Unknown5: array[$10 + SizeOf(TWindowProcs)..$8B] of Byte; // + 0x60
     PopupActive: Cardinal;                // + 0x8C
     _Unknown6: array[$90..$BB] of Byte;   // + 0x90
-    ButtonInfoOK: PButtonInfo;            // + 0xBC
-    ButtonInfoCANCEL: PButtonInfo;        // + 0xC0
+    ButtonInfoOK: PControlInfoButton;     // + 0xBC
+    ButtonInfoCANCEL: PControlInfoButton; // + 0xC0
     Unknown8: Byte;                       // + 0xC4
   end;
 
@@ -130,48 +144,52 @@ type
     ControlInfoScroll: PControlInfoScroll; //
   end;
 
-  TControlInfo = packed record            // Size = $40
+  TControlBlock = packed record           // Size = 0x30  GetWindowLongA(hWnd, 0)  (sub_5C9499)
+    hMem: HGLOBAL;
+    ControlInfo: PControlInfo;
+    Unknown_08: Integer;
+    Unknown_0C: Integer;
+    Unknown_10: Integer;
+    Unknown_14: Integer;
+    Unknown_18: Integer;
+    Unknown_1C: Integer;
+    Unknown_20: Integer;
+    Unknown_24: Integer;
+    Unknown_28: Integer;
+    Unknown_2C: Integer;
+  end;
+
+  TControlInfo = packed record            // Size = $2C
     ControlType: Integer;                 //  8-Scrollbar, 7-ListBox, 6-Button, 4-EditBox, 3-RadioButton(Group), 2-CheckBox, 1-ListItem
     Code: Integer;                        // + 0x04
+    // Button: 0x64 - OK, 0x65 - Cancel
+    // ListItem: 0x3E8 + Index, 0x12C + Index
+    // Scroll: 0xC8, 0xB, 0xC, 0x65
     WindowInfo: PWindowInfo;              // + 0x08
     Rect: TRect;                          // + 0x0C (Left, Top, Right, Bottom)
     HWindow: HWND;                        // + 0x1C
-    Unknown8: Integer;                    // + 0x20
-    Unknown9: Integer;                    // + 0x24
-    UnknownA: Integer;                    // + 0x28
-    UnknownB: Integer;                    // + 0x2C
-    UnknownC: Integer;                    // + 0x30
-    ScrollPageSize: Integer;              // + 0x34
-    UnknownE: Integer;                    // + 0x38
-    Proc_WM_LBUTTONDBLCLK: Pointer;       // + 0x3C
+    ControlInfo: PControlInfo;            // + 0x20
+    Unknown_24: Byte;                     // + 0x24
+    Unknown_25: Byte;                     // + 0x25
+    Unknown_26: Byte;                     // + 0x26
+    Unknown_27: Byte;                     // + 0x27
+    Unknown_28: Integer;                  // + 0x28
   end;
 
-  TButtonInfo = packed record             // Size = $3C  similar to ListItem/ControlInfo?
-    Unknown1: Integer;
-    Code: Integer;                        // + 0x04 (0x64 - OK, 0x65 - Cancel)
-    WindowInfo: PWindowInfo;              // + 0x08
-    Rect: TRect;                          // + 0x0C (Left, Top, Right, Bottom)
-    HWindow: HWND;                        // + 0x1C
-    Unknown7: Integer;                    // + 0x20
-    Unknown8: Integer;                    // + 0x24
-    Unknown9: Integer;                    // + 0x28
+  TControlInfoButton = packed record      // Size = $3C
+    ControlInfo: TControlInfo;
     Active: Integer;                      // + 0x2C
     Proc: Pointer;                        // + 0x30
-    UnknownA: Integer;                    // + 0x34
-    UnknownB: Integer;                    // + 0x38
+    Unknown_34: Integer;                  // + 0x34
+    Unknown_38: Integer;                  // + 0x38
   end;
 
-  TControlInfoScroll = packed record      // GetWindowLongA(hWnd, GetClassLongA(hWnd, GCL_CBWNDEXTRA) - 8)
-    _Unknown1: Integer;                   //
-    _Unknown2: Integer;                   // + 0x04
-    WindowInfo: PWindowInfo;              // + 0x08
-    Rect: TRect;                          // + 0x0C (Left, Top, Right, Bottom)
-    HWindow: HWND;                        // + 0x1C
-    _Unknown3: array[$20..$2B] of Byte;   // + 0x20
+  TControlInfoScroll = packed record      // Size = $40  GetWindowLongA(hWnd, GetClassLongA(hWnd, GCL_CBWNDEXTRA) - 8)
+    ControlInfo: TControlInfo;
     ProcRedraw: Pointer;                  // + 0x2C
     ProcTrack: Pointer;                   // + 0x30
     PageSize: Integer;                    // + 0x34
-    _Unknown5: Integer;                   // + 0x38
+    Unknown_38: Integer;                  // + 0x38
     CurrentPosition: Integer;             // + 0x3C
   end;
 
@@ -202,19 +220,37 @@ type
     ListItems: array of TControlInfo;     // + 0x280
   end;
 
-  // TODO: Rename to T_GraphicsInfoMap (Size = 0x3F0)
-  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C), Size = 0x114 (sub_5DEE28) + ... = T_GraphicsInfoMap Size = 0x3F0 
-    Unknown1: array[$00..$13] of Byte;
-    ClientRectangle: TRect;               // + 0x14
-    WindowRectangle: TRect;               // + 0x24
-    SpriteArea: Pointer;                  // + 0x34
-    Unknown3a: Integer;
+  TDrawPort = packed record               // Part of TGraphicsInfo; TODO: Move to TGraphicsInfo
+    _Proc: Pointer;
+    RectWidth: Integer;
+    RectHeight: Integer;
+    BmWidth4: Integer;
+    BmWidth4u: Integer;
+    ClientRectangle: TRect;
+    WindowRectangle: TRect;
+    pBmp: Pointer;
+    RowsAddr: Pointer;
     PrevPaletteID: Integer;
-    DrawInfo: PDrawInfo;                  // + 0x40
-    Unknown4: array[$44..$47] of Byte;
+    DrawInfo: PDrawInfo;
+    ColorDepth: Integer;
+  end;
+
+  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C), Size = 0x114 (sub_5DEE28)
+    DrawPort: TDrawPort;
     WindowInfo: TWindowInfo;              // + 0x48
-    Unknown5: array[$48 + SizeOf(TWindowInfo)..$123] of Byte;
-    ClientTopLeft: TPoint;                // + 0x124 ???
+    Unknown_10D: Byte;
+    Unknown_10E: Byte;
+    Unknown_10F: Byte;
+    UpdateProc: Pointer;                  // + 0x110
+  end;
+
+  TGraphicsInfoMap = packed record        // Size = 0x3F0
+    GraphicsInfo: TGraphicsInfo;          //
+    Unknown_114: Integer;                 // + 0x114
+    _CaptionHeight: Integer;              // + 0x118
+    Unknown_11C: Integer;                 // + 0x11C
+    _ResizeBorderWidth: Integer;          // + 0x120
+    ClientTopLeft: TPoint;                // + 0x124
     ClientSize: TSize;
     Unknown6: array[$134..$2DF] of Byte;
     MapCenter: TSmallPoint;               // + 0x2E0
@@ -231,10 +267,10 @@ type
     Unknown11: array[1..19] of Integer;
   end;
 
-  TGraphicsInfos = array[0..7] of TGraphicsInfo;
+  TMapGraphicsInfos = array[0..7] of TGraphicsInfoMap;
 
   // T_GraphicsInfoEx Size = 0xA28 (sub_4D5B21)
-  
+
   TDrawInfo = packed record               //  Size = $28
     Unknown0: Integer;
     DeviceContext: HDC;                   // + 0x04
@@ -272,6 +308,48 @@ type
   TFontInfo = packed record
     Handle: PPHFONT;
     Height: Longint;
+  end;
+
+  TSprite = packed record
+    Rectangle1: TRect;
+    Rectangle2: TRect;
+    Rectangle3: TRect;
+    Unknown1: Integer;
+    hMem: HGLOBAL;
+    pMem: Pointer;
+  end;
+
+  TSprites = array[0..5] of TSprite;
+  //
+
+  TAdvisorWindow = packed record          // Size = 0x4A4
+    GraphicsInfo: TGraphicsInfo;
+    Unknown_114: Integer;
+    _CaptionHeight: Integer;
+    Unknown_11C: Integer;
+    _ResizeBorderWidth: Integer;
+    ClientTopLeft: TPoint;
+    ClientSize: TSize;
+    Unknown1b: array[1..105] of Integer;
+    BgDrawPort: TDrawPort;
+    ControlInfoButton1: TControlInfoButton;
+    ControlInfoButton2: TControlInfoButton;
+    Unknown1a: array[1..30] of Integer;
+    ControlInfoScroll: TControlInfoScroll;
+    AdvisorType: Integer;
+    Unknown2: array[1..2] of Integer;
+    CurrCivIndex: Integer;
+    aPosition: Integer;
+    aPageSize: Integer;
+    Unknown2a: array[1..3] of Integer;
+    Height: Integer;
+    Unknown3: array[1..5] of Integer;
+    Width: Integer;
+    Unknown_490: Integer;
+    ScrollBarWidth: Integer;
+    Unknown_498: Integer;
+    Unknown_49C: Integer;
+    Popup: Integer;
   end;
 
   TGameParameters = packed record
@@ -398,7 +476,8 @@ type
     X: Smallint;                          //
     Y: Smallint;                          // + 0x02
     Attributes: Cardinal;                 // + 0x04
-    //
+    // 0000 0000 0000 0001 - Disorder
+    // 0000 0000 0000 0010 - We Love the King Day
     Owner: Byte;                          // + 0x08
     Size: Byte;                           // + 0x09
     Founder: Byte;                        // + 0x0A

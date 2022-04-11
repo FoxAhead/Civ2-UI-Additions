@@ -54,6 +54,7 @@ type
     BitmapHandle: HBITMAP;
     MapDeviceContext: HDC;
     Counter: Cardinal;
+    DrawPort: TDrawPort;
   end;
 
 const

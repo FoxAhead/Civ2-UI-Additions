@@ -79,6 +79,12 @@ begin
   Result := Value * (Zoom + 8) div 8;
 end;
 
+procedure OffsetPoint(var Point: TPoint; DX, DY: Integer);
+begin
+  Point.X := Point.X + DX;
+  Point.Y := Point.Y + DY;
+end;
+
 procedure TextOutWithShadows(var Canvas: TCanvas; var TextOut: string; Left, Top: Integer; const MainColor, ShadowColor: TColor; Shadows: Cardinal);
 var
   dX: Integer;
@@ -205,7 +211,7 @@ var
   TextSize: TSize;
 begin
   TextOut := CDPosition_To_String(Position) + ' / ' + CDLength_To_String(MCIPlayLength);
-  DC := Civ2.MapGraphicsInfo^.DrawInfo^.DeviceContext;
+  DC := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo^.DeviceContext;
   SavedDC := SaveDC(DC);
   Canvas := TCanvas.Create();
   Canvas.Handle := DC;
@@ -216,7 +222,7 @@ begin
   if TextSize.cx > MCITextSizeX then
     MCITextSizeX := TextSize.cx;
   R := Rect(0, 0, MCITextSizeX, TextSize.cy);
-  OffsetRect(R, Civ2.MapGraphicsInfo^.ClientRectangle.Right - MCITextSizeX, 9);
+  OffsetRect(R, Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.ClientRectangle.Right - MCITextSizeX, 9);
   InflateRect(R, 2, 0);
   Canvas.Brush.Style := bsSolid;
   Canvas.Brush.Color := clWhite;
@@ -233,32 +239,34 @@ begin
   Canvas.Handle := 0;
   Canvas.Free;
   RestoreDC(DC, SavedDC);
-  InvalidateRect(Civ2.MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow, @R, True);
+  InvalidateRect(Civ2.MapGraphicsInfo^.GraphicsInfo.WindowInfo.WindowStructure^.HWindow, @R, True);
 end;
 
 procedure DrawTestDrawInfoCreate();
 var
   BufBitmap: HBITMAP;
 begin
-  if Civ2.MapGraphicsInfo^.DrawInfo <> nil then
+  if Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo <> nil then
   begin
-    if Civ2.MapGraphicsInfo^.DrawInfo.DeviceContext <> 0 then
+    if Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo.DeviceContext <> 0 then
     begin
       //DrawTestDrawInfo := Civ2.DrawInfoCreate(@(MapGraphicsInfo^.WindowRectangle));
       //BufBitmap := CreateCompatibleBitmap(DrawTestDrawInfo.DeviceContext, MapGraphicsInfo^.WindowRectangle.Right, MapGraphicsInfo^.WindowRectangle.Bottom);
       //SelectObject(DrawTestDrawInfo.DeviceContext, BufBitmap);
       //SendMessageToLoader(Integer(DrawTestDrawInfo.DeviceContext), 2);
-      if DrawTestData.MapDeviceContext <> Civ2.MapGraphicsInfo^.DrawInfo.DeviceContext then
+      if DrawTestData.MapDeviceContext <> Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo.DeviceContext then
       begin
-        DrawTestData.MapDeviceContext := Civ2.MapGraphicsInfo^.DrawInfo.DeviceContext;
-        if DrawTestData.DeviceContext <> 0 then
+        DrawTestData.MapDeviceContext := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo.DeviceContext;
+        {if DrawTestData.DeviceContext <> 0 then
         begin
           DeleteDC(DrawTestData.DeviceContext);
           DeleteObject(DrawTestData.BitmapHandle);
         end;
         DrawTestData.DeviceContext := CreateCompatibleDC(Civ2.MapGraphicsInfo^.DrawInfo.DeviceContext);
         DrawTestData.BitmapHandle := CreateCompatibleBitmap(Civ2.MapGraphicsInfo^.DrawInfo.DeviceContext, Civ2.MapGraphicsInfo^.DrawInfo.Width, Civ2.MapGraphicsInfo^.DrawInfo.Height);
-        SelectObject(DrawTestData.DeviceContext, DrawTestData.BitmapHandle);
+        SelectObject(DrawTestData.DeviceContext, DrawTestData.BitmapHandle);}
+        Civ2.DrawPort_Reset(@(DrawTestData.DrawPort), Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.RectWidth, Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.RectHeight);
+        Civ2.SetDIBColorTableFromPalette(DrawTestData.DrawPort.DrawInfo, Civ2.MapGraphicsInfo.GraphicsInfo.WindowInfo.Palette);
       end;
     end;
   end;
@@ -274,11 +282,14 @@ var
   SrcDC: HDC;
   Canvas: TCanvas;
   SavedDC: Integer;
-  R: TRect;
+  R, R2: TRect;
+  P: TPoint;
   TextOut: string;
   TextSize: TSize;
   X1, Y1, X2, Y2: Integer;
   DX, DY: Integer;
+  FontHeight: Integer;
+  TextExtent: TSize;
   i: Integer;
   TextColor: TColor;
   MapMessage: TMapMessage;
@@ -290,6 +301,7 @@ var
   UnitTypesStrings: TStringList;
   UnitType: Integer;
   StringIndex: Integer;
+  City: TCity;
 begin
   if DeviceContext <> 0 then
   begin
@@ -306,6 +318,7 @@ begin
     // City Quickinfo
     if DrawTestCityIndex >= 0 then
     begin
+      City := Civ2.Cities[DrawTestCityIndex];
       if Ex.UnitsListBuildSorted(DrawTestCityIndex) > 0 then
       begin
         ZeroMemory(@UnitTypesCount, SizeOf(UnitTypesCount));
@@ -334,31 +347,32 @@ begin
           StringIndex := Civ2.UnitTypes[Civ2.Cities[DrawTestCityIndex].Building].StringIndex;
         TextOut := ' ' + string(Civ2.GetStringInList(StringIndex));
         UnitTypesStrings.Append(TextOut);
-        {UnitTypesStrings.Append(' BuildProgress = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].BuildProgress));
-        UnitTypesStrings.Append(' Science = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].Science));
-        UnitTypesStrings.Append(' Tax = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].Tax));
-        UnitTypesStrings.Append(' Trade = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].Trade));
-        UnitTypesStrings.Append(' TotalFood = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].TotalFood));
-        UnitTypesStrings.Append(' TotalShield = ' + IntToStr(Civ2.Cities[DrawTestCityIndex].TotalShield));}
+        Canvas.Font.Handle := CopyFont(Civ2.TimesFontInfo^.Handle^^);
+        //        Canvas.Font.Name := 'Times New Roman';
+        Canvas.Font.Size := 11;
+
         // Calculate max text size and rectangle bounds
         Width := 0;
-        Height := 7;
+        Height := 7 + 18;
+        FontHeight := 0;
         for i := 0 to UnitTypesStrings.Count - 1 do
         begin
           if UnitTypesStrings.Strings[i][1] <> ' ' then
             Canvas.Font.Style := [fsBold]
           else
             Canvas.Font.Style := [];
-          Width := Max(Width, Canvas.TextExtent(UnitTypesStrings.Strings[i]).cx + 6);
-          Height := Height + 12;
+          TextExtent := Canvas.TextExtent(UnitTypesStrings.Strings[i]);
+          Width := Max(Width, TextExtent.cx + 10);
+          FontHeight := Max(FontHeight, TextExtent.cy);
+          Height := Height + FontHeight;
         end;
 
         Canvas.Brush.Style := bsSolid;
         Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, DrawTestMapPoint.X + 2, DrawTestMapPoint.Y);
         R := Bounds(ScreenPoint.X, ScreenPoint.Y - Height, Width, Height);
         // Move Rect into viewport
-        DX := Civ2.MapGraphicsInfo^.ClientRectangle.Right - R.Right;
-        DY := Civ2.MapGraphicsInfo^.ClientRectangle.Top - R.Top;
+        DX := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.ClientRectangle.Right - R.Right;
+        DY := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.ClientRectangle.Top - R.Top;
         if DX > 0 then
           DX := 0;
         if DY < 0 then
@@ -386,9 +400,30 @@ begin
         TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 22, clBlack, clWhite, SHADOW_NONE);
         TextOut := Format('%.2d , %.2d', [ScreenPoint.X, ScreenPoint.Y]);
         TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 42, clBlack, clWhite, SHADOW_NONE);}
-        
         // Draw Rectangle Contents
-        //Canvas.Brush.Color := TColor($FFFFFF);
+        Canvas.Font.Style := [fsBold];
+        P := Point(R.Left + 3, R.Top + 3);
+        //
+        TextOut := IntToStr(City.TotalFood);
+        TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
+        OffsetPoint(P, Canvas.TextExtent(TextOut).cx + 1, 0);
+        Civ2.CopySprite(@PSprites($644F00)^[1], @R2, @(DrawTestData.DrawPort), P.X, P.Y + 2);
+        OffsetPoint(P, R2.Right - R2.Left + 4, 0);
+        //
+        TextOut := IntToStr(City.TotalShield);
+        TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
+        OffsetPoint(P, Canvas.TextExtent(TextOut).cx - 1, 0);
+        Civ2.CopySprite(@PSprites($644F00)^[3], @R2, @(DrawTestData.DrawPort), P.X, P.Y + 2);
+        OffsetPoint(P, R2.Right - R2.Left + 2, 0);
+        //
+        TextOut := IntToStr(City.Trade);
+        TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
+        OffsetPoint(P, Canvas.TextExtent(TextOut).cx + 1, 0);
+        Civ2.CopySprite(@PSprites($644F00)^[5], @R2, @(DrawTestData.DrawPort), P.X, P.Y + 2);
+        OffsetPoint(P, R2.Right - R2.Left + 4, 0);
+        //
+        P.X := R.Left + 3;
+        OffsetPoint(P, 0, 18);
         for i := 0 to UnitTypesStrings.Count - 1 do
         begin
           if UnitTypesStrings.Strings[i][1] <> ' ' then
@@ -397,9 +432,10 @@ begin
             Canvas.Font.Style := [];
           TextOut := UnitTypesStrings.Strings[i];
           //TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
-          TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, TColor($FFFFFF), TColor($101010), SHADOW_BR);
-          OffsetRect(R, 0, 12);
+          TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
+          OffsetPoint(P, 0, FontHeight);
         end;
+
         UnitTypesStrings.Free();
       end;
     end;
@@ -430,7 +466,7 @@ begin
       X1 := Min(255, 512 div 50 * (MapMessage.Timer + 10));
       TextColor := TColor(X1 * $10101);
       TextSize := Canvas.TextExtent(MapMessage.TextOut);
-      Y1 := Civ2.MapGraphicsInfo^.ClientRectangle.Right - TextSize.cx - 20;
+      Y1 := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.ClientRectangle.Right - TextSize.cx - 20;
       TextOutWithShadows(Canvas, MapMessage.TextOut, Y1, 100 + i * 20, TextColor, clBlack, SHADOW_ALL);
     end;
 
@@ -658,12 +694,12 @@ begin
     HWndScrollBar := 0;
     if PtInRect(Civ2.CityWindow^.RectSupportOut, CursorClient) then
     begin
-      HWndScrollBar := CityWindowEx.Support.ControlInfoScroll.HWindow;
+      HWndScrollBar := CityWindowEx.Support.ControlInfoScroll.ControlInfo.HWindow;
       CityWindowScrollLines := 1;
     end;
     if PtInRect(Civ2.CityWindow^.RectImproveOut, CursorClient) then
     begin
-      HWndScrollBar := Civ2.CityWindow^.ControlInfoScroll^.HWindow;
+      HWndScrollBar := Civ2.CityWindow^.ControlInfoScroll^.ControlInfo.HWindow;
       CityWindowScrollLines := 3;
     end;
   end;
@@ -702,7 +738,7 @@ begin
     SetScrollPos(HWndScrollBar, SB_CTL, nPrevPos - Delta * ScrollLines, True);
     nPos := GetScrollPos(HWndScrollBar, SB_CTL);
     ControlInfoScroll^.CurrentPosition := nPos;
-    WindowInfo := ControlInfoScroll^.WindowInfo;
+    WindowInfo := ControlInfoScroll^.ControlInfo.WindowInfo;
     asm
     mov   eax, WindowInfo
     mov   [$00637EA4], eax
@@ -775,8 +811,8 @@ begin
   Screen.Y := Smallint((LParam shr 16) and $FFFF);
   MButtonIsDown := (LOWORD(WParam) and MK_MBUTTON) <> 0;
   IsMapWindow := False;
-  if Civ2.MapGraphicsInfo^.WindowInfo.WindowStructure <> nil then
-    IsMapWindow := (HWindow = Civ2.MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow);
+  if Civ2.MapGraphicsInfo^.GraphicsInfo.WindowInfo.WindowStructure <> nil then
+    IsMapWindow := (HWindow = Civ2.MapGraphicsInfo^.GraphicsInfo.WindowInfo.WindowStructure^.HWindow);
   case Msg of
     WM_MBUTTONDOWN:
       if (LOWORD(WParam) and MK_CONTROL) <> 0 then
@@ -810,7 +846,7 @@ begin
       end;
     WM_MOUSEMOVE:
       begin
-        MouseDrag.Active := MouseDrag.Active and PtInRect(Civ2.MapGraphicsInfo^.WindowRectangle, Screen) and IsMapWindow and MButtonIsDown;
+        MouseDrag.Active := MouseDrag.Active and PtInRect(Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.WindowRectangle, Screen) and IsMapWindow and MButtonIsDown;
         if MouseDrag.Active then
         begin
           Inc(MouseDrag.Moved);
@@ -1057,13 +1093,13 @@ begin
   if (Civ2.CurrPopupInfo^^.NumberOfItems >= 9) and (ListOfUnits.Length > 9) then
   begin
     ZeroMemory(@ScrollBarControlInfo, SizeOf(ScrollBarControlInfo));
-    ScrollBarControlInfo.Rect.Left := Civ2.CurrPopupInfo^^.Width - 25;
-    ScrollBarControlInfo.Rect.Top := 36;
-    ScrollBarControlInfo.Rect.Right := Civ2.CurrPopupInfo^^.Width - 9;
-    ScrollBarControlInfo.Rect.Bottom := Civ2.CurrPopupInfo^^.Height - 45;
-    Civ2.CreateScrollbar(@ScrollBarControlInfo, @Civ2.CurrPopupInfo^^.GraphicsInfo^.WindowInfo, $0B, @ScrollBarControlInfo.Rect, 1);
-    SetScrollRange(ScrollBarControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
-    SetScrollPos(ScrollBarControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
+    ScrollBarControlInfo.ControlInfo.Rect.Left := Civ2.CurrPopupInfo^^.Width - 25;
+    ScrollBarControlInfo.ControlInfo.Rect.Top := 36;
+    ScrollBarControlInfo.ControlInfo.Rect.Right := Civ2.CurrPopupInfo^^.Width - 9;
+    ScrollBarControlInfo.ControlInfo.Rect.Bottom := Civ2.CurrPopupInfo^^.Height - 45;
+    Civ2.CreateScrollbar(@ScrollBarControlInfo, @Civ2.CurrPopupInfo^^.GraphicsInfo^.WindowInfo, $0B, @ScrollBarControlInfo.ControlInfo.Rect, 1);
+    SetScrollRange(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
+    SetScrollPos(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
   end;
 end;
 
@@ -1150,7 +1186,7 @@ begin
     call  eax
     add   esp, $04
   end;
-  DC := Civ2.SideBarGraphicsInfo^.DrawInfo^.DeviceContext;
+  DC := Civ2.SideBarGraphicsInfo^.DrawPort.DrawInfo^.DeviceContext;
   SavedDC := SaveDC(DC);
   Canvas := TCanvas.Create();
   Canvas.Handle := DC;
@@ -1221,7 +1257,7 @@ begin
   if GraphicsInfo = Civ2.ScienceAdvisorGraphicsInfo then
   begin
     TextOut := IntToStr(Current) + ' / ' + IntToStr(Total);
-    DC := GraphicsInfo^.DrawInfo^.DeviceContext;
+    DC := GraphicsInfo^.DrawPort.DrawInfo^.DeviceContext;
     SavedDC := SaveDC(DC);
     Canvas := TCanvas.Create();
     Canvas.Handle := DC;
@@ -1407,13 +1443,13 @@ begin
     ScrollBarWidth := 16;
   end;
 
-  CityWindowEx.Support.ControlInfoScroll.Rect := ACityWindow.RectSupportOut;
-  CityWindowEx.Support.ControlInfoScroll.Rect.Left := CityWindowEx.Support.ControlInfoScroll.Rect.Right - ScrollBarWidth - 1;
-  CityWindowEx.Support.ControlInfoScroll.Rect.Top := CityWindowEx.Support.ControlInfoScroll.Rect.Top + 1;
-  CityWindowEx.Support.ControlInfoScroll.Rect.Bottom := CityWindowEx.Support.ControlInfoScroll.Rect.Bottom - 1;
-  CityWindowEx.Support.ControlInfoScroll.Rect.Right := CityWindowEx.Support.ControlInfoScroll.Rect.Right - 1;
+  CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect := ACityWindow.RectSupportOut;
+  CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Left := CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Right - ScrollBarWidth - 1;
+  CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Top := CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Top + 1;
+  CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Bottom := CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Bottom - 1;
+  CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Right := CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Right - 1;
 
-  Civ2.CreateScrollbar(@CityWindowEx.Support.ControlInfoScroll, @PGraphicsInfo(ACityWindow).WindowInfo, $62, @CityWindowEx.Support.ControlInfoScroll.Rect, 1);
+  Civ2.CreateScrollbar(@CityWindowEx.Support.ControlInfoScroll, @PGraphicsInfo(ACityWindow).WindowInfo, $62, @CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect, 1);
   CityWindowEx.Support.ControlInfoScroll.ProcRedraw := @CallBackCityWindowSupportScroll;
   CityWindowEx.Support.ControlInfoScroll.ProcTrack := @CallBackCityWindowSupportScroll;
 
@@ -1537,7 +1573,7 @@ begin
   Civ2.SetScrollPageSize(@CityWindowEx.Support.ControlInfoScroll, 4);
   Civ2.SetScrollPosition(@CityWindowEx.Support.ControlInfoScroll, CityWindowEx.Support.ListStart);
   if SupportedUnits <= Rows * Columns then
-    ShowWindow(CityWindowEx.Support.ControlInfoScroll.HWindow, 0);
+    ShowWindow(CityWindowEx.Support.ControlInfoScroll.ControlInfo.HWindow, 0);
 end;
 
 procedure PatchDrawCityWindowSupport3; register;
@@ -1782,7 +1818,7 @@ begin
   begin
     GetCursorPos(MousePoint);
     WindowHandle := WindowFromPoint(MousePoint);
-    if WindowHandle = Civ2.MapGraphicsInfo.WindowInfo.WindowStructure.HWindow then
+    if WindowHandle = Civ2.MapGraphicsInfo.GraphicsInfo.WindowInfo.WindowStructure.HWindow then
     begin
       ScreenToClient(WindowHandle, MousePoint);
       Civ2.ScreenToMap(DrawTestMapPoint.X, DrawTestMapPoint.Y, MousePoint.X, MousePoint.Y);
@@ -1824,13 +1860,14 @@ procedure PatchCopyToScreenBitBlt(DestDC: HDC; X, Y, Width, Height: Integer; Src
 var
   VSrcDC: HDC;
 begin
-  if (Civ2.MapGraphicsInfo^.DrawInfo <> nil) and (SrcDC = Civ2.MapGraphicsInfo.DrawInfo.DeviceContext) then
+  if (Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo <> nil) and (SrcDC = Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.DeviceContext) then
   begin
     DrawTestDrawInfoCreate();
-    VSrcDC := DrawTestData.DeviceContext;
-    BitBlt(VSrcDC, 0, 0, Civ2.MapGraphicsInfo.DrawInfo.Width, Civ2.MapGraphicsInfo.DrawInfo.Height, SrcDC, 0, 0, Rop);
+    //VSrcDC := DrawTestData.DeviceContext;
+    VSrcDC := DrawTestData.DrawPort.DrawInfo^.DeviceContext;
+    BitBlt(VSrcDC, 0, 0, Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.Width, Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.Height, SrcDC, 0, 0, Rop);
     DrawMapOverlay(VSrcDC);
-    BitBlt(DestDC, 0, 0, Civ2.MapGraphicsInfo.DrawInfo.Width, Civ2.MapGraphicsInfo.DrawInfo.Height, VSrcDC, 0, 0, Rop);
+    BitBlt(DestDC, 0, 0, Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.Width, Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.Height, VSrcDC, 0, 0, Rop);
   end
   else
     BitBlt(DestDC, X, Y, Width, Height, SrcDC, XSrc, YSrc, Rop);
@@ -1872,18 +1909,18 @@ var
   OriginalAddress: Integer;
 begin
   asm
-    mov eax, [ebp + 4]
-    mov CallerAddress, eax
+    mov   eax, [ebp + 4]
+    mov   CallerAddress, eax
   end;
   SendMessageToLoader(1, 0);
   SendMessageToLoader(CallerAddress, HWindow);
   OriginalAddress := OriginalAddresses[1];
   MapMessagesList.Add(TMapMessage.Create(Format('%.6x SetFocus(%.8x)', [CallerAddress, HWindow])));
   asm
-    push HWindow
+    push  HWindow
     mov   eax, OriginalAddress
     call  eax
-    mov @Result, eax
+    mov   @Result, eax
   end
 end;
 
@@ -1893,18 +1930,18 @@ var
   OriginalAddress: Integer;
 begin
   asm
-    mov eax, [ebp + 4]
-    mov CallerAddress, eax
+    mov   eax, [ebp + 4]
+    mov   CallerAddress, eax
   end;
   SendMessageToLoader(2, 0);
   SendMessageToLoader(CallerAddress, HWindow);
   OriginalAddress := OriginalAddresses[2];
   MapMessagesList.Add(TMapMessage.Create(Format('%.6x DestroyWindow(%.8x)', [CallerAddress, HWindow])));
   asm
-    push HWindow
+    push  HWindow
     mov   eax, OriginalAddress
     call  eax
-    mov @Result, eax
+    mov   @Result, eax
   end
 end;
 
@@ -1916,25 +1953,94 @@ var
   CurrGetFocusAfter: HWND;
 begin
   asm
-    mov eax, [ebp + 4]
-    mov CallerAddress, eax
+    mov   eax, [ebp + 4]
+    mov   CallerAddress, eax
   end;
   CurrGetFocusBefore := GetFocus();
   //SendMessageToLoader(3, nCmdShow);
   //SendMessageToLoader(CallerAddress, HWindow);
   OriginalAddress := OriginalAddresses[3];
   asm
-    push nCmdShow
-    push HWindow
+    push  nCmdShow
+    push  HWindow
     mov   eax, OriginalAddress
     call  eax
-    mov @Result, eax
+    mov   @Result, eax
   end;
   Ex.AfterShowWindow(HWindow, nCmdShow);
   CurrGetFocusAfter := GetFocus();
   //MapMessagesList.Add(TMapMessage.Create(Format('%.8x => %.6x ShowWindow(%.8x, %.d) => %.8x', [CurrGetFocusBefore,CallerAddress, HWindow, nCmdShow,CurrGetFocusAfter])));
 //  if nCmdShow = 5 then
 //    SetFocus(HWindow);
+end;
+
+function PatchHookSetWindowPos(A1, A2, A3, A4, A5: Integer): Integer; stdcall;
+//HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags
+var
+  CallerAddress: Integer;
+  OriginalAddress: Integer;
+begin
+  asm
+    mov   eax, [ebp + 4]
+    mov   CallerAddress, eax
+  end;
+  OriginalAddress := OriginalAddresses[4];
+  SendMessageToLoader(CallerAddress, 0);
+  asm
+    push  A5
+    push  A4
+    push  A3
+    push  A2
+    push  A1
+    mov   eax, OriginalAddress
+    call  eax
+    mov   @Result, eax
+  end;
+end;
+
+function PatchHookSetWindowLongA(HWindow: HWND; A2, A3: Integer): Integer; stdcall;
+//HWND hWnd, int nIndex, LONG dwNewLong
+var
+  CallerAddress: Integer;
+  OriginalAddress: Integer;
+begin
+  asm
+    mov   eax, [ebp + 4]
+    mov   CallerAddress, eax
+  end;
+  OriginalAddress := OriginalAddresses[5];
+  if A2 = -4 then
+  begin
+    SendMessageToLoader(CallerAddress, HWindow);
+    SendMessageToLoader(A2, A3);
+  end;
+  asm
+    push  A3
+    push  A2
+    push  HWindow
+    mov   eax, OriginalAddress
+    call  eax
+    mov   @Result, eax
+  end;
+end;
+
+function PatchHookSetCursor(A1: Integer): Integer; stdcall;
+var
+  CallerAddress: Integer;
+  OriginalAddress: Integer;
+begin
+  asm
+    mov   eax, [ebp + 4]
+    mov   CallerAddress, eax
+  end;
+  OriginalAddress := OriginalAddresses[6];
+  SendMessageToLoader(CallerAddress, A1);
+  asm
+    push  A1
+    mov   eax, OriginalAddress
+    call  eax
+    mov   @Result, eax
+  end;
 end;
 
 procedure HookFunction(Index: Integer; HProcess: THandle; Address: Integer; ProcAddress: Pointer);
@@ -1947,11 +2053,14 @@ begin
   WriteMemory(HProcess, Address, [PatchedAddress.Bytes[0], PatchedAddress.Bytes[1], PatchedAddress.Bytes[2], PatchedAddress.Bytes[3]]);
 end;
 
-procedure HookSetFocus(HProcess: THandle);
+procedure HookImportedFunctions(HProcess: THandle);
 begin
-  HookFunction(1, HProcess, $006E7D94, @PatchSetFocus);
+  //HookFunction(1, HProcess, $006E7D94, @PatchSetFocus);
   //HookFunction(2, HProcess, $006E7E1C, @PatchDestroyWindow);
-  HookFunction(3, HProcess, $006E7E24, @PatchShowWindow);
+  //HookFunction(3, HProcess, $006E7E24, @PatchShowWindow);
+  //HookFunction(4, HProcess, $006E7DB8, @PatchHookSetWindowPos); - Never Used!
+  //HookFunction(5, HProcess, $006E7DB0, @PatchHookSetWindowLongA);
+  //HookFunction(6, HProcess, $006E7E64, @PatchHookSetCursor);
   //SendMessageToLoader(3, OriginalAddresses[2]);
 end;
 
@@ -1962,6 +2071,95 @@ begin
   begin
     Civ2.SetFocusAndBringToTop(@PGraphicsInfo($63EB10)^.WindowInfo);
   end;
+end;
+
+procedure PatchTestCopyBgEx(ThisAdvisorWindow: Integer); stdcall;
+var
+  DrawPort: PDrawPort;
+  BgDrawPort: PDrawPort;
+  Hdc1: HDC;
+  Width, Height: Integer;
+  DX, DY: Integer;
+begin
+  DrawPort := PDrawPort(ThisAdvisorWindow);
+  BgDrawPort := PDrawPort(ThisAdvisorWindow + $2D8);
+  //  Width := PInteger(ThisAdvisorWindow + $48C)^;
+  //  Height := PInteger(ThisAdvisorWindow + $474)^;
+  Width := PInteger(ThisAdvisorWindow + $12C)^;
+  Height := PInteger(ThisAdvisorWindow + $130)^;
+  DX := PInteger(ThisAdvisorWindow + $124)^;
+  DY := PInteger(ThisAdvisorWindow + $128)^;
+  //FillRect(DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle, 1);
+  StretchBlt(
+    //    DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle.Left, DrawPort.ClientRectangle.Top, Width, Height,
+    DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle.Left, DrawPort.ClientRectangle.Top, Width, Height,
+    BgDrawPort.DrawInfo.DeviceContext, 0, 0, 600, 400,
+    SRCCOPY
+    );
+end;
+
+procedure PatchTestCopyBg(); register;
+var
+  ThisAdvisorWindow: Integer;
+asm
+    mov   ThisAdvisorWindow, ecx
+    push  ThisAdvisorWindow
+    call  PatchTestCopyBgEx
+    mov   ecx, ThisAdvisorWindow
+    mov   eax, $0042AC18
+    //call  eax
+end;
+
+procedure PatchPrepareWindowEx(var A1, A2: Integer); stdcall;
+begin
+  A1 := A1 or $400;
+  A2 := 6;
+  //SendMessageToLoader(1, A1);
+end;
+
+procedure PatchPrepareWindow(A1: Integer); register;
+asm
+    push  ecx
+    lea   eax, esp+$1C
+    push  eax
+    lea   eax, esp+$C
+    push  eax
+    call  PatchPrepareWindowEx
+    pop   ecx
+    mov   eax, $00402AC7
+    call  eax
+    push  $0042AB8A
+    ret
+end;
+
+procedure PatchUpdateAdvisorCityStatusEx(); stdcall;
+var
+  P: TPoint;
+  S: TSize;
+  RP: PRect;
+begin
+  RP := @Civ2.AdvisorWindow.ControlInfoButton1.ControlInfo.Rect;
+  P := Civ2.AdvisorWindow.ClientTopLeft;
+  S := Civ2.AdvisorWindow.ClientSize;
+  //RP^ := Rect(P.X, 0, P.X + S.cx, 24);
+//  OffsetRect(RP^, 0, S.cy - 24);
+  Dec(RP.Right);
+  //SetWindowPos(Civ2.AdvisorWindow.ControlInfoButton1.ControlInfo.HWindow, 0, R.Left, R.Top, S.cx, S.cy, 0);
+  SetWindowPos(Civ2.AdvisorWindow.ControlInfoButton1.ControlInfo.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, 0);
+  InvalidateRect(Civ2.AdvisorWindow.ControlInfoButton1.ControlInfo.HWindow, RP, True);
+  //  SendMessageToLoader(RP.Right - RP.Left, S.cx);
+end;
+
+procedure PatchUpdateAdvisorCityStatus(); register;
+asm
+   mov    eax, $0042CED6
+   call   eax
+   call   PatchUpdateAdvisorCityStatusEx
+end;
+
+function PatchUpdateAdvisorCityStatus2(): Integer; stdcall;
+begin
+  Result := Civ2.AdvisorWindow.ClientTopLeft.Y + Civ2.AdvisorWindow.ClientSize.cy - 50;
 end;
 
 {$O+}
@@ -2074,9 +2272,18 @@ begin
 
   //
   //WriteMemory(HProcess, $004034A9, [OP_JMP], @PatchPopupSimpleMessageEx);
-  //HookSetFocus(HProcess);
+  //HookImportedFunctions(HProcess);
+  // Test size of Advisor
+  {WriteMemory(HProcess, $0042D729, [$20, $03]);
+  WriteMemory(HProcess, $0042ACDE, [$20, $03]);
+  WriteMemory(HProcess, $0042CF16, [$04, $03]);}
+  WriteMemory(HProcess, $0042CF15, [OP_CALL], @PatchUpdateAdvisorCityStatus2);
+  WriteMemory(HProcess, $00401636, [OP_JMP], @PatchTestCopyBg);
+  WriteMemory(HProcess, $0042AB85, [OP_JMP], @PatchPrepareWindow);
+  WriteMemory(HProcess, $004029F5, [OP_JMP], @PatchUpdateAdvisorCityStatus);
+  //  WriteMemory(HProcess, $0042D74F, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
 
-  // civ2patch
+    // civ2patch
   if UIAOPtions.civ2patchEnable then
   begin
     C2Patches(HProcess);

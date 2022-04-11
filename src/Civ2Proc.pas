@@ -11,6 +11,7 @@ type
   private
   protected
   public
+    AdvisorWindow: PAdvisorWindow;
     ChText: PChar;
     Cities: ^TCities;
     CityWindow: PCityWindow;
@@ -24,8 +25,8 @@ type
     Leaders: ^TLeaders;
     MainMenu: ^HMENU;
     MainWindowInfo: PWindowInfo;
-    MapGraphicsInfo: PGraphicsInfo;
-    MapGraphicsInfos: ^TGraphicsInfos;
+    MapGraphicsInfo: PGraphicsInfoMap;
+    MapGraphicsInfos: ^TMapGraphicsInfos;
     ScienceAdvisorClientRect: PRect;
     ScienceAdvisorGraphicsInfo: PGraphicsInfo;
     ShieldFontInfo: ^TFontInfo;
@@ -65,6 +66,8 @@ type
     procedure CenterView(X, Y: Integer);
     function GetFontHeightWithExLeading(thisFont: Pointer): Integer;
     procedure SetFocusAndBringToTop(WindowInfo: PWindowInfo);
+    function DrawPort_Reset(DrawPort: PDrawPort; Width, Height: Integer): Integer;
+    function CopySprite(Sprite: PSprite; ARect: PRect; DrawPort: PDrawPort; X, Y: Integer): PRect;
   published
   end;
 
@@ -83,6 +86,7 @@ begin
   inherited;
   // For inline ASM all TCiv2 fileds can be referenced directly only inside TCiv2 class, and as Self.FieldName
   // Important: by default EAX register contains Self reference
+  AdvisorWindow := Pointer($0063EB10);
   ChText := Pointer($00679640);
   Cities := Pointer($0064F340);
   CityWindow := Pointer($006A91B8);
@@ -117,12 +121,16 @@ begin
   // Check structure sizes
   if SizeOf(TCityWindow) <> $16E0 then
     raise Exception.Create('Wrong size of TCityWindow');
-  if SizeOf(TGraphicsInfo) <> $3F0 then
+  if SizeOf(TGraphicsInfo) <> $114 then
     raise Exception.Create('Wrong size of TGraphicsInfo');
+  if SizeOf(TGraphicsInfoMap) <> $3F0 then
+    raise Exception.Create('Wrong size of TGraphicsInfoMap');
   if SizeOf(TCity) <> $58 then
     raise Exception.Create('Wrong size of TCity');
   if SizeOf(TCiv) <> $594 then
     raise Exception.Create('Wrong size of TCiv');
+  if SizeOf(TAdvisorWindow) <> $4A4 then
+    raise Exception.Create('Wrong size of TAdvisorWindow');
 end;
 
 destructor TCiv2.Destroy;
@@ -361,6 +369,28 @@ asm
     mov   ecx, WindowInfo
     mov   eax, $0040325B
     call  eax
+end;
+
+function TCiv2.DrawPort_Reset(DrawPort: PDrawPort; Width, Height: Integer): Integer;
+asm
+    push  Height
+    push  Width
+    mov   ecx, DrawPort
+    mov   eax, $005BD65C
+    call  eax
+    mov   @Result, eax
+end;
+
+function TCiv2.CopySprite(Sprite: PSprite; ARect: PRect; DrawPort: PDrawPort; X, Y: Integer): PRect;
+asm
+    push  Y
+    push  X
+    push  DrawPort
+    push  ARect
+    mov   ecx, Sprite
+    mov   eax, $005CEF31
+    call  eax
+    mov   @Result, eax
 end;
 
 end.

@@ -53,6 +53,7 @@ uses
   Windows,
   Civ2UIA_Global,
   Civ2UIA_Proc,
+  Civ2Types,
   Civ2Proc;
 
 {$R *.dfm}
@@ -65,20 +66,21 @@ end;
 procedure TFormSettings.ScrollBar1Change(Sender: TObject);
 var
   HWindow: HWND;
+  GraphicsInfo: PGraphicsInfo;
 begin
   if not ColorChangeEventActive then
     Exit;
+  GraphicsInfo := @Civ2.MapGraphicsInfo^.GraphicsInfo;
   FormSettingsColorExposure := ScrollBar1.Position / 20;
   FormSettingsColorGamma := ScrollBar2.Position / 20;
   Label2.Caption := FloatToStr(FormSettingsColorExposure);
   Label4.Caption := FloatToStr(FormSettingsColorGamma);
-  //SendMessageToLoader(Integer(MapGraphicsInfo), MapGraphicsInfo.WindowInfo._Unknown2);
-  Civ2.Palette_SetRandomID(Civ2.MapGraphicsInfo.WindowInfo.Palette);
-  Civ2.UpdateDIBColorTableFromPalette(Civ2.MapGraphicsInfo, Civ2.MapGraphicsInfo.WindowInfo.Palette);
+  Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.Palette);
+  Civ2.UpdateDIBColorTableFromPalette(GraphicsInfo, GraphicsInfo.WindowInfo.Palette);
   // Also set new palette to map overlay - to be consistent with the game look
-  Civ2.SetDIBColorTableFromPalette(Pointer(Integer(@DrawTestData.DeviceContext) - 4), Civ2.MapGraphicsInfo.WindowInfo.Palette);
+  Civ2.SetDIBColorTableFromPalette(DrawTestData.DrawPort.DrawInfo, GraphicsInfo.WindowInfo.Palette);
   // Redraw main window with all subwindows
-  HWindow := GetParent(Civ2.MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow);
+  HWindow := GetParent(GraphicsInfo.WindowInfo.WindowStructure^.HWindow);
   RedrawWindow(HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
 end;
 
