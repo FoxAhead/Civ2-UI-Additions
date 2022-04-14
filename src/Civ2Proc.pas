@@ -119,6 +119,8 @@ begin
   UnitTypes := Pointer($0064B1B8);
 
   // Check structure sizes
+  if SizeOf(TWindowInfo) <> $C5 then
+    raise Exception.Create('Wrong size of TWindowInfo');
   if SizeOf(TCityWindow) <> $16E0 then
     raise Exception.Create('Wrong size of TCityWindow');
   if SizeOf(TGraphicsInfo) <> $114 then

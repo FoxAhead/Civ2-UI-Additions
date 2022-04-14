@@ -30,7 +30,8 @@ uses
   Civ2UIA_FormSettings in 'Civ2UIA_FormSettings.pas' {FormSettings},
   Civ2UIA_Global in 'Civ2UIA_Global.pas',
   Civ2UIA_MapMessage in 'Civ2UIA_MapMessage.pas',
-  Civ2UIA_Ex in 'Civ2UIA_Ex.pas';
+  Civ2UIA_Ex in 'Civ2UIA_Ex.pas',
+  Civ2UIA_Hooks in 'Civ2UIA_Hooks.pas';
 
 {$R *.res}
 
@@ -504,7 +505,8 @@ var
 begin
   FormProgress := TFormSettings.Create(nil);
   FormProgress.ShowModal();
-  FormProgress.Free;
+  FormProgress.Free();
+  Ex.SaveSettingsFile();
 end;
 
 //--------------------------------------------------------------------------------------------------
@@ -1136,7 +1138,8 @@ begin
     add   esp, $1C
     mov   Result, eax
   end;
-
+  if (UnitIndex < 0) or (UnitIndex > High(Civ2.Units^)) then
+    Exit;
   UnitType := Civ2.Units^[UnitIndex].UnitType;
   if ((Civ2.UnitTypes^[UnitType].Role = 5) or (Civ2.UnitTypes^[UnitType].Domain = 1)) and (Civ2.Units^[UnitIndex].CivIndex = Civ2.HumanCivIndex^) and (Civ2.Units^[UnitIndex].Counter > 0) then
   begin
@@ -1352,7 +1355,7 @@ begin
   end;
 end;
 
-function PatchAfterCallbackMrTimer(): Integer; stdcall;
+function PatchWindowProcMsMrTimerAfter(): Integer; stdcall;
 begin
   Result := 0;
   PatchCheckCDStatus();
@@ -1640,11 +1643,14 @@ var
   R, G, B: Integer;
   Gamma, Exposure: Double;
 begin
-  Gamma := FormSettingsColorGamma;
-  Exposure := FormSettingsColorExposure;
-  GammaCorrection(A3, Gamma, Exposure);
-  GammaCorrection(A4, Gamma, Exposure);
-  GammaCorrection(A5, Gamma, Exposure);
+  Gamma := UIASettings.ColorGamma;
+  Exposure := UIASettings.ColorExposure;
+  if (Gamma <> 1.0) or (Exposure <> 0.0) then
+  begin
+    GammaCorrection(A3, Gamma, Exposure);
+    GammaCorrection(A4, Gamma, Exposure);
+    GammaCorrection(A5, Gamma, Exposure);
+  end;
 end;
 
 procedure PatchPaletteGamma; register;
@@ -1766,7 +1772,7 @@ var
 begin
   HalfCitySize := Civ2.Cities[j].Size div 2;
   if (Civ2.Cities[j].UnHappyCitizens = 0) and ((Civ2.Cities[j].Size - Civ2.Cities[j].HappyCitizens) <= HalfCitySize) then
-    Result := $72                         // Yellow
+    Result := WLTDKColorIndex             // Yellow
   else if (Civ2.Cities[j].HappyCitizens < Civ2.Cities[j].UnHappyCitizens) then
     Result := $6A                         // Red
   else
@@ -1860,6 +1866,10 @@ procedure PatchCopyToScreenBitBlt(DestDC: HDC; X, Y, Width, Height: Integer; Src
 var
   VSrcDC: HDC;
 begin
+  //  if (Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo <> nil) and (SrcDC = Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo.DeviceContext) then
+  //  begin
+  //    SendMessageToLoader(Width, Height);
+  //  end;
   if (Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo <> nil) and (SrcDC = Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.DeviceContext) then
   begin
     DrawTestDrawInfoCreate();
@@ -1900,231 +1910,92 @@ begin
   end;
 end;
 
-var
-  OriginalAddresses: array[1..10] of Integer;
-
-function PatchSetFocus(HWindow: HWND): Integer; stdcall;
-var
-  CallerAddress: Integer;
-  OriginalAddress: Integer;
-begin
-  asm
-    mov   eax, [ebp + 4]
-    mov   CallerAddress, eax
-  end;
-  SendMessageToLoader(1, 0);
-  SendMessageToLoader(CallerAddress, HWindow);
-  OriginalAddress := OriginalAddresses[1];
-  MapMessagesList.Add(TMapMessage.Create(Format('%.6x SetFocus(%.8x)', [CallerAddress, HWindow])));
-  asm
-    push  HWindow
-    mov   eax, OriginalAddress
-    call  eax
-    mov   @Result, eax
-  end
-end;
-
-function PatchDestroyWindow(HWindow: HWND): Integer; stdcall;
-var
-  CallerAddress: Integer;
-  OriginalAddress: Integer;
-begin
-  asm
-    mov   eax, [ebp + 4]
-    mov   CallerAddress, eax
-  end;
-  SendMessageToLoader(2, 0);
-  SendMessageToLoader(CallerAddress, HWindow);
-  OriginalAddress := OriginalAddresses[2];
-  MapMessagesList.Add(TMapMessage.Create(Format('%.6x DestroyWindow(%.8x)', [CallerAddress, HWindow])));
-  asm
-    push  HWindow
-    mov   eax, OriginalAddress
-    call  eax
-    mov   @Result, eax
-  end
-end;
-
-function PatchShowWindow(HWindow: HWND; nCmdShow: Integer): Integer; stdcall;
-var
-  CallerAddress: Integer;
-  OriginalAddress: Integer;
-  CurrGetFocusBefore: HWND;
-  CurrGetFocusAfter: HWND;
-begin
-  asm
-    mov   eax, [ebp + 4]
-    mov   CallerAddress, eax
-  end;
-  CurrGetFocusBefore := GetFocus();
-  //SendMessageToLoader(3, nCmdShow);
-  //SendMessageToLoader(CallerAddress, HWindow);
-  OriginalAddress := OriginalAddresses[3];
-  asm
-    push  nCmdShow
-    push  HWindow
-    mov   eax, OriginalAddress
-    call  eax
-    mov   @Result, eax
-  end;
-  Ex.AfterShowWindow(HWindow, nCmdShow);
-  CurrGetFocusAfter := GetFocus();
-  //MapMessagesList.Add(TMapMessage.Create(Format('%.8x => %.6x ShowWindow(%.8x, %.d) => %.8x', [CurrGetFocusBefore,CallerAddress, HWindow, nCmdShow,CurrGetFocusAfter])));
-//  if nCmdShow = 5 then
-//    SetFocus(HWindow);
-end;
-
-function PatchHookSetWindowPos(A1, A2, A3, A4, A5: Integer): Integer; stdcall;
-//HWND hWnd, HWND hWndInsertAfter, int X, int Y, int cx, int cy, UINT uFlags
-var
-  CallerAddress: Integer;
-  OriginalAddress: Integer;
-begin
-  asm
-    mov   eax, [ebp + 4]
-    mov   CallerAddress, eax
-  end;
-  OriginalAddress := OriginalAddresses[4];
-  SendMessageToLoader(CallerAddress, 0);
-  asm
-    push  A5
-    push  A4
-    push  A3
-    push  A2
-    push  A1
-    mov   eax, OriginalAddress
-    call  eax
-    mov   @Result, eax
-  end;
-end;
-
-function PatchHookSetWindowLongA(HWindow: HWND; A2, A3: Integer): Integer; stdcall;
-//HWND hWnd, int nIndex, LONG dwNewLong
-var
-  CallerAddress: Integer;
-  OriginalAddress: Integer;
-begin
-  asm
-    mov   eax, [ebp + 4]
-    mov   CallerAddress, eax
-  end;
-  OriginalAddress := OriginalAddresses[5];
-  if A2 = -4 then
-  begin
-    SendMessageToLoader(CallerAddress, HWindow);
-    SendMessageToLoader(A2, A3);
-  end;
-  asm
-    push  A3
-    push  A2
-    push  HWindow
-    mov   eax, OriginalAddress
-    call  eax
-    mov   @Result, eax
-  end;
-end;
-
-function PatchHookSetCursor(A1: Integer): Integer; stdcall;
-var
-  CallerAddress: Integer;
-  OriginalAddress: Integer;
-begin
-  asm
-    mov   eax, [ebp + 4]
-    mov   CallerAddress, eax
-  end;
-  OriginalAddress := OriginalAddresses[6];
-  SendMessageToLoader(CallerAddress, A1);
-  asm
-    push  A1
-    mov   eax, OriginalAddress
-    call  eax
-    mov   @Result, eax
-  end;
-end;
-
-procedure HookFunction(Index: Integer; HProcess: THandle; Address: Integer; ProcAddress: Pointer);
-var
-  BytesRead: Cardinal;
-  PatchedAddress: LongRec;
-begin
-  ReadProcessMemory(HProcess, Pointer(Address), @OriginalAddresses[Index], 4, BytesRead);
-  PatchedAddress := LongRec(ProcAddress);
-  WriteMemory(HProcess, Address, [PatchedAddress.Bytes[0], PatchedAddress.Bytes[1], PatchedAddress.Bytes[2], PatchedAddress.Bytes[3]]);
-end;
-
-procedure HookImportedFunctions(HProcess: THandle);
-begin
-  //HookFunction(1, HProcess, $006E7D94, @PatchSetFocus);
-  //HookFunction(2, HProcess, $006E7E1C, @PatchDestroyWindow);
-  //HookFunction(3, HProcess, $006E7E24, @PatchShowWindow);
-  //HookFunction(4, HProcess, $006E7DB8, @PatchHookSetWindowPos); - Never Used!
-  //HookFunction(5, HProcess, $006E7DB0, @PatchHookSetWindowLongA);
-  //HookFunction(6, HProcess, $006E7E64, @PatchHookSetCursor);
-  //SendMessageToLoader(3, OriginalAddresses[2]);
-end;
-
 function PatchAfterCityWindowClose(): Integer; stdcall;
 begin
   Result := 0;
-  if PInteger($0063EF60)^ > 0 then
+  // If there is some Advisor opened
+  if Civ2.AdvisorWindow.AdvisorType > 0 then
   begin
-    Civ2.SetFocusAndBringToTop(@PGraphicsInfo($63EB10)^.WindowInfo);
+    // Then focus and bring it to top
+    Civ2.SetFocusAndBringToTop(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo);
   end;
 end;
 
-procedure PatchTestCopyBgEx(ThisAdvisorWindow: Integer); stdcall;
+procedure PatchAdvisorCopyBgEx(This: PAdvisorWindow); stdcall;
 var
   DrawPort: PDrawPort;
   BgDrawPort: PDrawPort;
-  Hdc1: HDC;
   Width, Height: Integer;
   DX, DY: Integer;
 begin
-  DrawPort := PDrawPort(ThisAdvisorWindow);
-  BgDrawPort := PDrawPort(ThisAdvisorWindow + $2D8);
-  //  Width := PInteger(ThisAdvisorWindow + $48C)^;
-  //  Height := PInteger(ThisAdvisorWindow + $474)^;
-  Width := PInteger(ThisAdvisorWindow + $12C)^;
-  Height := PInteger(ThisAdvisorWindow + $130)^;
-  DX := PInteger(ThisAdvisorWindow + $124)^;
-  DY := PInteger(ThisAdvisorWindow + $128)^;
-  //FillRect(DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle, 1);
-  StretchBlt(
-    //    DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle.Left, DrawPort.ClientRectangle.Top, Width, Height,
-    DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle.Left, DrawPort.ClientRectangle.Top, Width, Height,
-    BgDrawPort.DrawInfo.DeviceContext, 0, 0, 600, 400,
-    SRCCOPY
-    );
+  DrawPort := @This.MSWindow.GraphicsInfo.DrawPort;
+  if This.AdvisorType in ResizableAdvisorWindows then
+  begin
+    BgDrawPort := @This.BgDrawPort;
+    Width := This.MSWindow.ClientSize.cx;
+    Height := This.MSWindow.ClientSize.cy;
+    DX := This.MSWindow.ClientTopLeft.X;
+    DY := This.MSWindow.ClientTopLeft.Y;
+    StretchBlt(
+      DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle.Left, DrawPort.ClientRectangle.Top, Width, Height,
+      BgDrawPort.DrawInfo.DeviceContext, 0, 0, 600, 400,
+      SRCCOPY
+      );
+  end
+  else
+    asm
+    mov   ecx, This
+    mov   eax, $0042AC18   // Q_CopyBg_sub_42AC18(P_AdvisorWindow this)
+    call  eax
+    end;
 end;
 
-procedure PatchTestCopyBg(); register;
-var
-  ThisAdvisorWindow: Integer;
-asm
-    mov   ThisAdvisorWindow, ecx
-    push  ThisAdvisorWindow
-    call  PatchTestCopyBgEx
-    mov   ecx, ThisAdvisorWindow
-    mov   eax, $0042AC18
-    //call  eax
-end;
-
-procedure PatchPrepareWindowEx(var A1, A2: Integer); stdcall;
-begin
-  A1 := A1 or $400;
-  A2 := 6;
-  //SendMessageToLoader(1, A1);
-end;
-
-procedure PatchPrepareWindow(A1: Integer); register;
+procedure PatchAdvisorCopyBg(); register;
 asm
     push  ecx
-    lea   eax, esp+$1C
+    call  PatchAdvisorCopyBgEx
+end;
+
+procedure PatchPrepareAdvisorWindow1Ex(This: PAdvisorWindow; AWidth, AHeight: Integer); stdcall;
+begin
+  This.Width := AWidth;
+  This.Height := AHeight;
+  if This.AdvisorType in ResizableAdvisorWindows then
+  begin
+    This.Height := Min(Max(400, UIASettings.AdvisorHeights[This.AdvisorType]), PInteger($006AB19C)^ - 125); // V_ScreenRectHeight_dword_6AB19C
+    UIASettings.AdvisorHeights[This.AdvisorType] := This.Height;
+  end;
+end;
+
+procedure PatchPrepareAdvisorWindow1(); register;
+asm
+    push  [ebp + $18]
+    push  [ebp + $14]
+    push  [ebp - $460]
+    call  PatchPrepareAdvisorWindow1Ex
+    push  $0042A90A
+    ret
+end;
+
+procedure PatchPrepareAdvisorWindowEx2(This: PAdvisorWindow; var Style, Border: Integer); stdcall;
+begin
+  //  if (This = Civ2.AdvisorWindow) and (Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows) then
+  if This.AdvisorType in ResizableAdvisorWindows then
+  begin
+    Style := Style or $400;
+    Border := 6;
+  end;
+end;
+
+procedure PatchPrepareAdvisorWindow2(A1: Integer); register;
+asm
+    push  ecx
+    lea   eax, esp + $1C
     push  eax
-    lea   eax, esp+$C
+    lea   eax, esp + $C
     push  eax
-    call  PatchPrepareWindowEx
+    push  ecx
+    call  PatchPrepareAdvisorWindowEx2
     pop   ecx
     mov   eax, $00402AC7
     call  eax
@@ -2132,34 +2003,112 @@ asm
     ret
 end;
 
-procedure PatchUpdateAdvisorCityStatusEx(); stdcall;
+procedure PatchPrepareAdvisorWindow3Ex(This: PAdvisorWindow); stdcall;
+begin
+  if This.AdvisorType in ResizableAdvisorWindows then
+  begin
+    This.MSWindow.GraphicsInfo.WindowInfo.MinTrackSize.Y := 415;
+  end;
+end;
+
+procedure PatchPrepareAdvisorWindow3(); register;
+asm
+    push  [ebp-$460]
+    call  PatchPrepareAdvisorWindow3Ex
+    push  $0042ABB1
+    ret
+end;
+
+procedure PatchUpdateAdvisorRepositionControlsEx(); stdcall;
 var
   P: TPoint;
   S: TSize;
   RP: PRect;
+  i: Integer;
 begin
-  RP := @Civ2.AdvisorWindow.ControlInfoButton1.ControlInfo.Rect;
-  P := Civ2.AdvisorWindow.ClientTopLeft;
-  S := Civ2.AdvisorWindow.ClientSize;
-  //RP^ := Rect(P.X, 0, P.X + S.cx, 24);
-//  OffsetRect(RP^, 0, S.cy - 24);
-  Dec(RP.Right);
-  //SetWindowPos(Civ2.AdvisorWindow.ControlInfoButton1.ControlInfo.HWindow, 0, R.Left, R.Top, S.cx, S.cy, 0);
-  SetWindowPos(Civ2.AdvisorWindow.ControlInfoButton1.ControlInfo.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, 0);
-  InvalidateRect(Civ2.AdvisorWindow.ControlInfoButton1.ControlInfo.HWindow, RP, True);
-  //  SendMessageToLoader(RP.Right - RP.Left, S.cx);
+  S := Civ2.AdvisorWindow.MSWindow.ClientSize;
+  for i := 1 to 3 do
+  begin
+    if Civ2.AdvisorWindow.ControlInfoButton[i].ControlInfo.HWindow > 0 then
+    begin
+      RP := @Civ2.AdvisorWindow.ControlInfoButton[i].ControlInfo.Rect;
+      OffsetRect(RP^, 0, -RP^.Top + S.cy - 18);
+      SetWindowPos(Civ2.AdvisorWindow.ControlInfoButton[i].ControlInfo.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOSIZE or SWP_NOREDRAW);
+    end;
+  end;
+  if Civ2.AdvisorWindow.ControlInfoScroll.ControlInfo.HWindow > 0 then
+  begin
+    RP := @Civ2.AdvisorWindow.ControlInfoScroll.ControlInfo.Rect;
+    if Civ2.AdvisorWindow.AdvisorType in [3, 6] then
+    begin
+      OffsetRect(RP^, 0, -RP^.Top + S.cy - 38);
+      SetWindowPos(Civ2.AdvisorWindow.ControlInfoScroll.ControlInfo.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOSIZE or SWP_NOREDRAW);
+    end
+    else
+    begin
+      RP^.Bottom := S.cy - 20;
+      SetWindowPos(Civ2.AdvisorWindow.ControlInfoScroll.ControlInfo.HWindow, 0, 0, 0, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOMOVE or SWP_NOREDRAW);
+    end;
+  end;
+  RedrawWindow(Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure.HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
+  UIASettings.AdvisorHeights[Civ2.AdvisorWindow.AdvisorType] := S.cy;
 end;
 
-procedure PatchUpdateAdvisorCityStatus(); register;
+procedure PatchUpdateAdvisorRepositionControlsEx2(This: PGraphicsInfo); stdcall;
+begin
+  if (This = @Civ2.AdvisorWindow.MSWindow.GraphicsInfo) and (Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows) then
+  begin
+    PatchUpdateAdvisorRepositionControlsEx();
+  end;
+end;
+
+procedure PatchUpdateAdvisorRepositionControls(); register;
 asm
-   mov    eax, $0042CED6
-   call   eax
-   call   PatchUpdateAdvisorCityStatusEx
+   push   [ebp - $04]
+   call   PatchUpdateAdvisorRepositionControlsEx2
+   push   $0040847B
+   ret
 end;
 
-function PatchUpdateAdvisorCityStatus2(): Integer; stdcall;
+function PatchUpdateAdvisorHeight(): Integer; stdcall;
 begin
-  Result := Civ2.AdvisorWindow.ClientTopLeft.Y + Civ2.AdvisorWindow.ClientSize.cy - 50;
+  Result := Civ2.AdvisorWindow.MSWindow.ClientTopLeft.Y + Civ2.AdvisorWindow.MSWindow.ClientSize.cy - 44;
+end;
+
+procedure PatchWindowProcMSWindowWmNcHitTestEx(var HotSpot: LRESULT; WindowStructure: PWindowStructure); stdcall;
+begin
+  if WindowStructure = Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure then
+  begin
+    case Civ2.AdvisorWindow.AdvisorType of
+      1, 3, 4, 6:
+        WindowStructure._CaptionHeight := 75;
+    else
+      WindowStructure._CaptionHeight := 0;
+    end;
+    if Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows then
+    begin
+      if (HotSpot in [HTLEFT..HTBOTTOMRIGHT]) and (HotSpot <> HTTOP) and (HotSpot <> HTBOTTOM) then
+      begin
+        HotSpot := HTCLIENT;
+      end;
+    end;
+  end;
+end;
+
+procedure PatchWindowProcMSWindowWmNcHitTest(); register;
+asm
+    push  [ebp - $98]
+    lea   eax, [ebp - $9C]
+    push  eax
+    call  PatchWindowProcMSWindowWmNcHitTestEx
+    cmp   [ebp - $9C], HTCLIENT // if ( v44 == HTCLIENT )
+    push  $005DCA70
+    ret
+end;
+
+procedure PatchCloseAdvisorWindowAfter(); stdcall;
+begin
+  Ex.SaveSettingsFile();
 end;
 
 {$O+}
@@ -2188,7 +2137,7 @@ begin
     WriteMemory(HProcess, $0056954A, [OP_JMP], @PatchDrawSideBarV2);
     WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
     WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
-    WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchAfterCallbackMrTimer);
+    WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchWindowProcMsMrTimerAfter);
     WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
     WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
     WriteMemory(HProcess, $0040284C, [OP_JMP], @PatchInitNewGameParameters);
@@ -2240,8 +2189,8 @@ begin
   // Color correction
   //WriteMemory(HProcess, $005DEB12, [OP_JMP], @PatchPaletteGamma);
   WriteMemory(HProcess, $005DEAD1, [OP_JMP], @PatchPaletteGammaV2);
-  // Celebrating city color in Attitude Advisor (F4)
-  WriteMemory(HProcess, $0042DE86, [$72]); // (Color index = Idx + 10)
+  // Celebrating city yellow color instead of white in Attitude Advisor (F4)
+  WriteMemory(HProcess, $0042DE86, [WLTDKColorIndex]); // (Color index = Idx + 10)
   // Show Unit shields cost in City Change list
   WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListUnitCost);
 
@@ -2263,27 +2212,40 @@ begin
 
   // Test On_WM_TIMER Draw
   WriteMemory(HProcess, $0040364D, [OP_JMP], @PatchOnWmTimerDraw);
-  // Test CopyToScreen
+
+  // Map Overlay
   WriteMemory(HProcess, $005BCC7D, [OP_NOP, OP_CALL], @PatchCopyToScreenBitBlt);
-  // Set focus on City Window when opened
+
+  // Set focus on City Window when opened and back to Advisor when closed
   WriteMemory(HProcess, $0040138E, [OP_JMP], @PatchFocusCityWindow);
-  //WriteMemory(HProcess, $0050CF2E, [$01]);
   WriteMemory(HProcess, $00509985, [OP_CALL], @PatchAfterCityWindowClose);
 
   //
   //WriteMemory(HProcess, $004034A9, [OP_JMP], @PatchPopupSimpleMessageEx);
   //HookImportedFunctions(HProcess);
-  // Test size of Advisor
-  {WriteMemory(HProcess, $0042D729, [$20, $03]);
-  WriteMemory(HProcess, $0042ACDE, [$20, $03]);
-  WriteMemory(HProcess, $0042CF16, [$04, $03]);}
-  WriteMemory(HProcess, $0042CF15, [OP_CALL], @PatchUpdateAdvisorCityStatus2);
-  WriteMemory(HProcess, $00401636, [OP_JMP], @PatchTestCopyBg);
-  WriteMemory(HProcess, $0042AB85, [OP_JMP], @PatchPrepareWindow);
-  WriteMemory(HProcess, $004029F5, [OP_JMP], @PatchUpdateAdvisorCityStatus);
-  //  WriteMemory(HProcess, $0042D74F, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
 
-    // civ2patch
+  // Resizable Advisor Windows
+  WriteMemory(HProcess, $0042CF15, [OP_CALL], @PatchUpdateAdvisorHeight); // City Status
+  WriteMemory(HProcess, $0042E265, [OP_CALL], @PatchUpdateAdvisorHeight); // Defense Minister
+  WriteMemory(HProcess, $0042DA7B, [OP_CALL], @PatchUpdateAdvisorHeight); // Attitude Advisor
+  WriteMemory(HProcess, $0042BDD7, [OP_CALL], @PatchUpdateAdvisorHeight); // Trade Advisor
+  WriteMemory(HProcess, $0042ADD1, [OP_CALL], @PatchUpdateAdvisorHeight); // Science Advisor
+  WriteMemory(HProcess, $0042F2E3, [OP_CALL], @PatchUpdateAdvisorHeight); // Intelligence Report
+  WriteMemory(HProcess, $004315B5, [OP_CALL], @PatchUpdateAdvisorHeight); // Wonders of the World
+  WriteMemory(HProcess, $00401636, [OP_JMP], @PatchAdvisorCopyBg); // Stretch background for resizable Advisors
+  WriteMemory(HProcess, $0042A8EC, [OP_JMP], @PatchPrepareAdvisorWindow1); // Set size
+  WriteMemory(HProcess, $0042AB85, [OP_JMP], @PatchPrepareAdvisorWindow2); // Set resizable style and border
+  WriteMemory(HProcess, $0042AB96, [OP_JMP], @PatchPrepareAdvisorWindow3); // Set MinMaxTrackSize
+  //  WriteMemory(HProcess, $0042D60E, [OP_CALL], @PatchUpdateAdvisorRepositionControlsEx); // City Status
+  //  WriteMemory(HProcess, $0042EFD9, [OP_CALL], @PatchUpdateAdvisorRepositionControlsEx); // Defense Minister
+  //  WriteMemory(HProcess, $0042E075, [OP_CALL], @PatchUpdateAdvisorRepositionControlsEx); // Attitude Advisor
+  //  WriteMemory(HProcess, $0042CCEA, [OP_CALL], @PatchUpdateAdvisorRepositionControlsEx); // Trade Advisor
+  WriteMemory(HProcess, $00408476, [OP_JMP], @PatchUpdateAdvisorRepositionControls);
+
+  WriteMemory(HProcess, $005DCA69, [OP_JMP], @PatchWindowProcMSWindowWmNcHitTest); // Set cursor at window edges
+  WriteMemory(HProcess, $0042A7B2, [OP_CALL], @PatchCloseAdvisorWindowAfter); // Save UIA settings after closing Advisor
+
+  // civ2patch
   if UIAOPtions.civ2patchEnable then
   begin
     C2Patches(HProcess);

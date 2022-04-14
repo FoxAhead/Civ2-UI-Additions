@@ -22,6 +22,9 @@ type
     function UnitsListBuildSorted(CityIndex: Integer): Integer;
     function UnitsListGetNextUnitIndex(CursorIncrement: Integer): Integer;
     procedure AfterShowWindow(HWindow: HWND; nCmdShow: Integer);
+    procedure LoadSettingsFile();
+    procedure SaveSettingsFile();
+    procedure LoadDefaultSettings();
   published
 
   end;
@@ -70,6 +73,7 @@ begin
   inherited;
   UnitsList := TList.Create();
   ShowWindowStack := TStack.Create();
+  LoadSettingsFile();
 end;
 
 destructor TEx.Destroy;
@@ -134,7 +138,48 @@ begin
         Break;
     end;
   end;
+end;
 
+procedure TEx.LoadSettingsFile;
+var
+  FileHandle: Integer;
+  BytesRead: Integer;
+  SizeOfSettings: Integer;
+begin
+  SizeOfSettings := SizeOf(UIASettings);
+  ZeroMemory(@UIASettings, SizeOfSettings);
+  FileHandle := FileOpen('CIV2UIA.DAT', fmOpenRead);
+  if FileHandle > 0 then
+  begin
+    BytesRead := FileRead(FileHandle, UIASettings, SizeOfSettings);
+    FileClose(FileHandle);
+    if (BytesRead = SizeOfSettings) and (UIASettings.Version = 1) and (UIASettings.Size = SizeOfSettings) then
+      Exit;
+  end;
+  LoadDefaultSettings();
+end;
+
+procedure TEx.SaveSettingsFile;
+var
+  FileHandle: Integer;
+  BytesWritten: Integer;
+begin
+  FileHandle := FileCreate('CIV2UIA.DAT');
+  if FileHandle > 0 then
+  begin
+    BytesWritten := FileWrite(FileHandle, UIASettings, SizeOf(UIASettings));
+    FileClose(FileHandle);
+    if BytesWritten <> SizeOf(UIASettings) then
+      DeleteFile('CIV2UIA.DAT');
+  end;
+end;
+
+procedure TEx.LoadDefaultSettings;
+begin
+  UIASettings.Version := 1;
+  UIASettings.Size := SizeOf(UIASettings);
+  UIASettings.ColorExposure := 0.0;
+  UIASettings.ColorGamma := 1.0;
 end;
 
 end.

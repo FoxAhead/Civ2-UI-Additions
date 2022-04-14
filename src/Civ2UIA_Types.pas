@@ -50,13 +50,19 @@ type
   end;
 
   TDrawTestData = record
-    DeviceContext: HDC;
-    BitmapHandle: HBITMAP;
     MapDeviceContext: HDC;
     Counter: Cardinal;
     DrawPort: TDrawPort;
   end;
 
+  TUIASettings = packed record
+    Version: Integer;
+    Size: Integer;
+    ColorExposure: Double;
+    ColorGamma: Double;
+    AdvisorHeights: array [1..12] of Word;
+  end;
+  
 const
   OP_NOP: Byte = $90;
   OP_CALL: Byte = $E8;

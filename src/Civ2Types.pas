@@ -44,7 +44,7 @@ type
 
   PUnit = ^TUnit;
 
-  TWindowProcs = packed record            // GetWindowLongA(hWnd, 4) + 0x10
+  TWindowProcs = packed record            // Size 0x68  GetWindowLongA(hWnd, 4) + 0x10
     MouseFirst: Pointer;
     LButtonDown: Pointer;                 // + 0x04
     LButtonUpEnd: Pointer;                // + 0x08
@@ -65,20 +65,29 @@ type
     WM_MOVE: Pointer;                     // + 0x44
     WM_COMMNOTIFY: Pointer;               // + 0x48
     _Unknown8: Pointer;                   // + 0x4C
+    Proc21: Pointer;                      // + 0x50
+    Proc22: Pointer;                      // + 0x54
+    Proc23: Pointer;                      // + 0x58
+    Proc24: Pointer;                      // + 0x5C
+    Proc25: Pointer;                      // + 0x60
+    Proc26: Pointer;                      // + 0x64
   end;
 
   TWindowInfo = packed record             // GetWindowLongA(hWnd, 4),  GetWindowLongA(hWnd, 8)
-    _Unknown1: Integer;                   // = 0x00000C02 ...
+    Style: Integer;                       // = 0x00000C02 ...
     Palette: Pointer;                     // + 0x04
     WindowStructure: PWindowStructure;    // + 0x08
-    _Unknown4: Integer;                   // + 0x0C
+    Unknown_0C: Integer;                  // + 0x0C
     WindowProcs: TWindowProcs;            // + 0x10
-    _Unknown5: array[$10 + SizeOf(TWindowProcs)..$8B] of Byte; // + 0x60
+    Unknown_78: Integer;                  // + 0x78
+    MinTrackSize: TPoint;                 // + 0x7C
+    MaxTrackSize: TPoint;                 // + 0x84
     PopupActive: Cardinal;                // + 0x8C
-    _Unknown6: array[$90..$BB] of Byte;   // + 0x90
+    Unknown_90: array[$90..$B7] of Byte;  // + 0x90
+    ControlInfo: PControlInfo;            // + 0x94
     ButtonInfoOK: PControlInfoButton;     // + 0xBC
     ButtonInfoCANCEL: PControlInfoButton; // + 0xC0
-    Unknown8: Byte;                       // + 0xC4
+    Unknown_C4: Byte;                     // + 0xC4
   end;
 
   TCitySprite = packed record
@@ -299,6 +308,16 @@ type
     DeviceContext: HDC;
     Unknown2: array[$0C..$1F] of Byte;
     Icon: HICON;                          // + 0x20
+    Unknown_24: Integer;
+    Unknown_28: Integer;
+    Unknown_2C: Integer;
+    _Moveable: Integer;
+    _Sizeable: Integer;
+    _CaptionHeight: Integer;
+    _ResizeBorderWidth: Integer;
+    Unknown_40: Integer;
+    Unknown_44: Integer;
+    Unknown_48: Integer;
   end;
 
   PHFONT = ^HFONT;
@@ -320,9 +339,8 @@ type
   end;
 
   TSprites = array[0..5] of TSprite;
-  //
 
-  TAdvisorWindow = packed record          // Size = 0x4A4
+  TMSWindow = packed record               // Size = 0x2D8
     GraphicsInfo: TGraphicsInfo;
     Unknown_114: Integer;
     _CaptionHeight: Integer;
@@ -331,12 +349,26 @@ type
     ClientTopLeft: TPoint;
     ClientSize: TSize;
     Unknown1b: array[1..105] of Integer;
+  end;
+
+  TAdvisorWindow = packed record          // Size = 0x4A4
+    MSWindow: TMSWindow;
     BgDrawPort: TDrawPort;
-    ControlInfoButton1: TControlInfoButton;
-    ControlInfoButton2: TControlInfoButton;
-    Unknown1a: array[1..30] of Integer;
+    ControlInfoButton: array[1..3] of TControlInfoButton;
+    Unknown_3D4: array[1..15] of Integer;
     ControlInfoScroll: TControlInfoScroll;
     AdvisorType: Integer;
+    //  1 - F1  City Status
+    //  2 - F2  Defence Minister
+    //  3 - F3  Intelligence Report
+    //  4 - F4  Attitude Advisor
+    //  5 - F5  Trade Advisor
+    //  6 - F6  Science Advisor
+    //  7 - F7  Wonders of the World
+    //  8 - F8  Top 5 Cities, About Civilization II
+    //  9 - F11 Demographics
+    // 10 - F9  Civilization Score
+    // 12 - Ctrl-D Casaulty Timeline
     Unknown2: array[1..2] of Integer;
     CurrCivIndex: Integer;
     aPosition: Integer;
@@ -350,6 +382,30 @@ type
     Unknown_498: Integer;
     Unknown_49C: Integer;
     Popup: Integer;
+  end;
+
+  TTaxWindow = packed record              // Size = 0x4D0
+    MSWindow: TMSWindow;
+    CivIndex: Integer;                    // + 0x2D8
+    MaxRate: Integer;                     // + 0x2DC
+    TaxRateF: Integer;                    // + 0x2E0
+    LuxuryRateF: Integer;                 // + 0x2E4
+    ScienceRateF: Integer;                // + 0x2E8
+    TaxRate: Integer;                     // + 0x2EC
+    LuxuryRate: Integer;                  // + 0x2F0
+    ScienceRate: Integer;                 // + 0x2F4
+    ClientWidth: Integer;                 // + 0x2F8
+    ClientHeight: Integer;                // + 0x2FC
+    Unknown_300: Integer;
+    Unknown_304: Integer;
+    Unknown_308: Integer;
+    Unknown_30C: Integer;
+    Unknown_310: Integer;
+    Unknown_314: Integer;
+    Unknown_318: Integer;
+    Unknown_31C: Integer;
+    ScrollBarHeight: Integer;
+    Unknown_324: array[1..107] of Integer;
   end;
 
   TGameParameters = packed record

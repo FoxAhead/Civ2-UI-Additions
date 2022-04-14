@@ -8,6 +8,9 @@ uses
   Windows,
   Civ2UIA_Types;
 
+const
+  WLTDKColorIndex: Integer = $72;
+
 var
   ChangeSpecialistDown: Boolean;
   RegisteredHWND: array[TWindowType] of HWND;
@@ -25,6 +28,9 @@ var
   CityWindowEx: TCityWindowEx;
   DrawTestData: TDrawTestData;
   MapMessagesList: TList;
+  UIASettings: TUIASettings;
+  //
+  ResizableAdvisorWindows: set of Byte = [1..7];
 
 implementation
 

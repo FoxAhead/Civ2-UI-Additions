@@ -42,8 +42,6 @@ type
 
 var
   FormSettings: TFormSettings;
-  FormSettingsColorExposure: Double = 0.0;
-  FormSettingsColorGamma: Double = 1.0;
 
 implementation
 
@@ -71,10 +69,10 @@ begin
   if not ColorChangeEventActive then
     Exit;
   GraphicsInfo := @Civ2.MapGraphicsInfo^.GraphicsInfo;
-  FormSettingsColorExposure := ScrollBar1.Position / 20;
-  FormSettingsColorGamma := ScrollBar2.Position / 20;
-  Label2.Caption := FloatToStr(FormSettingsColorExposure);
-  Label4.Caption := FloatToStr(FormSettingsColorGamma);
+  UIASettings.ColorExposure := ScrollBar1.Position / 20;
+  UIASettings.ColorGamma := ScrollBar2.Position / 20;
+  Label2.Caption := FloatToStr(UIASettings.ColorExposure);
+  Label4.Caption := FloatToStr(UIASettings.ColorGamma);
   Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.Palette);
   Civ2.UpdateDIBColorTableFromPalette(GraphicsInfo, GraphicsInfo.WindowInfo.Palette);
   // Also set new palette to map overlay - to be consistent with the game look
@@ -92,27 +90,27 @@ end;
 procedure TFormSettings.SetScrollbars();
 begin
   ColorChangeEventActive := False;
-  ScrollBar1.Position := Trunc(FormSettingsColorExposure * 20);
-  ScrollBar2.Position := Trunc(FormSettingsColorGamma * 20);
+  ScrollBar1.Position := Trunc(UIASettings.ColorExposure * 20);
+  ScrollBar2.Position := Trunc(UIASettings.ColorGamma * 20);
   ColorChangeEventActive := True;
   ScrollBar1Change(nil);
 end;
 
 procedure TFormSettings.SetColor(Exposure, Gamma: Double);
 begin
-  FormSettingsColorExposure := Exposure;
-  FormSettingsColorGamma := Gamma;
+  UIASettings.ColorExposure := Exposure;
+  UIASettings.ColorGamma := Gamma;
   SetScrollbars();
 end;
 
 procedure TFormSettings.Button3Click(Sender: TObject);
 begin
-  SetColor(-0.45, 0.9);
+  SetColor(-0.45, 0.8);
 end;
 
 procedure TFormSettings.Button4Click(Sender: TObject);
 begin
-  SetColor(-0.20, 0.95);
+  SetColor(-0.20, 0.9);
 end;
 
 procedure TFormSettings.Button5Click(Sender: TObject);
@@ -122,12 +120,12 @@ end;
 
 procedure TFormSettings.Button6Click(Sender: TObject);
 begin
-  SetColor(0.20, 1.05);
+  SetColor(0.20, 1.10);
 end;
 
 procedure TFormSettings.Button7Click(Sender: TObject);
 begin
-  SetColor(0.45, 1.10);
+  SetColor(0.45, 1.20);
 end;
 
 end.
