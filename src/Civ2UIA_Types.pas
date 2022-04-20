@@ -70,6 +70,7 @@ const
   OP_0F: Byte = $0F;
   OP_JZ: Byte = $84;
   OP_JG: Byte = $8F;
+  OP_RET: Byte = $C3;
   SHADOW_NONE = $00;
   SHADOW_TL = $01;
   SHADOW_T_ = $02;

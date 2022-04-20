@@ -3,7 +3,7 @@ unit Civ2UIA_Proc;
 interface
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
-procedure WriteMemory(HProcess: THandle; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer = nil);
+procedure WriteMemory(HProcess: THandle; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer = nil; Abs: Boolean = False);
 
 implementation
 
@@ -22,7 +22,7 @@ begin
   end;
 end;
 
-procedure WriteMemory(HProcess: THandle; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer);
+procedure WriteMemory(HProcess: THandle; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer; Abs: Boolean);
 var
   SizeOP: Integer;
   BytesWritten: Cardinal;
@@ -33,7 +33,9 @@ begin
     WriteProcessMemory(HProcess, Pointer(Address), @Opcodes, SizeOP, BytesWritten);
   if ProcAddress <> nil then
   begin
-    Offset := Integer(ProcAddress) - Address - 4 - SizeOP;
+    Offset := Integer(ProcAddress);
+    if not Abs then
+      Offset := Offset - Address - 4 - SizeOP;
     WriteProcessMemory(HProcess, Pointer(Address + SizeOP), @Offset, 4, BytesWritten);
   end;
 end;

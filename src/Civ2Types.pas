@@ -12,9 +12,16 @@ type
 
   PWindowInfo = ^TWindowInfo;
 
+  PFontInfo = ^TFontInfo;
+
   PControlBlock = ^TControlBlock;
 
   PControlInfo = ^TControlInfo;
+
+  PControlInfoRadio = ^TControlInfoRadio;
+  PControlInfoRadios = ^TControlInfoRadios;
+
+  PControlInfoRadioGroup = ^TControlInfoRadioGroup;
 
   PControlInfoButton = ^TControlInfoButton;
 
@@ -28,9 +35,9 @@ type
 
   PWindowStructure = ^TWindowStructure;
 
-  PCurrPopupInfo = ^TCurrPopupInfo;
+  PDialogWindow = ^TDialogWindow;
 
-  PPCurrPopupInfo = ^PCurrPopupInfo;
+  PPDialogWindow = ^PDialogWindow;
 
   PDrawInfo = ^TDrawInfo;
 
@@ -173,7 +180,7 @@ type
     Code: Integer;                        // + 0x04
     // Button: 0x64 - OK, 0x65 - Cancel
     // ListItem: 0x3E8 + Index, 0x12C + Index
-    // Scroll: 0xC8, 0xB, 0xC, 0x65
+    // Scroll: 0xC8, 0xB (Vert), 0xC(Horz), 0x65
     WindowInfo: PWindowInfo;              // + 0x08
     Rect: TRect;                          // + 0x0C (Left, Top, Right, Bottom)
     HWindow: HWND;                        // + 0x1C
@@ -185,6 +192,32 @@ type
     Unknown_28: Integer;                  // + 0x28
   end;
 
+  TControlInfoRadio = packed record       // Size = $A4
+    HWindow: HWND;
+    Rect: TRect;
+    Index: Integer;
+    Enabled: Integer;
+    Text: array[0..127] of Char;
+    HotKey: array[0..3] of Char;
+    HotKeyPos: Integer;
+  end;
+  TControlInfoRadios = array[0..0] of TControlInfoRadio;
+
+  // ControlType = 3
+  TControlInfoRadioGroup = packed record  // Size = $50
+    ControlInfo: TControlInfo;
+    ProcLButtonDown: Pointer;
+    Proc2: Pointer;
+    ProcRButtonDown: Pointer;
+    NRadios: Integer;
+    Columns: Integer;
+    Selected: Integer;
+    hRadios: HGLOBAL;
+    pRadios: PControlInfoRadios;
+    FontInfo: PFontInfo;
+  end;
+
+  // ControlType = 6
   TControlInfoButton = packed record      // Size = $3C
     ControlInfo: TControlInfo;
     Active: Integer;                      // + 0x2C
@@ -193,6 +226,7 @@ type
     Unknown_38: Integer;                  // + 0x38
   end;
 
+  // ControlType = 8
   TControlInfoScroll = packed record      // Size = $40  GetWindowLongA(hWnd, GetClassLongA(hWnd, GCL_CBWNDEXTRA) - 8)
     ControlInfo: TControlInfo;
     ProcRedraw: Pointer;                  // + 0x2C
@@ -202,15 +236,180 @@ type
     CurrentPosition: Integer;             // + 0x3C
   end;
 
-  TCurrPopupInfo = packed record
+  PListItemB = Pointer;
+  PListItem = Pointer;
+  PDlgTextLine = Pointer;
+  PEdit = Pointer;
+  PControlInfoCheckbox = Pointer;
+  PControlInfoEdit = Pointer;
+  PControlInfoListItem = Pointer;
+
+  THeap = packed record                   // Size = $12
+    Unknown_00: Byte;
+    Unknown_01: Byte;
+    Unknown_02: Byte;
+    Unknown_03: Byte;
+    hMem: HGLOBAL;
+    pMem: Pointer;
+    Size: Word;
+    AllocSize: Word;
+    FreeSize: Word;
+  end;
+
+  TButton = packed record
+    StdType: Integer;
+    Left: Integer;
+  end;
+
+  TDialogWindow = packed record           // Size = $2F4 ?
+    GraphicsInfo: PGraphicsInfo;
+    DrawPort: PDrawPort;
+    FontInfo1: PFontInfo;
+    FontInfo2: PFontInfo;
+    FontInfo3: PFontInfo;
+    Unknown_14: Integer;
+    Unknown_18: Integer;
+    _Height: Integer;
+    NumTextLines: Integer;
+    NumEdits: Integer;
+    NumLines: Integer;
+    NumListItems: Integer;
+    NumButtonsStd: Integer;
+    NumButtons: Integer;
+    Columns: Integer;
+    Flags: Integer;
+    ClientSize: SIZE;
+    ScrollOrientation: Integer;
+    ListboxWidth: array[0..1] of Integer;
+    ListboxHeight: array[0..1] of Integer;
+    ListboxPageSize: array[0..1] of Integer;
+    Color1: Integer;
+    Color2: Integer;
+    Color3: Integer;
+    Color4: Integer;
+    Color5: Integer;
+    Color6: Integer;
+    Color7: Integer;
+    RatioNumerator: Integer;
+    RatioDenominator: Integer;
+    Unknown_88: Integer;
+    Unknown_8C: Integer;
+    Color8: Integer;
+    Unknown_94: Integer;
+    Unknown_98: Integer;
+    Color9: Integer;
+    Unknown_A0: Integer;
+    Unknown_A4: Integer;
+    Unknown_A8: Integer;
+    Unknown_AC: Integer;
+    Unknown_B0: Integer;
+    Unknown_B4: Integer;
+    _ButtonPadding: Integer;
+    Unknown_BC: Integer;
+    Unknown_C0: Integer;
+    Unknown_C4: Integer;
+    Margin: Integer;
+    LRBorder: Integer;
+    CaptionHeight: Integer;
+    Unknown_D4: Integer;
+    SelectedItem: Cardinal;
+    Unknown_DC: Integer;
+    Position: TPoint;
+    ClientTopLeft: TPoint;
+    Unknown_F0: Integer;
+    Unknown_F4: Integer;
+    Unknown_F8: Integer;
+    Unknown_FC: Integer;
+    Unknown_100: Integer;
+    Unknown_104: Integer;
+    Unknown_108: Integer;
+    Unknown_10C: Integer;
+    _EditsLeft: Integer;
+    ButtonsTop: Integer;
+    _MaxWidth1: Integer;
+    _Width: Integer;
+    _MaxWidth2: Integer;
+    Unknown_124: Integer;
+    Unknown_128: Integer;
+    ButtonsWidth: Integer;
+    _Zoom: Integer;
+    Title: PChar;
+    Rects1: array[0..1] of TRect;
+    Rects2: array[0..1] of TRect;
+    Rects3: array[0..1] of TRect;
+    Rects4: array[0..1] of TRect;
+    Unknown_1B8: array[0..1] of Integer;
+    VScrollWidth1: Integer;
+    VScrollWidth2: Integer;
+    HScrollHeight1: Integer;
+    HScrollHeight2: Integer;
+    Unknown_1D0: array[0..1] of Integer;
+    Unknown_1D8: array[0..1] of Integer;
+    Unknown_1E0: array[0..1] of Integer;
+    Unknown_1E8: array[0..1] of Integer;
+    Unknown_1F0: array[0..1] of Integer;
+    Unknown_1F8: Integer;
+    Unknown_1FC: Integer;
+    Unknown_200: Integer;
+    Unknown_204: Integer;
+    Unknown_208: array[0..1] of Integer;
+    PageStartListItemB: array[0..1] of PListItemB;
+    Unknown_218: Integer;
+    Unknown_21C: Integer;
+    SelectedListItemB: PListItemB;
+    SelectedListItem: PListItem;
+    FirstListItemB: PListItemB;
+    LastListItemB2: PListItemB;
+    FirstTextLine: PDlgTextLine;
+    FirstListItem: PListItem;
+    Edit: PEdit;
+    Proc1: Pointer;
+    Proc2: Pointer;
+    Proc3: Pointer;
+    Proc4: Pointer;
+    Unknown_24C: Integer;
+    Proc5: Pointer;
+    Heap: THeap;
+    Unknown_266: Word;
+    Unknown_268: Integer;
+    CheckboxControls: PControlInfoCheckbox;
+    EditControls: PControlInfoEdit;
+    ButtonControls: PControlInfoButton;
+    Unknown_278: array[0..1] of Integer;
+    ListItemControls: PControlInfoListItem;
+    ScrollControls1: array[0..1] of PControlInfoScroll;
+    ScrollControls2: array[0..1] of PControlInfoScroll;
+    ButtonTexts: array[0..5] of PChar;
+    Buttons: array[0..5] of TButton;
+    Unknown_2DC: Integer;
+    Unknown_2E0: Integer;
+    Unknown_2E4: Integer;
+    Unknown_2E8: Integer;
+    Unknown_2EC: Integer;
+    Unknown_2F0: Integer;
+  end;
+  {
+  TDialogWindow = packed record           // Size = $2F4 ?
     GraphicsInfo: PGraphicsInfo;
     Unknown1: array[$04..$27] of Byte;    // + 0x04
-    NumberOfLines: Integer;               // + 0x28 [A]
-    NumberOfItems: Integer;               // + 0x2C [B]
-    NumberOfButtons: Integer;             // + 0x30 [C]
-    NumberOfButtons2: Integer;            // + 0x34 [D]
+    NumLines: Integer;                    // + 0x28 [A]
+    NumListItems: Integer;                // + 0x2C [B]
+    NumberOfButtonsStd: Integer;          // + 0x30 [C]
+    NumberOfButtons: Integer;             // + 0x34 [D]
     ScrollPageSize: Integer;              // + 0x38 [E]
-    Flags: Integer;                       // + 0x3C : 0x400-ClearPopup, 0x2000-Choose
+    Flags: Integer;                       // + 0x3C :
+    // 0x00000001 - Has Cancel button (StdType = 2)
+    // 0x00000004 - Checkboxes
+    // 0x00000020 - Created
+    // 0x02000080 - Has Ok button (StdType = 0)
+    // 0x00000040 - Has Help button (StdType = 1)
+    // 0x00000200 - Created parts
+    // 0x00000400 - ClearPopup
+    // 0x00001000 - Has ListBox
+    // 0x00002000 - Choose
+    // 0x00010000 - System popup
+    // 0x00040000 - System listbox
+    // 0x01000000 - Force scrollbar for listbox
     Width: Integer;                       // + 0x40
     Height: Integer;                      // + 0x44
     Unknown4: array[$48..$D7] of Byte;    // + 0x48
@@ -228,7 +427,7 @@ type
 
     ListItems: array of TControlInfo;     // + 0x280
   end;
-
+}
   TDrawPort = packed record               // Part of TGraphicsInfo; TODO: Move to TGraphicsInfo
     _Proc: Pointer;
     RectWidth: Integer;
@@ -237,7 +436,7 @@ type
     BmWidth4u: Integer;
     ClientRectangle: TRect;
     WindowRectangle: TRect;
-    pBmp: Pointer;
+    pBmp: PByte;
     RowsAddr: Pointer;
     PrevPaletteID: Integer;
     DrawInfo: PDrawInfo;
@@ -310,11 +509,11 @@ type
     Icon: HICON;                          // + 0x20
     Unknown_24: Integer;
     Unknown_28: Integer;
-    Unknown_2C: Integer;
-    _Moveable: Integer;
-    _Sizeable: Integer;
-    _CaptionHeight: Integer;
-    _ResizeBorderWidth: Integer;
+    DrawPort: PDrawPort;
+    Moveable: Integer;
+    Sizeable: Integer;
+    CaptionHeight: Integer;
+    ResizeBorderWidth: Integer;
     Unknown_40: Integer;
     Unknown_44: Integer;
     Unknown_48: Integer;
@@ -421,7 +620,11 @@ type
     word_655AFC: Word;
     ActiveUnitIndex: Word;                // Current unit index
     word_655B00: Word;
-    PlayerTribeNumber: Byte;              // not PlayerTribeNumber?
+    MultiType: Byte;                      // Multiplayer Game Type
+    // 0 - Singleplayer
+    // 1 - Hot Seat
+    // 3 - Network Game
+    // 4 - Internet
     byte_655B03: Byte;                    // PlayerTribeNumber?
     byte_655B04: Byte;
     SomeCivIndex: Byte;                   // Active Unit Civ index?

@@ -60,7 +60,7 @@ begin
   if v27 = $006A66B0 then
     Result := wtCivilopedia;
   if (Civ2.CurrPopupInfo^ <> nil) then
-    if (Civ2.CurrPopupInfo^^.GraphicsInfo = Pointer(GetWindowLongA(HWindow, $0C))) and (Civ2.CurrPopupInfo^^.NumberOfItems > 0) and (Civ2.CurrPopupInfo^^.NumberOfLines = 0) then
+    if (Civ2.CurrPopupInfo^^.GraphicsInfo = Pointer(GetWindowLongA(HWindow, $0C))) and (Civ2.CurrPopupInfo^^.NumListItems > 0) and (Civ2.CurrPopupInfo^^.NumLines = 0) then
       Result := wtUnitsListPopup;
   if Result = wtUnknown then
   begin
@@ -1092,13 +1092,13 @@ var
 
 procedure PatchCallCreateScrollBar(); stdcall;
 begin
-  if (Civ2.CurrPopupInfo^^.NumberOfItems >= 9) and (ListOfUnits.Length > 9) then
+  if (Civ2.CurrPopupInfo^^.NumListItems >= 9) and (ListOfUnits.Length > 9) then
   begin
     ZeroMemory(@ScrollBarControlInfo, SizeOf(ScrollBarControlInfo));
-    ScrollBarControlInfo.ControlInfo.Rect.Left := Civ2.CurrPopupInfo^^.Width - 25;
+    ScrollBarControlInfo.ControlInfo.Rect.Left := Civ2.CurrPopupInfo^^.ClientSize.cx - 25;
     ScrollBarControlInfo.ControlInfo.Rect.Top := 36;
-    ScrollBarControlInfo.ControlInfo.Rect.Right := Civ2.CurrPopupInfo^^.Width - 9;
-    ScrollBarControlInfo.ControlInfo.Rect.Bottom := Civ2.CurrPopupInfo^^.Height - 45;
+    ScrollBarControlInfo.ControlInfo.Rect.Right := Civ2.CurrPopupInfo^^.ClientSize.cx - 9;
+    ScrollBarControlInfo.ControlInfo.Rect.Bottom := Civ2.CurrPopupInfo^^.ClientSize.cy - 45;
     Civ2.CreateScrollbar(@ScrollBarControlInfo, @Civ2.CurrPopupInfo^^.GraphicsInfo^.WindowInfo, $0B, @ScrollBarControlInfo.ControlInfo.Rect, 1);
     SetScrollRange(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
     SetScrollPos(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
@@ -1686,23 +1686,39 @@ asm
     ret
 end;
 
-procedure PatchCityChangeListUnitCostEx(A1, A2: Integer); stdcall;
+function PatchCityChangeListUnitCostEx(Cost, Done, ShieldsInRow, Total, Support: Integer): Integer; stdcall;
 var
   Text: string;
+  RealCost, LeftToDo, Production: Integer;
 begin
+  RealCost := Cost * ShieldsInRow;
+  LeftToDo := RealCost - 1 - Done;
+  Production := Min(Max(1, Total - Support), 1000);
   Text := string(Civ2.ChText);
-  Text := Text + IntToStr(A1 * A2) + ' Sh, ';
+  Text := Text + IntToStr(RealCost) + ' Sh, ';
   StrCopy(Civ2.ChText, PChar(Text));
+  Result := Min(Max(1, LeftToDo div Production + 1), 999);
 end;
 
 procedure PatchCityChangeListUnitCost; register;
 asm
-    push  [$006A657C]
-    push  [ebp + $08]
+    push  [$006A6568] // Support
+    push  [$006A65CC] // Total
+    push  [$006A657C] // ShieldsInRow
+    push  [ebp + $0C] // Done
+    push  [ebp + $08] // Cost
     call  PatchCityChangeListUnitCostEx
-    push  $3E7
-    push  $00509ACE
+    push  $00509B07
     ret
+end;
+
+procedure PatchLoadCityChangeDialog(AEAX, AADX, ADialogWindow, ASectionName: Integer); register;
+asm
+   push  1
+   push  ASectionName
+   mov   ecx, ADialogWindow
+   mov   eax, $004037CE
+   call  eax
 end;
 
 procedure PatchOnActivateUnitEx; stdcall;
@@ -1979,10 +1995,8 @@ end;
 
 procedure PatchPrepareAdvisorWindowEx2(This: PAdvisorWindow; var Style, Border: Integer); stdcall;
 begin
-  //  if (This = Civ2.AdvisorWindow) and (Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows) then
   if This.AdvisorType in ResizableAdvisorWindows then
   begin
-    Style := Style or $400;
     Border := 6;
   end;
 end;
@@ -2013,7 +2027,7 @@ end;
 
 procedure PatchPrepareAdvisorWindow3(); register;
 asm
-    push  [ebp-$460]
+    push  [ebp - $460]
     call  PatchPrepareAdvisorWindow3Ex
     push  $0042ABB1
     ret
@@ -2064,10 +2078,10 @@ end;
 
 procedure PatchUpdateAdvisorRepositionControls(); register;
 asm
-   push   [ebp - $04]
-   call   PatchUpdateAdvisorRepositionControlsEx2
-   push   $0040847B
-   ret
+    push  [ebp - $04]
+    call  PatchUpdateAdvisorRepositionControlsEx2
+    push  $0040847B
+    ret
 end;
 
 function PatchUpdateAdvisorHeight(): Integer; stdcall;
@@ -2081,9 +2095,9 @@ begin
   begin
     case Civ2.AdvisorWindow.AdvisorType of
       1, 3, 4, 6:
-        WindowStructure._CaptionHeight := 75;
+        WindowStructure.CaptionHeight := 75;
     else
-      WindowStructure._CaptionHeight := 0;
+      WindowStructure.CaptionHeight := 0;
     end;
     if Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows then
     begin
@@ -2111,6 +2125,92 @@ begin
   Ex.SaveSettingsFile();
 end;
 
+procedure PatchCreateWindowRadioGroupAfterEx(Group: PControlInfoRadioGroup); stdcall;
+var
+  i, j: Integer;
+  Radios: PControlInfoRadios;
+  Text: PChar;
+  HotKey: string;
+  HotKeysList: TStringList;
+begin
+  HotKeysList := TStringList.Create();
+  Radios := Group.pRadios;
+  for i := 0 to Group.NRadios - 1 do
+  begin
+    Radios[i].HotKeyPos := -1;
+    j := 0;
+    Text := Radios[i].Text;
+    while (Text[j] <> #00) and (Radios[i].HotKeyPos < 0) do
+    begin
+      HotKey := LowerCase(Text[j]);
+      if HotKeysList.IndexOf(HotKey) < 0 then
+      begin
+        Radios[i].HotKey[0] := PChar(HotKey)^;
+        Radios[i].HotKeyPos := j;
+        HotKeysList.Append(HotKey);
+        Break;
+      end;
+      inc(j);
+    end;
+  end;
+  HotKeysList.Free();
+end;
+
+procedure PatchCreateWindowRadioGroupAfter(); register;
+asm
+    push  ecx
+    call  PatchCreateWindowRadioGroupAfterEx
+    push  $00531168
+    ret
+end;
+
+procedure PatchCreateDialogMainWindowEx(This: PDialogWindow; var AStyle: Integer); stdcall;
+begin
+  AStyle := $C02;
+  if (This.Flags and $41000) = $1000 then
+  begin
+    AStyle := AStyle or $1000;
+  end;
+end;
+
+procedure PatchCreateDialogMainWindow(); register;
+asm
+    lea   eax, [ebp - $20] // vStyle
+    push  eax
+    push  [ebp - $2C] // This PDialogWindow
+    call  PatchCreateDialogMainWindowEx
+    push  $005A1EE3
+    ret
+end;
+
+procedure PatchUpdateDialogWindow(); stdcall;
+var
+  Dialog: PDialogWindow;
+  DeltaY: Integer;
+  ListItemHeight: Integer;
+begin
+  Dialog := Civ2.CurrPopupInfo^;
+  if Dialog <> nil then
+  begin
+    if Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1 then
+    begin
+      DeltaY := Dialog.GraphicsInfo^.DrawPort.RectHeight - Dialog.ClientSize.cy;
+      Dialog.ClientSize.cy := Dialog.GraphicsInfo^.DrawPort.RectHeight;
+      Dialog.Rects1[0].Bottom := Dialog.Rects1[0].Bottom + DeltaY;
+      Dialog.Rects2[0].Bottom := Dialog.Rects2[0].Bottom + DeltaY;
+      Dialog.Rects3[0].Bottom := Dialog.Rects3[0].Bottom + DeltaY;
+      Dialog.ListboxHeight[0] := Dialog.ListboxHeight[0] + DeltaY;
+      Dialog.ButtonsTop := Dialog.ButtonsTop + DeltaY;
+      ListItemHeight := Dialog.FontInfo3.Height + 1;
+      Dialog.ListboxPageSize[0] := (Dialog.ListboxHeight[0] - 2) div ListItemHeight;
+    end;
+
+    asm
+    mov   eax, $00005A20F4
+    call  eax
+    end;
+  end;
+end;
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -2191,8 +2291,11 @@ begin
   WriteMemory(HProcess, $005DEAD1, [OP_JMP], @PatchPaletteGammaV2);
   // Celebrating city yellow color instead of white in Attitude Advisor (F4)
   WriteMemory(HProcess, $0042DE86, [WLTDKColorIndex]); // (Color index = Idx + 10)
-  // Show Unit shields cost in City Change list
+  // Show Unit shields cost in City Change list and fix Turns calculation for high numbers production
   WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListUnitCost);
+
+  // Add Cancel button to City Change list
+  WriteMemory(HProcess, $0050AA86, [OP_CALL], @PatchLoadCityChangeDialog);
 
   // Reset Units wait flag after activating
   WriteMemory(HProcess, $0058D5CF, [OP_JMP], @PatchOnActivateUnit);
@@ -2220,10 +2323,6 @@ begin
   WriteMemory(HProcess, $0040138E, [OP_JMP], @PatchFocusCityWindow);
   WriteMemory(HProcess, $00509985, [OP_CALL], @PatchAfterCityWindowClose);
 
-  //
-  //WriteMemory(HProcess, $004034A9, [OP_JMP], @PatchPopupSimpleMessageEx);
-  //HookImportedFunctions(HProcess);
-
   // Resizable Advisor Windows
   WriteMemory(HProcess, $0042CF15, [OP_CALL], @PatchUpdateAdvisorHeight); // City Status
   WriteMemory(HProcess, $0042E265, [OP_CALL], @PatchUpdateAdvisorHeight); // Defense Minister
@@ -2236,16 +2335,27 @@ begin
   WriteMemory(HProcess, $0042A8EC, [OP_JMP], @PatchPrepareAdvisorWindow1); // Set size
   WriteMemory(HProcess, $0042AB85, [OP_JMP], @PatchPrepareAdvisorWindow2); // Set resizable style and border
   WriteMemory(HProcess, $0042AB96, [OP_JMP], @PatchPrepareAdvisorWindow3); // Set MinMaxTrackSize
-  //  WriteMemory(HProcess, $0042D60E, [OP_CALL], @PatchUpdateAdvisorRepositionControlsEx); // City Status
-  //  WriteMemory(HProcess, $0042EFD9, [OP_CALL], @PatchUpdateAdvisorRepositionControlsEx); // Defense Minister
-  //  WriteMemory(HProcess, $0042E075, [OP_CALL], @PatchUpdateAdvisorRepositionControlsEx); // Attitude Advisor
-  //  WriteMemory(HProcess, $0042CCEA, [OP_CALL], @PatchUpdateAdvisorRepositionControlsEx); // Trade Advisor
   WriteMemory(HProcess, $00408476, [OP_JMP], @PatchUpdateAdvisorRepositionControls);
-
   WriteMemory(HProcess, $005DCA69, [OP_JMP], @PatchWindowProcMSWindowWmNcHitTest); // Set cursor at window edges
   WriteMemory(HProcess, $0042A7B2, [OP_CALL], @PatchCloseAdvisorWindowAfter); // Save UIA settings after closing Advisor
+  // Tests
+  // Suppress specific simple popup message
+  //WriteMemory(HProcess, $004034A9, [OP_JMP], @PatchPopupSimpleMessageEx);
+  //HookImportedFunctions(HProcess);
+  // Radios hotkey
+  WriteMemory(HProcess, $00531163, [OP_JMP], @PatchCreateWindowRadioGroupAfter);
+  // BgTiles
+//  WriteMemory(HProcess, $00402C9D, [OP_RET]);
+//  WriteMemory(HProcess, $00401C53, [OP_RET]);
+//  WriteMemory(HProcess, $005A9A4C, [$5F, $5E, $5B, $C9, $C3]);
+//  WriteMemory(HProcess, $00633588, [$0F]);
+//  WriteMemory(HProcess, $0063358C, [$0F]);
+  // Resizable Dialog window
+  WriteMemory(HProcess, $005A1EDC, [OP_JMP], @PatchCreateDialogMainWindow);
+  WriteMemory(HProcess, $005A203D, [], @PatchUpdateDialogWindow, True);
+  //  WriteMemory(HProcess, $005A15E7, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
 
-  // civ2patch
+    // civ2patch
   if UIAOPtions.civ2patchEnable then
   begin
     C2Patches(HProcess);

@@ -17,7 +17,7 @@ type
     CityWindow: PCityWindow;
     Civs: ^TCivs;
     CurrCivIndex: PInteger;
-    CurrPopupInfo: PPCurrPopupInfo;
+    CurrPopupInfo: PPDialogWindow;
     GameParameters: PGameParameters;
     GameTurn: PWord;
     HumanCivIndex: PInteger;
@@ -62,12 +62,13 @@ type
     procedure SetScrollPosition(ControlInfoScroll: PControlInfoScroll; Position: Integer);
     procedure SetTextFromLabel(A1: Integer);
     procedure SetTextIntToStr(A1: Integer);
-    procedure UpdateDIBColorTableFromPalette(ThisGraphicsInfo: PGraphicsInfo; Palette: Pointer);
+    procedure UpdateDIBColorTableFromPalette(ThisDrawPort: PDrawPort; Palette: Pointer);
     procedure CenterView(X, Y: Integer);
     function GetFontHeightWithExLeading(thisFont: Pointer): Integer;
     procedure SetFocusAndBringToTop(WindowInfo: PWindowInfo);
     function DrawPort_Reset(DrawPort: PDrawPort; Width, Height: Integer): Integer;
     function CopySprite(Sprite: PSprite; ARect: PRect; DrawPort: PDrawPort; X, Y: Integer): PRect;
+    procedure RecreateBrush(WindowInfo: PWindowInfo; Color: Integer);
   published
   end;
 
@@ -133,6 +134,8 @@ begin
     raise Exception.Create('Wrong size of TCiv');
   if SizeOf(TAdvisorWindow) <> $4A4 then
     raise Exception.Create('Wrong size of TAdvisorWindow');
+  if SizeOf(TDialogWindow) <> $2F4 then
+    raise Exception.Create('Wrong size of TDialogWindow');
 end;
 
 destructor TCiv2.Destroy;
@@ -244,7 +247,7 @@ asm
     call  eax
 end;
 
-procedure TCiv2.UpdateDIBColorTableFromPalette(ThisGraphicsInfo: PGraphicsInfo; Palette: Pointer);
+procedure TCiv2.UpdateDIBColorTableFromPalette(ThisDrawPort: PDrawPort; Palette: Pointer);
 asm
 //
 //    if ( Q_Pallete_GetID_sub_5C56F0(a2) != this->PrevPaletteID )
@@ -253,7 +256,7 @@ asm
 //      v2->PrevPaletteID = Q_Pallete_GetID_sub_5C56F0(a2);
 //    }
     push  Palette
-    mov   ecx, ThisGraphicsInfo
+    mov   ecx, ThisDrawPort
     mov   eax, $005C0D12
     call  eax
 end;
@@ -393,6 +396,14 @@ asm
     mov   eax, $005CEF31
     call  eax
     mov   @Result, eax
+end;
+
+procedure TCiv2.RecreateBrush(WindowInfo: PWindowInfo; Color: Integer);
+asm
+    push  Color
+    mov   ecx, WindowInfo
+    mov   eax, $00402045
+    call  eax
 end;
 
 end.

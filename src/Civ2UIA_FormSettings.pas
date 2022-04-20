@@ -74,8 +74,10 @@ begin
   Label2.Caption := FloatToStr(UIASettings.ColorExposure);
   Label4.Caption := FloatToStr(UIASettings.ColorGamma);
   Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.Palette);
-  Civ2.UpdateDIBColorTableFromPalette(GraphicsInfo, GraphicsInfo.WindowInfo.Palette);
-  // Also set new palette to map overlay - to be consistent with the game look
+  Civ2.UpdateDIBColorTableFromPalette(@GraphicsInfo.DrawPort, GraphicsInfo.WindowInfo.Palette);
+  // Also recreate main window brush for background
+  Civ2.RecreateBrush(Civ2.MainWindowInfo, $9E); 
+  // Also set new palette for map overlay - to be consistent with the game look
   Civ2.SetDIBColorTableFromPalette(DrawTestData.DrawPort.DrawInfo, GraphicsInfo.WindowInfo.Palette);
   // Redraw main window with all subwindows
   HWindow := GetParent(GraphicsInfo.WindowInfo.WindowStructure^.HWindow);
