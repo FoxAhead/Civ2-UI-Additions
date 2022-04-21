@@ -61,6 +61,13 @@ type
     ColorExposure: Double;
     ColorGamma: Double;
     AdvisorHeights: array [1..12] of Word;
+    ListboxHeights: array [1..3] of Word;
+  end;
+
+  PCallerChain = ^TCallerChain;
+  TCallerChain = packed record
+     Prev: PCallerChain;
+     Caller: Pointer; 
   end;
   
 const

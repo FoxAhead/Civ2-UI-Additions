@@ -24,6 +24,7 @@ type
   PControlInfoRadioGroup = ^TControlInfoRadioGroup;
 
   PControlInfoButton = ^TControlInfoButton;
+  PControlInfoButtons = ^TControlInfoButtons;  
 
   PControlInfoScroll = ^TControlInfoScroll;
 
@@ -225,6 +226,7 @@ type
     Unknown_34: Integer;                  // + 0x34
     Unknown_38: Integer;                  // + 0x38
   end;
+  TControlInfoButtons = array[0..0] of TControlInfoButton;
 
   // ControlType = 8
   TControlInfoScroll = packed record      // Size = $40  GetWindowLongA(hWnd, GetClassLongA(hWnd, GCL_CBWNDEXTRA) - 8)
@@ -374,7 +376,7 @@ type
     Unknown_268: Integer;
     CheckboxControls: PControlInfoCheckbox;
     EditControls: PControlInfoEdit;
-    ButtonControls: PControlInfoButton;
+    ButtonControls: PControlInfoButtons;
     Unknown_278: array[0..1] of Integer;
     ListItemControls: PControlInfoListItem;
     ScrollControls1: array[0..1] of PControlInfoScroll;
@@ -400,8 +402,9 @@ type
     Flags: Integer;                       // + 0x3C :
     // 0x00000001 - Has Cancel button (StdType = 2)
     // 0x00000004 - Checkboxes
+    // 0x00000008 - Don't show
     // 0x00000020 - Created
-    // 0x02000080 - Has Ok button (StdType = 0)
+    // 0x02000000 - Without Ok button (StdType = 0)
     // 0x00000040 - Has Help button (StdType = 1)
     // 0x00000200 - Created parts
     // 0x00000400 - ClearPopup

@@ -25,6 +25,7 @@ type
     procedure LoadSettingsFile();
     procedure SaveSettingsFile();
     procedure LoadDefaultSettings();
+    function FindGameTxtSectionIndex(Section: PChar): Integer;
   published
 
   end;
@@ -41,6 +42,13 @@ uses
   Civ2UIA_Proc,
   Civ2UIA_Global,
   Civ2UIA_MapMessage;
+
+var
+  GameTxtSections: array[1..3] of PChar = (
+    PChar($00630F1C),                     // PRODUCTION
+    PChar($00625F30),                     // INTELLCITY
+    PChar($00624F24)                      // FINDCITY
+    );
 
 function CompareCityUnits(Item1, Item2: Pointer): Integer;
 var
@@ -180,6 +188,21 @@ begin
   UIASettings.Size := SizeOf(UIASettings);
   UIASettings.ColorExposure := 0.0;
   UIASettings.ColorGamma := 1.0;
+end;
+
+function TEx.FindGameTxtSectionIndex(Section: PChar): Integer;
+var
+  i: Integer;
+begin
+  Result := 0;
+  for i := Low(GameTxtSections) to High(GameTxtSections) do
+  begin
+    if StrComp(Section, GameTxtSections[i]) = 0 then
+    begin
+      Result := i;
+      Exit;
+    end;
+  end;
 end;
 
 end.

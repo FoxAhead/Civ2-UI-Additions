@@ -27,6 +27,7 @@ type
     MainWindowInfo: PWindowInfo;
     MapGraphicsInfo: PGraphicsInfoMap;
     MapGraphicsInfos: ^TMapGraphicsInfos;
+    ScreenRectSize: PSize;
     ScienceAdvisorClientRect: PRect;
     ScienceAdvisorGraphicsInfo: PGraphicsInfo;
     ShieldFontInfo: ^TFontInfo;
@@ -103,6 +104,7 @@ begin
   MainWindowInfo := Pointer($006553D8);
   MapGraphicsInfo := Pointer($0066C7A8);
   MapGraphicsInfos := Pointer($0066C7A8);
+  ScreenRectSize := Pointer($006AB198);
   ScienceAdvisorClientRect := Pointer($0063EC34);
   ScienceAdvisorGraphicsInfo := Pointer($0063EB10);
   ShieldFontInfo := Pointer($006AC090);

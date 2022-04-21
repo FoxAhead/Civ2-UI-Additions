@@ -1978,7 +1978,7 @@ begin
   This.Height := AHeight;
   if This.AdvisorType in ResizableAdvisorWindows then
   begin
-    This.Height := Min(Max(400, UIASettings.AdvisorHeights[This.AdvisorType]), PInteger($006AB19C)^ - 125); // V_ScreenRectHeight_dword_6AB19C
+    This.Height := Min(Max(400, UIASettings.AdvisorHeights[This.AdvisorType]), Civ2.ScreenRectSize.cy - 125);
     UIASettings.AdvisorHeights[This.AdvisorType] := This.Height;
   end;
 end;
@@ -2090,8 +2090,19 @@ begin
 end;
 
 procedure PatchWindowProcMSWindowWmNcHitTestEx(var HotSpot: LRESULT; WindowStructure: PWindowStructure); stdcall;
+var
+  IsSizableDialog: Boolean;
+  DialogWindowStructure: PWindowStructure;
 begin
-  if WindowStructure = Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure then
+  IsSizableDialog := False;
+  if Civ2.CurrPopupInfo^ <> nil then
+  begin
+    DialogWindowStructure := Civ2.CurrPopupInfo^^.GraphicsInfo.WindowInfo.WindowStructure;
+    IsSizableDialog := (WindowStructure = DialogWindowStructure) and (DialogWindowStructure.Sizeable = 1);
+  end;
+  if (WindowStructure = Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure)
+    or
+    (IsSizableDialog) then
   begin
     case Civ2.AdvisorWindow.AdvisorType of
       1, 3, 4, 6:
@@ -2099,7 +2110,7 @@ begin
     else
       WindowStructure.CaptionHeight := 0;
     end;
-    if Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows then
+    if (Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows) or IsSizableDialog then
     begin
       if (HotSpot in [HTLEFT..HTBOTTOMRIGHT]) and (HotSpot <> HTTOP) and (HotSpot <> HTBOTTOM) then
       begin
@@ -2122,6 +2133,7 @@ end;
 
 procedure PatchCloseAdvisorWindowAfter(); stdcall;
 begin
+  // Called also two times at the bottom of the main game loop! 
   Ex.SaveSettingsFile();
 end;
 
@@ -2164,17 +2176,46 @@ asm
     ret
 end;
 
-procedure PatchCreateDialogMainWindowEx(This: PDialogWindow; var AStyle: Integer); stdcall;
+procedure PatchCreateDialogMainWindowEx(Dialog: PDialogWindow; var AStyle: Integer; AEbp: PCallerChain); stdcall;
+var
+  SectionIndex: Integer;
+  OriginalHeight: Integer;
+  DeltaY: Integer;
+  ListItemHeight: Integer;
 begin
   AStyle := $C02;
-  if (This.Flags and $41000) = $1000 then
+  if (Dialog.Flags and $41000) = $1000 then // Has Listbox, not system
   begin
-    AStyle := AStyle or $1000;
+    SectionIndex := Ex.FindGameTxtSectionIndex(PChar($6CECB0));
+    if SectionIndex > 0 then
+    begin
+      AStyle := AStyle or $1000;          // Make resizable
+      OriginalHeight := Dialog.ClientSize.cy;
+      Dialog.GraphicsInfo.WindowInfo.MinTrackSize.Y := Dialog.ClientSize.cy - 1;
+      Dialog.ClientSize.cy := Min(Max(OriginalHeight, UIASettings.ListboxHeights[SectionIndex]), Civ2.ScreenRectSize.cy - 125);
+
+      ListItemHeight := Dialog.FontInfo3.Height + 1;
+      DeltaY := Dialog.ClientSize.cy - OriginalHeight;
+
+      Dialog.ListboxPageSize[0] := (Dialog.ListboxHeight[0] + DeltaY - 2) div ListItemHeight;
+      Dialog.ListboxHeight[0] := Dialog.ListboxHeight[0] + DeltaY;
+      Dialog.Rects1[0].Bottom := Dialog.Rects1[0].Bottom + DeltaY;
+      Dialog.Rects2[0].Bottom := Dialog.Rects2[0].Bottom + DeltaY;
+      Dialog.Rects3[0].Bottom := Dialog.Rects3[0].Bottom + DeltaY;
+      Dialog.ButtonsTop := Dialog.ButtonsTop + DeltaY;
+
+      Dialog.Flags := Dialog.Flags or $1000000; // Force scrollbar for listbox
+
+      Dialog.Position.Y := Min(Max(0, Dialog.Position.Y), Civ2.ScreenRectSize.cy - Dialog.ClientSize.cy - 10);
+
+      Dialog.ListboxPageSize[1] := SectionIndex; // ! Storing data in unused structure members. [1] - for horizontal scrolls
+    end;
   end;
 end;
 
 procedure PatchCreateDialogMainWindow(); register;
 asm
+    push  ebp
     lea   eax, [ebp - $20] // vStyle
     push  eax
     push  [ebp - $2C] // This PDialogWindow
@@ -2188,21 +2229,45 @@ var
   Dialog: PDialogWindow;
   DeltaY: Integer;
   ListItemHeight: Integer;
+  ListboxHeight: Integer;
+  i: Integer;
+  Control: PControlInfo;
+  RP: PRect;
+  SectionIndex: Integer;
 begin
   Dialog := Civ2.CurrPopupInfo^;
   if Dialog <> nil then
   begin
     if Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1 then
     begin
+      ListItemHeight := Dialog.FontInfo3.Height + 1;
       DeltaY := Dialog.GraphicsInfo^.DrawPort.RectHeight - Dialog.ClientSize.cy;
       Dialog.ClientSize.cy := Dialog.GraphicsInfo^.DrawPort.RectHeight;
+
+      Dialog.ListboxPageSize[0] := (Dialog.ListboxHeight[0] + DeltaY - 2) div ListItemHeight;
+      ListboxHeight := Dialog.ListboxPageSize[0] * ListItemHeight + 2;
+      //      Dialog.ListboxHeight[0] := ListboxHeight;
+      Dialog.ListboxHeight[0] := Dialog.ListboxHeight[0] + DeltaY;
       Dialog.Rects1[0].Bottom := Dialog.Rects1[0].Bottom + DeltaY;
       Dialog.Rects2[0].Bottom := Dialog.Rects2[0].Bottom + DeltaY;
       Dialog.Rects3[0].Bottom := Dialog.Rects3[0].Bottom + DeltaY;
-      Dialog.ListboxHeight[0] := Dialog.ListboxHeight[0] + DeltaY;
       Dialog.ButtonsTop := Dialog.ButtonsTop + DeltaY;
-      ListItemHeight := Dialog.FontInfo3.Height + 1;
-      Dialog.ListboxPageSize[0] := (Dialog.ListboxHeight[0] - 2) div ListItemHeight;
+      for i := 0 to Dialog.NumButtons + Dialog.NumButtonsStd - 1 do
+      begin
+        Control := @Dialog.ButtonControls[i].ControlInfo;
+        RP := @Control.Rect;
+        OffsetRect(RP^, 0, DeltaY);
+        SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOSIZE);
+      end;
+      Control := @Dialog.ScrollControls1[0].ControlInfo;
+      if Control <> nil then
+      begin
+        RP := @Control.Rect;
+        RP.Bottom := RP.Bottom + DeltaY;
+        SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOMOVE);
+      end;
+      SectionIndex := Dialog.ListboxPageSize[1]; // ! Storing data in unused structure members. [1] - for horizontal scrolls
+      UIASettings.ListboxHeights[SectionIndex] := Dialog.ClientSize.cy;
     end;
 
     asm
