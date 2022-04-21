@@ -23,6 +23,7 @@ type
     HumanCivIndex: PInteger;
     Improvements: ^TImprovements;
     Leaders: ^TLeaders;
+    LoadedTxtSectionName: PChar;
     MainMenu: ^HMENU;
     MainWindowInfo: PWindowInfo;
     MapGraphicsInfo: PGraphicsInfoMap;
@@ -100,6 +101,7 @@ begin
   HumanCivIndex := Pointer($006D1DA0);
   Improvements := Pointer($0064C488);
   Leaders := Pointer($006554F8);
+  LoadedTxtSectionName := Pointer($006CECB0);
   MainMenu := Pointer($006A64F8);
   MainWindowInfo := Pointer($006553D8);
   MapGraphicsInfo := Pointer($0066C7A8);

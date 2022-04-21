@@ -81,7 +81,6 @@ begin
     call  eax
     mov   @Result, eax
   end;
-  Ex.AfterShowWindow(HWindow, nCmdShow);
   CurrGetFocusAfter := GetFocus();
   //MapMessagesList.Add(TMapMessage.Create(Format('%.8x => %.6x ShowWindow(%.8x, %.d) => %.8x', [CurrGetFocusBefore,CallerAddress, HWindow, nCmdShow,CurrGetFocusAfter])));
 //  if nCmdShow = 5 then

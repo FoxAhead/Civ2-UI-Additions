@@ -21,11 +21,10 @@ type
     destructor Destroy; override;
     function UnitsListBuildSorted(CityIndex: Integer): Integer;
     function UnitsListGetNextUnitIndex(CursorIncrement: Integer): Integer;
-    procedure AfterShowWindow(HWindow: HWND; nCmdShow: Integer);
     procedure LoadSettingsFile();
     procedure SaveSettingsFile();
     procedure LoadDefaultSettings();
-    function FindGameTxtSectionIndex(Section: PChar): Integer;
+    function GetSizableDialogNameIndex(Section: PChar): Integer;
   published
 
   end;
@@ -44,7 +43,7 @@ uses
   Civ2UIA_MapMessage;
 
 var
-  GameTxtSections: array[1..3] of PChar = (
+  SizableDialogNames: array[1..3] of PChar = (
     PChar($00630F1C),                     // PRODUCTION
     PChar($00625F30),                     // INTELLCITY
     PChar($00624F24)                      // FINDCITY
@@ -123,31 +122,6 @@ begin
   end;
 end;
 
-procedure TEx.AfterShowWindow(HWindow: HWND; nCmdShow: Integer); //Obsolete, Remove
-var
-  PrevWindow: HWND;
-begin
-  if nCmdShow = 5 then
-  begin
-    ShowWindowStack.Push(Pointer(HWindow));
-    MapMessagesList.Add(TMapMessage.Create(Format('SetFocus(%.8x)', [HWindow])));
-    SetFocus(HWindow);
-  end;
-  if nCmdShow = 0 then
-  begin
-    while ShowWindowStack.AtLeast(1) do
-    begin
-      ShowWindowStack.Pop();
-      if not ShowWindowStack.AtLeast(1) then
-        Break;
-      PrevWindow := HWND(ShowWindowStack.Peek());
-      MapMessagesList.Add(TMapMessage.Create(Format('SetFocus(%.8x)', [PrevWindow])));
-      if SetFocus(PrevWindow) <> 0 then
-        Break;
-    end;
-  end;
-end;
-
 procedure TEx.LoadSettingsFile;
 var
   FileHandle: Integer;
@@ -190,14 +164,14 @@ begin
   UIASettings.ColorGamma := 1.0;
 end;
 
-function TEx.FindGameTxtSectionIndex(Section: PChar): Integer;
+function TEx.GetSizableDialogNameIndex(Section: PChar): Integer;
 var
   i: Integer;
 begin
   Result := 0;
-  for i := Low(GameTxtSections) to High(GameTxtSections) do
+  for i := Low(SizableDialogNames) to High(SizableDialogNames) do
   begin
-    if StrComp(Section, GameTxtSections[i]) = 0 then
+    if StrComp(Section, SizableDialogNames[i]) = 0 then
     begin
       Result := i;
       Exit;

@@ -238,7 +238,7 @@ type
     CurrentPosition: Integer;             // + 0x3C
   end;
 
-  PListItemB = Pointer;
+  PListboxItem = Pointer;
   PListItem = Pointer;
   PDlgTextLine = Pointer;
   PEdit = Pointer;
@@ -355,13 +355,13 @@ type
     Unknown_200: Integer;
     Unknown_204: Integer;
     Unknown_208: array[0..1] of Integer;
-    PageStartListItemB: array[0..1] of PListItemB;
+    PageStartListboxItem: array[0..1] of PListboxItem;
     Unknown_218: Integer;
     Unknown_21C: Integer;
-    SelectedListItemB: PListItemB;
+    SelectedListboxItem: PListboxItem;
     SelectedListItem: PListItem;
-    FirstListItemB: PListItemB;
-    LastListItemB2: PListItemB;
+    FirstListboxItem: PListboxItem;
+    LastListboxItem: PListboxItem;
     FirstTextLine: PDlgTextLine;
     FirstListItem: PListItem;
     Edit: PEdit;
