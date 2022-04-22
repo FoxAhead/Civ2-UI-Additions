@@ -71,6 +71,8 @@ type
     function DrawPort_Reset(DrawPort: PDrawPort; Width, Height: Integer): Integer;
     function CopySprite(Sprite: PSprite; ARect: PRect; DrawPort: PDrawPort; X, Y: Integer): PRect;
     procedure RecreateBrush(WindowInfo: PWindowInfo; Color: Integer);
+    procedure sub_401BC7(A1: PDialogWindow; A2: PChar; A3, A4, A5, A6: Integer);
+    function GetTextExtentX(A1: PFontInfo; A2: PChar): Integer;
   published
   end;
 
@@ -407,6 +409,26 @@ asm
     push  Color
     mov   ecx, WindowInfo
     mov   eax, $00402045
+    call  eax
+end;
+
+procedure TCiv2.sub_401BC7(A1: PDialogWindow; A2: PChar; A3, A4, A5, A6: Integer);
+asm
+    push  A6
+    push  A5
+    push  A4
+    push  A3
+    push  A2
+    mov   ecx, A1
+    mov   eax, $00401BC7
+    call  eax
+end;
+
+function TCiv2.GetTextExtentX(A1: PFontInfo; A2: PChar): Integer;
+asm
+    push  A2
+    mov   ecx, A1
+    mov   eax, $00402B21
     call  eax
 end;
 

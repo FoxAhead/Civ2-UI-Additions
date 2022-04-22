@@ -42,7 +42,7 @@ uses
   Civ2UIA_Global,
   Civ2UIA_MapMessage;
 
-var
+const
   SizableDialogNames: array[1..3] of PChar = (
     PChar($00630F1C),                     // PRODUCTION
     PChar($00625F30),                     // INTELLCITY

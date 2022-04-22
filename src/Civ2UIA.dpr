@@ -679,7 +679,7 @@ begin
   begin
     Civ2.GetInfoOfClickedCitySprite(@Civ2.CityWindow^.CitySpritesInfo, CursorClient.X, CursorClient.Y, SIndex, SType);
     //SendMessageToLoader(Sindex,SType);
-    if SType = 2 then
+    if SType = 2 then                     // Citizens
     begin
       ChangeSpecialistDown := (Delta = -1);
       asm
@@ -1688,15 +1688,19 @@ end;
 
 function PatchCityChangeListUnitCostEx(Cost, Done, ShieldsInRow, Total, Support: Integer): Integer; stdcall;
 var
+  P: PChar;
   Text: string;
   RealCost, LeftToDo, Production: Integer;
 begin
   RealCost := Cost * ShieldsInRow;
   LeftToDo := RealCost - 1 - Done;
   Production := Min(Max(1, Total - Support), 1000);
+  P := StrEnd(Civ2.ChText) - 1;
+  if P^ = '(' then
+    P^ := #00;
   Text := string(Civ2.ChText);
-  Text := Text + IntToStr(RealCost) + ' Sh, ';
-  StrCopy(Civ2.ChText, PChar(Text));
+  Text := Text + IntToStr(RealCost) + '#644F00:3#(';
+  StrPCopy(Civ2.ChText, Text);
   Result := Min(Max(1, LeftToDo div Production + 1), 999);
 end;
 
@@ -1712,7 +1716,7 @@ asm
     ret
 end;
 
-procedure PatchLoadCityChangeDialog(AEAX, AADX, ADialogWindow, ASectionName: Integer); register;
+procedure PatchLoadCityChangeDialog(AEAX, AEDX, ADialogWindow, ASectionName: Integer); register;
 asm
    push  1
    push  ASectionName
@@ -2290,6 +2294,57 @@ begin
     end;
   end;
 end;
+
+procedure PatchDlgDrawListboxItemText(AEAX, AEDX: Integer; AECX: PDialogWindow; ADisabled, ASelected, ATop, ALeft: Integer; AText: PChar); register;
+var
+  RightPart, Bar: PChar;
+  X, DY: Integer;
+  R: TRect;
+  IsSprite: boolean;
+  SLT, SLS: TStringList;
+  i: Integer;
+  Sprite: PSprite;
+begin
+  RightPart := nil;
+  if AText <> nil then
+  begin
+    Bar := StrScan(AText, '|');
+  end;
+  if Bar <> nil then
+  begin
+    RightPart := Bar + 1;
+    Bar^ := #00;
+  end;
+  Civ2.sub_401BC7(AECX, AText, ALeft + AECX.ListboxSpriteAreaWidth[AECX.ScrollOrientation], ATop, ASelected, ADisabled);
+  if RightPart <> nil then
+  begin
+    Bar^ := '|';
+    SLT := TStringList.Create();
+    SLS := TStringList.Create();
+    SLT.Text := StringReplace(string(RightPart), '#', #13#10, [rfReplaceAll]);
+    X := ALeft + AECX.ListboxInnerWidth[AECX.ScrollOrientation] - 4;
+    for i := SLT.Count - 1 downto 0 do
+    begin
+      if Odd(i) then
+      begin
+        SLS.Clear();
+        SLS.Text := StringReplace(SLT[i], ':', #13#10, [rfReplaceAll]);
+        Sprite := PSprite(StrToInt('$' + SLS[0]) + StrToInt(SLS[1]) * SizeOf(TSprite));
+        X := X - Sprite.Rectangle2.Right;
+        DY := (AECX.FontInfo3.Height + 1 - Sprite.Rectangle2.Bottom) div 2;
+        Civ2.CopySprite(Sprite, @R, @AECX.GraphicsInfo^.DrawPort, X, ATop + DY);
+      end
+      else
+      begin
+        X := X - Civ2.GetTextExtentX(AECX.FontInfo3, PChar(SLT[i]));
+        Civ2.sub_401BC7(AECX, PChar(SLT[i]), X, ATop, ASelected, ADisabled);
+      end;
+    end;
+    SLS.Free();
+    SLT.Free();
+  end;
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -2433,6 +2488,8 @@ begin
   WriteMemory(HProcess, $0059FD36, [OP_JMP], @PatchCreateDialogDimension);
   WriteMemory(HProcess, $005A1EDC, [OP_JMP], @PatchCreateDialogMainWindow);
   WriteMemory(HProcess, $005A203D, [], @PatchUpdateDialogWindow, True);
+  // Draw sprites in listbox item text
+  WriteMemory(HProcess, $00403625, [OP_JMP], @PatchDlgDrawListboxItemText);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

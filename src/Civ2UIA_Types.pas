@@ -69,7 +69,7 @@ type
      Prev: PCallerChain;
      Caller: Pointer; 
   end;
-  
+
 const
   OP_NOP: Byte = $90;
   OP_CALL: Byte = $E8;

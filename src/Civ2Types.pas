@@ -348,13 +348,13 @@ type
     Unknown_1D0: array[0..1] of Integer;
     Unknown_1D8: array[0..1] of Integer;
     Unknown_1E0: array[0..1] of Integer;
-    Unknown_1E8: array[0..1] of Integer;
+    ListboxInnerWidth: array[0..1] of Integer;
     Unknown_1F0: array[0..1] of Integer;
     Unknown_1F8: Integer;
     Unknown_1FC: Integer;
     Unknown_200: Integer;
     Unknown_204: Integer;
-    Unknown_208: array[0..1] of Integer;
+    ListboxSpriteAreaWidth: array[0..1] of Integer;
     PageStartListboxItem: array[0..1] of PListboxItem;
     Unknown_218: Integer;
     Unknown_21C: Integer;
