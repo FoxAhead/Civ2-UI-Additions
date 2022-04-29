@@ -8,15 +8,52 @@ implementation
 
 uses
   Civ2UIA_Types,
-  Civ2UIA_Global,  
+  Civ2UIA_Global,
   Civ2UIA_Proc,
   Civ2UIA_MapMessage,
   Civ2UIA_Ex,
   SysUtils,
+  Classes,
   Windows;
+
+type
+  PHookInfo = ^THookInfo;
+
+  THookInfo = packed record
+    CallerChain: PCallerChain;
+    Addr: Pointer;
+    AddrOriginal: Pointer;
+    AddrPatched: Pointer;
+    ParamsCount: Integer;
+  end;
 
 var
   OriginalAddresses: array[1..10] of Integer;
+  HookListAddr: TList;
+  HookListAddrOriginal: TList;
+  HookListAddrPatched: TList;
+  HookListParamsCount: TList;
+
+function HookGetCallerChain(): PCallerChain; register;
+asm
+    mov   eax, ebp
+end;
+
+procedure HookPushParams(ParamsCount: Integer); register;
+asm
+    mov   ecx, ParamsCount
+    pop   eax
+
+@@LABEL1:
+    push  [ebp + 4 + 4 * ecx]
+    loop  @@LABEL1
+    push  eax
+end;
+
+function HookCall(Address: Pointer): Integer; register;
+asm
+    call  Address
+end;
 
 function PatchSetFocus(HWindow: HWND): Integer; stdcall;
 var
@@ -60,30 +97,27 @@ begin
   end
 end;
 
-function PatchShowWindow(HWindow: HWND; nCmdShow: Integer): Integer; stdcall;
+function PatchShowWindow(HWindow: HWND; nCmdShow: Integer; HookInfo: PHookInfo): Integer; stdcall;
 var
   CallerChain: PCallerChain;
-  OriginalAddress: Integer;
+  OriginalAddress: Pointer;
   CurrGetFocusBefore: HWND;
   CurrGetFocusAfter: HWND;
 begin
+  {  CallerChain := HookGetCallerChain();
+    //CurrGetFocusBefore := GetFocus();
+    //SendMessageToLoader(3, nCmdShow);
+    //SendMessageToLoader(HWindow, nCmdShow);
+    if nCmdShow = 5 then
+    begin
+      SendMessageToLoader(HWindow, Integer(CallerChain.Caller));
+      SendMessageToLoader(HWindow, Integer(CallerChain.Prev.Caller));
+    end;}
+  //  OriginalAddress := OriginalAddresses[3];
+  HookPushParams(HookInfo.ParamsCount);
   asm
-    mov   CallerChain, ebp
-  end;
-  //CurrGetFocusBefore := GetFocus();
-  //SendMessageToLoader(3, nCmdShow);
-  //SendMessageToLoader(HWindow, nCmdShow);
-  if nCmdShow = 5 then
-  begin
-    SendMessageToLoader(HWindow, Integer(CallerChain.Caller));
-    SendMessageToLoader(HWindow, Integer(CallerChain.Prev.Caller));    
-  end;
-  
-  OriginalAddress := OriginalAddresses[3];
-  asm
-    push  nCmdShow
-    push  HWindow
-    mov   eax, OriginalAddress
+    mov   eax, HookInfo
+    mov   eax, THookInfo(eax).AddrOriginal
     call  eax
     mov   @Result, eax
   end;
@@ -246,26 +280,122 @@ begin
   end;
 end;
 
-procedure HookFunction(Index: Integer; HProcess: THandle; Address: Integer; ProcAddress: Pointer);
+function PatchHookSetScrollPos(A1, A2, A3, A4: Integer): Integer; stdcall;
+// int __stdcall SetScrollPos(HWND hWnd, int nBar, int nPos, BOOL bRedraw)
+var
+  CallerChain: PCallerChain;
+  OriginalAddress: Integer;
+begin
+  asm
+    mov   CallerChain, ebp
+  end;
+  SendMessageToLoader(A1, Integer(CallerChain.Caller));
+  SendMessageToLoader(A3, Integer(CallerChain.Prev.Caller));
+  OriginalAddress := OriginalAddresses[9];
+  asm
+    push  A4
+    push  A3
+    push  A2
+    push  A1
+    mov   eax, OriginalAddress
+    call  eax
+    mov   @Result, eax
+  end;
+end;
+
+function PatchHookSetScrollRange(A1, A2, A3, A4, A5: Integer): Integer; stdcall;
+// BOOL __stdcall SetScrollRange(HWND hWnd, int nBar, int nMinPos, int nMaxPos, BOOL bRedraw)
+var
+  CallerChain: PCallerChain;
+  OriginalAddress: Integer;
+begin
+  CallerChain := HookGetCallerChain();
+  SendMessageToLoader(A1, Integer(CallerChain.Caller));
+  SendMessageToLoader(A4, Integer(CallerChain.Prev.Caller));
+  OriginalAddress := OriginalAddresses[10];
+  asm
+    push  A5
+    push  A4
+    push  A3
+    push  A2
+    push  A1
+    mov   eax, OriginalAddress
+    call  eax
+    mov   @Result, eax
+  end;
+end;
+
+{$O-}
+
+procedure HookBase(); stdcall;
+var
+  HookInfo: THookInfo;
+  i: Integer;
+  ReturnAddress: Pointer;
+begin
+  asm
+    mov   HookInfo.CallerChain, ebp
+    mov   eax, [ebp + 4]
+    mov   eax, [eax - 4]
+    mov   HookInfo.Addr, eax
+  end;
+  i := HookListAddr.IndexOf(HookInfo.Addr);
+  HookInfo.AddrOriginal := HookListAddrOriginal[i];
+  HookInfo.AddrPatched := HookListAddrPatched[i];
+  HookInfo.ParamsCount := Integer(HookListParamsCount[i]);
+  //SendMessageToLoader(Integer(HookInfo.Addr), Integer(HookInfo.ParamsCount));
+  //SendMessageToLoader(Integer(HookInfo.AddrOriginal), Integer(HookInfo.AddrPatched));
+  asm
+    lea   eax, HookInfo
+    push  eax
+  end;
+  HookPushParams(HookInfo.ParamsCount);
+  asm
+    mov   eax, HookInfo.AddrPatched
+    call  eax
+    mov   ecx, HookInfo.ParamsCount
+    shl   ecx, 2
+    leave
+    pop   edx
+    add   esp, ecx 
+    push  edx
+    ret
+  end;
+end;
+
+{$O+}
+
+procedure HookFunction(Index: Integer; HProcess: THandle; Address: Integer; ProcAddress: Pointer; ParamsCount: Integer);
 var
   BytesRead: Cardinal;
-  PatchedAddress: LongRec;
+  OriginalAddress: Pointer;
 begin
-  ReadProcessMemory(HProcess, Pointer(Address), @OriginalAddresses[Index], 4, BytesRead);
-  PatchedAddress := LongRec(ProcAddress);
-  WriteMemory(HProcess, Address, [PatchedAddress.Bytes[0], PatchedAddress.Bytes[1], PatchedAddress.Bytes[2], PatchedAddress.Bytes[3]]);
+  ReadProcessMemory(HProcess, Pointer(Address), @OriginalAddress, 4, BytesRead);
+  OriginalAddresses[Index] := Integer(OriginalAddress);
+  HookListAddr.Add(Pointer(Address));
+  HookListAddrOriginal.Add(OriginalAddress);
+  HookListAddrPatched.Add(ProcAddress);
+  HookListParamsCount.Add(Pointer(ParamsCount));
+  //  WriteMemory(HProcess, Address, [], ProcAddress, True);
+  WriteMemory(HProcess, Address, [], @HookBase, True);
 end;
 
 procedure HookImportedFunctions(HProcess: THandle);
 begin
+  HookListAddr := TList.Create();
+  HookListAddrOriginal := TList.Create();
+  HookListAddrPatched := TList.Create();
+  HookListParamsCount := TList.Create();
   //HookFunction(1, HProcess, $006E7D94, @PatchSetFocus);
   //HookFunction(2, HProcess, $006E7E1C, @PatchDestroyWindow);
-  //HookFunction(3, HProcess, $006E7E24, @PatchShowWindow);
+  //HookFunction(3, HProcess, $006E7E24, @PatchShowWindow, 2);
   //HookFunction(4, HProcess, $006E7DB8, @PatchHookSetWindowPos); - Never Used!
   //HookFunction(5, HProcess, $006E7DB0, @PatchHookSetWindowLongA);
   //HookFunction(6, HProcess, $006E7E64, @PatchHookSetCursor);
   //HookFunction(7, HProcess, $006E7D50, @PatchHookCreateWindowEx);
   //HookFunction(8, HProcess, $006E7ED0, @PatchHookAppendMenu);
+  //HookFunction(9, HProcess, $006E7EA8, @PatchHookSetScrollPos);
+  //HookFunction(10, HProcess, $006E7EAC, @PatchHookSetScrollRange);
   //SendMessageToLoader(3, OriginalAddresses[2]);
 end;
 

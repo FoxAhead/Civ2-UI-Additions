@@ -727,7 +727,7 @@ begin
     goto EndOfFunction;
   end;}
 
-  if (HWndScrollBar > 0) and IsWindowVisible(HWndScrollBar) then
+  if (HWndScrollBar > 0) and IsWindowVisible(HWndScrollBar) and (IsWindowEnabled(HWndScrollBar)) then
   begin
     ScrollLines := 3;
     case WindowType of
@@ -2195,6 +2195,75 @@ asm
     ret
 end;
 
+procedure PatchUpdateDialogWindow(); stdcall;
+var
+  Dialog: PDialogWindow;
+  DeltaY: Integer;
+  ListItemHeight: Integer;
+  ListboxHeight: Integer;
+  i: Integer;
+  Control: PControlInfo;
+  RP: PRect;
+  DialogIndex: Integer;
+  ScrollInfo: TScrollInfo;
+begin
+  Dialog := Civ2.CurrPopupInfo^;
+  if Dialog <> nil then
+  begin
+    if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
+    begin
+      DialogIndex := Dialog._Extra.DialogIndex;
+
+      DeltaY := Dialog.GraphicsInfo^.DrawPort.RectHeight - Dialog.ClientSize.cy + 1;
+      Dialog.ClientSize.cy := Dialog.GraphicsInfo^.DrawPort.RectHeight + 1;
+
+      if DialogIndex in ResizableDialogListbox then
+      begin
+        ListItemHeight := Dialog.FontInfo3.Height + 1;
+        Dialog.ListboxPageSize[0] := (Dialog.ListboxHeight[0] + DeltaY - 2) div ListItemHeight;
+        Dialog.ListboxHeight[0] := Dialog.ListboxHeight[0] + DeltaY;
+        Dialog.Rects1[0].Bottom := Dialog.Rects1[0].Bottom + DeltaY;
+        Dialog.Rects2[0].Bottom := Dialog.Rects2[0].Bottom + DeltaY;
+        Dialog.Rects3[0].Bottom := Dialog.Rects3[0].Bottom + DeltaY;
+        Dialog.ButtonsTop := Dialog.ButtonsTop + DeltaY;
+        UIASettings.DialogLines[DialogIndex] := Dialog.ListboxPageSize[0];
+      end
+      else if DialogIndex in ResizableDialogList then
+      begin
+        Dialog._Extra.ListPageSize := (Dialog.ClientSize.cy - 79) div (Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing);
+        UIASettings.DialogLines[DialogIndex] := Dialog._Extra.ListPageSize;
+
+        {ScrollInfo.cbSize := SizeOf(ScrollInfo);
+        ScrollInfo.nPage := Dialog._Extra.ListPageSize;
+        ScrollInfo.fMask := SIF_PAGE;
+        SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, False);
+        Dialog._Extra.ListPageStart := GetScrollPos(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL);}
+
+      end;
+
+      for i := 0 to Dialog.NumButtons + Dialog.NumButtonsStd - 1 do
+      begin
+        Control := @Dialog.ButtonControls[i].ControlInfo;
+        RP := @Control.Rect;
+        OffsetRect(RP^, 0, DeltaY);
+        SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOSIZE);
+      end;
+      Control := @Dialog.ScrollControls1[0].ControlInfo;
+      if Control <> nil then
+      begin
+        RP := @Control.Rect;
+        RP.Bottom := RP.Bottom + DeltaY;
+        SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOMOVE);
+      end;
+    end;
+
+    asm
+    mov   eax, $00005A20F4
+    call  eax
+    end;
+  end;
+end;
+
 procedure PatchCreateDialogDimensionEx(Dialog: PDialogWindow); stdcall;
 var
   DialogIndex: Integer;
@@ -2205,6 +2274,7 @@ begin
   if (DialogIndex > 0) and (Dialog.ScrollOrientation = 0) then // Vertical
   begin
     Dialog._Extra := Civ2.Heap_Add(@Dialog.Heap, SizeOf(TDialogExtra));
+    ZeroMemory(Dialog._Extra, SizeOf(Dialog._Extra));
     Dialog._Extra.DialogIndex := DialogIndex;
     if DialogIndex in ResizableDialogListbox then
     begin
@@ -2219,7 +2289,7 @@ begin
     end
     else if (DialogIndex in ResizableDialogList) and (Dialog.NumListItems > 9) then
     begin
-      Dialog._Extra.ListPageStart := 0;
+      //      Dialog._Extra.ListPageStart := 0;
     end
     else
       Dialog._Extra.DialogIndex := 0;
@@ -2344,16 +2414,21 @@ begin
       Dialog.ScrollControls1[0] := Civ2.Scroll_Ctr(Civ2.Crt_OperatorNew(SizeOf(TControlInfoScroll)));
       Civ2.CreateScrollbar(Dialog.ScrollControls1[0], @Dialog.GraphicsInfo.WindowInfo, $0B, @Rect, 1);
       Civ2.InitControlScrollRange(Dialog.ScrollControls1[0], 0, Dialog.NumListItems - 1);
-      Civ2.SetScrollPosition(Dialog.ScrollControls1[0], Dialog._Extra.ListPageStart);
+      Civ2.SetScrollPosition(Dialog.ScrollControls1[0], 0);
       Civ2.SetScrollPageSize(Dialog.ScrollControls1[0], Dialog._Extra.ListPageSize);
+
+      ZeroMemory(@ScrollInfo, SizeOf(ScrollInfo));
+      ScrollInfo.cbSize := SizeOf(ScrollInfo);
+      ScrollInfo.fMask := SIF_ALL or SIF_DISABLENOSCROLL;
+      ScrollInfo.nPage := Dialog._Extra.ListPageSize;
+      ScrollInfo.nMin := 0;
+      ScrollInfo.nMax := Dialog.NumListItems - 1;
+      ScrollInfo.nPos := 0;
+      ScrollInfo.nTrackPos := 0;
+      Dialog._Extra.ListPageStart := SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, True);
+
       Dialog.ScrollControls1[0].ProcRedraw := @CallBackDialogListScroll;
       Dialog.ScrollControls1[0].ProcTrack := @CallBackDialogListScroll;
-
-      ScrollInfo.cbSize := SizeOf(ScrollInfo);
-      ScrollInfo.nPage := Dialog._Extra.ListPageSize;
-      ScrollInfo.fMask := SIF_PAGE;
-      SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, True);
-
     end;
   end;
 end;
@@ -2367,73 +2442,145 @@ asm
     ret
 end;
 
-procedure PatchUpdateDialogWindow(); stdcall;
+// Return 1 if processed
+function PatchCreateDialogDrawListEx(Dialog: PDialogWindow): Integer; stdcall;
 var
-  Dialog: PDialogWindow;
-  DeltaY: Integer;
-  ListItemHeight: Integer;
-  ListboxHeight: Integer;
   i: Integer;
-  Control: PControlInfo;
-  RP: PRect;
-  DialogIndex: Integer;
+  ListItem: PListItem;
+  HWindow: HWND;
+  ListItemX, ListItemY: Integer;
+  SpriteW, SpriteH: Integer;
+  FontHeight: Integer;
+  R: TRect;
+  PageStart, PageFinish: Integer;
   ScrollInfo: TScrollInfo;
 begin
-  Dialog := Civ2.CurrPopupInfo^;
-  if Dialog <> nil then
+  Result := 0;
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
   begin
-    if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
+    if Dialog._Extra.DialogIndex in ResizableDialogList then
     begin
-      DialogIndex := Dialog._Extra.DialogIndex;
-
-      DeltaY := Dialog.GraphicsInfo^.DrawPort.RectHeight - Dialog.ClientSize.cy + 1;
-      Dialog.ClientSize.cy := Dialog.GraphicsInfo^.DrawPort.RectHeight + 1;
-
-      if DialogIndex in ResizableDialogListbox then
+      ShowWindow(Dialog.GraphicsInfo.WindowInfo.WindowStructure.HWindow, SW_SHOW);
+      // Set scrollbar
+      ZeroMemory(@ScrollInfo, SizeOf(ScrollInfo));
+      ScrollInfo.cbSize := SizeOf(ScrollInfo);
+      ScrollInfo.fMask := SIF_PAGE or SIF_POS or SIF_DISABLENOSCROLL;
+      ScrollInfo.nPage := Dialog._Extra.ListPageSize;
+      ScrollInfo.nPos := Dialog._Extra.ListPageStart;
+      Dialog._Extra.ListPageStart := SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, True);
+      //SendMessageToLoader($1111, $1111);
+      // Draw list items
+      FontHeight := Civ2.GetFontHeightWithExLeading(Dialog.FontInfo1);
+      Civ2.SetSpriteZoom(Dialog.Zoom);
+      ListItemX := Dialog.ListTopLeft.X;
+      ListItemY := Dialog.ListTopLeft.Y;
+      i := 0;
+      ListItem := Dialog.FirstListItem;
+      PageStart := Dialog._Extra.ListPageStart;
+      PageFinish := PageStart + Dialog._Extra.ListPageSize - 1;
+      while ListItem <> nil do
       begin
-        ListItemHeight := Dialog.FontInfo3.Height + 1;
-        Dialog.ListboxPageSize[0] := (Dialog.ListboxHeight[0] + DeltaY - 2) div ListItemHeight;
-        Dialog.ListboxHeight[0] := Dialog.ListboxHeight[0] + DeltaY;
-        Dialog.Rects1[0].Bottom := Dialog.Rects1[0].Bottom + DeltaY;
-        Dialog.Rects2[0].Bottom := Dialog.Rects2[0].Bottom + DeltaY;
-        Dialog.Rects3[0].Bottom := Dialog.Rects3[0].Bottom + DeltaY;
-        Dialog.ButtonsTop := Dialog.ButtonsTop + DeltaY;
-        UIASettings.DialogLines[DialogIndex] := Dialog.ListboxPageSize[0];
-      end
-      else if DialogIndex in ResizableDialogList then
-      begin
-        Dialog._Extra.ListPageSize := (Dialog.ClientSize.cy - 79) div (Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing);
-        UIASettings.DialogLines[DialogIndex] := Dialog._Extra.ListPageSize;
-
-        ScrollInfo.cbSize := SizeOf(ScrollInfo);
-        ScrollInfo.nPage := Dialog._Extra.ListPageSize;
-        ScrollInfo.fMask := SIF_PAGE;
-        SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, True);
-        Dialog._Extra.ListPageStart := GetScrollPos(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL);
-        
+        if i in [PageStart..PageFinish] then
+        begin
+          SpriteW := ScaleByZoom(RectWidth(@ListItem.Sprite.Rectangle1), Dialog.Zoom);
+          SpriteH := ScaleByZoom(RectHeight(@ListItem.Sprite.Rectangle1), Dialog.Zoom);
+          if Assigned(Dialog.Proc3SpriteDraw) then
+            Dialog.Proc3SpriteDraw(ListItem.Sprite, Dialog.GraphicsInfo, ListItem.UnitIndex, ListItem.Unknown_04, ListItemX, ListItemY);
+          if ((Dialog.Flags and $20000) <> 0) and (Dialog.SelectedListItem = ListItem) then
+          begin
+            R := Rect(ListItemX - 1, ListItemY - 1, ListItemX + SpriteW, ListItemY + SpriteH);
+            //R := Rect(ListItemX - 1, ListItemY - 1, Dialog.ClientSize.cx - 27, ListItemY + SpriteH);
+            Civ2.DrawFrame(@Dialog.GraphicsInfo.DrawPort, @R, Dialog.Color4);
+          end;
+          if ListItem.Text <> nil then
+            Civ2.DlgDrawTextLine(Dialog, ListItem.Text, ListItemX + SpriteW + Dialog.TextIndent, ListItemY + ((SpriteH - FontHeight) div 2), 0);
+          ListItemY := ListItemY + SpriteH + Dialog.LineSpacing;
+        end
+        else
+          ShowWindow(Dialog.ListItemControls[i].ControlInfo.HWindow, SW_HIDE);
+        Inc(i);
+        ListItem := ListItem.Next;
       end;
-
-      for i := 0 to Dialog.NumButtons + Dialog.NumButtonsStd - 1 do
-      begin
-        Control := @Dialog.ButtonControls[i].ControlInfo;
-        RP := @Control.Rect;
-        OffsetRect(RP^, 0, DeltaY);
-        SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOSIZE);
-      end;
-      Control := @Dialog.ScrollControls1[0].ControlInfo;
-      if Control <> nil then
-      begin
-        RP := @Control.Rect;
-        RP.Bottom := RP.Bottom + DeltaY;
-        SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOMOVE);
-      end;
-    end;
-
-    asm
-    mov   eax, $00005A20F4
-    call  eax
+      Civ2.ResetSpriteZoom();
+      Result := 1;
     end;
   end;
+end;
+
+procedure PatchCreateDialogDrawList(); register;
+asm
+    jz    @@LABEL1
+    push  [ebp - $5C] // P_DialogWindow this
+    call  PatchCreateDialogDrawListEx
+    cmp   eax, 1;
+    je    @@LABEL1
+    mov   eax, $005A5A58
+    jmp   eax
+
+@@LABEL1:
+    push  $005A5C11
+    ret
+end;
+
+procedure PatchCreateDialogShowListEx(Dialog: PDialogWindow);
+var
+  IsResizableDialog: Boolean;
+  i: Integer;
+  HWindow: HWND;
+  PageStart, PageFinish: Integer;
+  RP: PRect;
+  ListItemY: Integer;
+  Control: PControlInfo;
+  ScrollInfo: TScrollInfo;
+begin
+  IsResizableDialog := False;
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
+    IsResizableDialog := Dialog._Extra.DialogIndex in ResizableDialogList;
+  if IsResizableDialog then
+  begin
+    PageStart := Dialog._Extra.ListPageStart;
+    PageFinish := PageStart + Dialog._Extra.ListPageSize - 1;
+    ListItemY := Dialog.ListTopLeft.Y;
+    for i := 0 to Dialog.NumListItems - 1 do
+    begin
+      Control := @Dialog.ListItemControls[i];
+      if i in [PageStart..PageFinish] then
+      begin
+        RP := @Control.Rect;
+        OffsetRect(RP^, 0, -RP^.Top + ListItemY);
+        SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOSIZE or SWP_NOREDRAW);
+        Civ2.ShowWindowInvalidateRect(Control);
+        ListItemY := ListItemY + Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing;
+      end
+      else
+      begin
+        ShowWindow(Control.HWindow, SW_HIDE);
+      end;
+    end;
+
+    //Tests
+    {ZeroMemory(@ScrollInfo, SizeOf(ScrollInfo));
+    ScrollInfo.cbSize := SizeOf(ScrollInfo);
+    ScrollInfo.fMask := SIF_PAGE or SIF_DISABLENOSCROLL;
+    ScrollInfo.nPage := Dialog._Extra.ListPageSize;
+    Dialog._Extra.ListPageStart := SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, True);}
+
+    RedrawWindow(Dialog.GraphicsInfo.WindowInfo.WindowStructure.HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
+    //    Civ2.ShowWindowInvalidateRect(@Dialog.ScrollControls1[0].ControlInfo);
+
+  end
+  else
+    // Original code
+    for i := 0 to Dialog.NumListItems - 1 do
+      Civ2.ShowWindowInvalidateRect(@Dialog.ListItemControls[i].ControlInfo);
+end;
+
+procedure PatchCreateDialogShowList(); register;
+asm
+    push  [ebp - $5C] // P_DialogWindow this
+    call  PatchCreateDialogShowListEx
+    push  $005A5F19
+    ret
 end;
 
 //
@@ -2490,120 +2637,79 @@ begin
 end;
 
 // Return 1 if processed
-function PatchDlgDrawListEx(Dialog: PDialogWindow): Integer; stdcall;
+function PatchDlgKeyDownListEx(KeyCode: Integer): Integer; stdcall;
 var
-  i: Integer;
+  Dialog: PDialogWindow;
   ListItem: PListItem;
-  HWindow: HWND;
-  ListItemX, ListItemY: Integer;
-  SpriteW, SpriteH: Integer;
-  FontHeight: Integer;
-  R: TRect;
+  Pos, NewPos: Integer;
   PageStart, PageFinish: Integer;
+  List: TList;
 begin
   Result := 0;
+  Dialog := Civ2.CurrPopupInfo^;
   if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
   begin
     if Dialog._Extra.DialogIndex in ResizableDialogList then
     begin
-      FontHeight := Civ2.GetFontHeightWithExLeading(Dialog.FontInfo1);
-      Civ2.SetSpriteZoom(Dialog.Zoom);
-      ListItemX := Dialog.ListTopLeft.X;
-      ListItemY := Dialog.ListTopLeft.Y;
-      i := 0;
-      ListItem := Dialog.FirstListItem;
       PageStart := Dialog._Extra.ListPageStart;
       PageFinish := PageStart + Dialog._Extra.ListPageSize - 1;
+      List := TList.Create();
+      ListItem := Dialog.FirstListItem;
       while ListItem <> nil do
       begin
-        if i in [PageStart..PageFinish] then
-        begin
-          SpriteW := ScaleByZoom(RectWidth(@ListItem.Sprite.Rectangle1), Dialog.Zoom);
-          SpriteH := ScaleByZoom(RectHeight(@ListItem.Sprite.Rectangle1), Dialog.Zoom);
-          if Assigned(Dialog.Proc3SpriteDraw) then
-            Dialog.Proc3SpriteDraw(ListItem.Sprite, Dialog.GraphicsInfo, ListItem.UnitIndex, ListItem.Unknown_04, ListItemX, ListItemY);
-          if ((Dialog.Flags and $20000) <> 0) and (Dialog.SelectedListItem = ListItem) then
-          begin
-            R := Rect(ListItemX - 1, ListItemY - 1, ListItemX + SpriteW, ListItemY + SpriteH);
-            //R := Rect(ListItemX - 1, ListItemY - 1, Dialog.ClientSize.cx - 27, ListItemY + SpriteH);
-            Civ2.DrawFrame(@Dialog.GraphicsInfo.DrawPort, @R, Dialog.Color4);
-          end;
-          if ListItem.Text <> nil then
-            Civ2.DlgDrawTextLine(Dialog, ListItem.Text, ListItemX + SpriteW + Dialog.TextIndent, ListItemY + ((SpriteH - FontHeight) div 2), 0);
-          ListItemY := ListItemY + SpriteH + Dialog.LineSpacing;
-        end
-        else
-          ShowWindow(Dialog.ListItemControls[i].ControlInfo.HWindow, SW_HIDE);
-        Inc(i);
+        List.Add(ListItem);
         ListItem := ListItem.Next;
       end;
-      Civ2.ResetSpriteZoom();
+      Pos := Max(0, List.IndexOf(Dialog.SelectedListItem));
+      NewPos := Pos;
+      case KeyCode of
+        $A2, $C1:                         // Down
+          NewPos := Pos + 1;
+        $A8, $C0:                         // Up
+          NewPos := Pos - 1;
+        $A7, $C4:                         // Home
+          NewPos := 0;
+        $A1, $C7:                         // End
+          NewPos := List.Count - 1;
+        $A9, $C5:                         // PgUp
+          NewPos := Max(0, NewPos - Dialog._Extra.ListPageSize);
+        $A3, $C6:                         // PgDn
+          NewPos := Min(NewPos + Dialog._Extra.ListPageSize, List.Count - 1);
+        $D1:                              // Space
+          begin
+            if Dialog.SelectedListItem <> nil then
+            begin
+              Civ2.ListItemProcLButtonUp(Dialog.SelectedListItem.UnitIndex);
+            end;
+
+          end;
+      end;
+      if Pos <> NewPos then
+      begin
+        NewPos := (NewPos + List.Count) mod List.Count;
+        Dialog.SelectedListItem := List[NewPos];
+        if NewPos < PageStart then
+          Dialog._Extra.ListPageStart := NewPos
+        else if NewPos > PageFinish then
+          Dialog._Extra.ListPageStart := NewPos - Dialog._Extra.ListPageSize + 1;
+        Civ2.CreateDialog(Dialog);
+      end;
+      List.Free();
       Result := 1;
     end;
   end;
 end;
 
-procedure PatchDlgDrawList(); register;
+procedure PatchDlgKeyDownList(); register;
 asm
-    jz    @@LABEL1
-    push  [ebp - $5C] // P_DialogWindow this
-    call  PatchDlgDrawListEx
-    cmp   eax, 1;
+    push  [ebp + $08] // aKeyCode
+    call  PatchDlgKeyDownListEx
+    cmp   eax, 1
     je    @@LABEL1
-    mov   eax, $005A5A58
-    jmp   eax
-
-@@LABEL1:
-    push  $005A5C11
+    push  $005A41D5
     ret
-end;
-
-procedure PatchCreateDialogShowListEx(Dialog: PDialogWindow);
-var
-  IsResizableDialog: Boolean;
-  i: Integer;
-  HWindow: HWND;
-  PageStart, PageFinish: Integer;
-  RP: PRect;
-  ListItemY: Integer;
-  Control: PControlInfo;
-begin
-  IsResizableDialog := False;
-  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
-    IsResizableDialog := Dialog._Extra.DialogIndex in ResizableDialogList;
-  if IsResizableDialog then
-  begin
-    PageStart := Dialog._Extra.ListPageStart;
-    PageFinish := PageStart + Dialog._Extra.ListPageSize - 1;
-    ListItemY := Dialog.ListTopLeft.Y;
-    for i := 0 to Dialog.NumListItems - 1 do
-    begin
-      Control := @Dialog.ListItemControls[i];
-      if i in [PageStart..PageFinish] then
-      begin
-        RP := @Control.Rect;
-        OffsetRect(RP^, 0, -RP^.Top + ListItemY);
-        SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOSIZE or SWP_NOREDRAW);
-        Civ2.ShowWindowInvalidateRect(Control);
-        ListItemY := ListItemY + Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing;
-      end
-      else
-      begin
-        ShowWindow(Control.HWindow, SW_HIDE);
-      end;
-    end;
-    RedrawWindow(Dialog.GraphicsInfo.WindowInfo.WindowStructure.HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
-  end
-  else
-    for i := 0 to Dialog.NumListItems - 1 do
-      Civ2.ShowWindowInvalidateRect(@Dialog.ListItemControls[i].ControlInfo);
-end;
-
-procedure PatchCreateDialogShowList(); register;
-asm
-    push  [ebp - $5C] // P_DialogWindow this
-    call  PatchCreateDialogShowListEx
-    push  $005A5F19
+@@LABEL1:
+    push  $005A4240
     ret
 end;
 
@@ -2756,8 +2862,14 @@ begin
   WriteMemory(HProcess, $005B6BFE, [OP_NOP, OP_JMP]); // Ignore limit of 9 Units
   WriteMemory(HProcess, $005A0200, [OP_JMP], @PatchCreateDialogDimensionList);
   WriteMemory(HProcess, $005A3388, [OP_JMP], @PatchCreateDialogPartsList);
-  WriteMemory(HProcess, $005A5A52, [OP_JMP], @PatchDlgDrawList);
+  WriteMemory(HProcess, $005A5A52, [OP_JMP], @PatchCreateDialogDrawList);
   WriteMemory(HProcess, $005A5EE7, [OP_JMP], @PatchCreateDialogShowList);
+  WriteMemory(HProcess, $005A40D7, [OP_JMP], @PatchDlgKeyDownList);
+
+  //
+  //WriteMemory(HProcess, $005A5CDA, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
+  //WriteMemory(HProcess, $005A5CDF, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
+  //WriteMemory(HProcess, $00408637, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

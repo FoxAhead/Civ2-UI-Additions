@@ -84,6 +84,7 @@ type
     procedure DrawFrame(DrawPort: PDrawPort; Rect: PRect; Color: Integer);
     procedure CallRedrawAfterScroll(ControlInfoScroll: PControlInfoScroll; Pos: Integer);
     procedure CreateDialog(Dialog: PDialogWindow);
+    procedure ListItemProcLButtonUp(Code: Integer);
   published
   end;
 
@@ -526,6 +527,14 @@ asm
     mov   ecx, Dialog
     mov   eax, $004026D5
     call  eax
+end;
+
+procedure TCiv2.ListItemProcLButtonUp(Code: Integer);
+asm
+    push  Code
+    mov   eax, $005A3CCA
+    call  eax
+    add   esp, 4
 end;
 
 end.

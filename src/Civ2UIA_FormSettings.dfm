@@ -1,8 +1,8 @@
 object FormSettings: TFormSettings
-  Left = 704
-  Top = 267
+  Left = 709
+  Top = 251
   BorderStyle = bsDialog
-  Caption = 'FormSettings'
+  Caption = 'UIA Settings'
   ClientHeight = 212
   ClientWidth = 302
   Color = clBtnFace
@@ -55,7 +55,7 @@ object FormSettings: TFormSettings
     Max = 30
     Min = -30
     PageSize = 0
-    TabOrder = 1
+    TabOrder = 0
     TabStop = False
     OnChange = ScrollBar1Change
   end
@@ -69,11 +69,11 @@ object FormSettings: TFormSettings
     Min = 1
     PageSize = 0
     Position = 1
-    TabOrder = 2
+    TabOrder = 1
     TabStop = False
     OnChange = ScrollBar1Change
   end
-  object Button1: TButton
+  object ButtonClose: TButton
     Left = 112
     Top = 176
     Width = 75
@@ -81,60 +81,122 @@ object FormSettings: TFormSettings
     Anchors = [akBottom]
     Cancel = True
     Caption = 'Close'
-    TabOrder = 0
-    OnClick = Button1Click
+    TabOrder = 13
+    OnClick = ButtonCloseClick
   end
-  object Button3: TButton
-    Left = 64
+  object btn4: TButton
+    Tag = -2
+    Left = 96
     Top = 56
-    Width = 25
-    Height = 25
+    Width = 24
+    Height = 24
     Caption = '-2'
-    TabOrder = 3
-    OnClick = Button3Click
+    TabOrder = 5
+    OnClick = ButtonColorPresetClick
   end
-  object Button4: TButton
-    Left = 104
+  object btn5: TButton
+    Tag = -1
+    Left = 120
     Top = 56
-    Width = 25
-    Height = 25
+    Width = 24
+    Height = 24
     Caption = '-1'
-    TabOrder = 4
-    OnClick = Button4Click
+    TabOrder = 6
+    OnClick = ButtonColorPresetClick
   end
-  object Button5: TButton
+  object btn6: TButton
     Left = 144
     Top = 56
-    Width = 25
-    Height = 25
+    Width = 24
+    Height = 24
     Caption = '0'
-    TabOrder = 5
-    OnClick = Button5Click
-  end
-  object Button6: TButton
-    Left = 184
-    Top = 56
-    Width = 25
-    Height = 25
-    Caption = '+1'
-    TabOrder = 6
-    OnClick = Button6Click
-  end
-  object Button7: TButton
-    Left = 224
-    Top = 56
-    Width = 25
-    Height = 25
-    Caption = '+2'
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -11
+    Font.Name = 'MS Sans Serif'
+    Font.Style = [fsBold]
+    ParentFont = False
     TabOrder = 7
-    OnClick = Button7Click
+    OnClick = ButtonColorPresetClick
   end
-  object CheckBox1: TCheckBox
-    Left = 8
-    Top = 104
-    Width = 97
-    Height = 17
-    Caption = 'CheckBox1'
+  object btn7: TButton
+    Tag = 1
+    Left = 168
+    Top = 56
+    Width = 24
+    Height = 24
+    Caption = '+1'
     TabOrder = 8
+    OnClick = ButtonColorPresetClick
+  end
+  object btn8: TButton
+    Tag = 2
+    Left = 192
+    Top = 56
+    Width = 24
+    Height = 24
+    Caption = '+2'
+    TabOrder = 9
+    OnClick = ButtonColorPresetClick
+  end
+  object btn3: TButton
+    Tag = -3
+    Left = 72
+    Top = 56
+    Width = 24
+    Height = 24
+    Caption = '-3'
+    TabOrder = 4
+    OnClick = ButtonColorPresetClick
+  end
+  object btn9: TButton
+    Tag = 3
+    Left = 216
+    Top = 56
+    Width = 24
+    Height = 24
+    Caption = '+3'
+    TabOrder = 10
+    OnClick = ButtonColorPresetClick
+  end
+  object btn2: TButton
+    Tag = -4
+    Left = 48
+    Top = 56
+    Width = 24
+    Height = 24
+    Caption = '-4'
+    TabOrder = 3
+    OnClick = ButtonColorPresetClick
+  end
+  object btn10: TButton
+    Tag = 4
+    Left = 240
+    Top = 56
+    Width = 24
+    Height = 24
+    Caption = '+4'
+    TabOrder = 11
+    OnClick = ButtonColorPresetClick
+  end
+  object btn1: TButton
+    Tag = -5
+    Left = 24
+    Top = 56
+    Width = 24
+    Height = 24
+    Caption = '-5'
+    TabOrder = 2
+    OnClick = ButtonColorPresetClick
+  end
+  object btn11: TButton
+    Tag = 5
+    Left = 264
+    Top = 56
+    Width = 24
+    Height = 24
+    Caption = '+5'
+    TabOrder = 12
+    OnClick = ButtonColorPresetClick
   end
 end

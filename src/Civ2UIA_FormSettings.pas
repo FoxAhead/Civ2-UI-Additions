@@ -16,21 +16,22 @@ type
     Label3: TLabel;
     ScrollBar2: TScrollBar;
     Label4: TLabel;
-    Button1: TButton;
-    Button3: TButton;
-    Button4: TButton;
-    Button5: TButton;
-    Button6: TButton;
-    Button7: TButton;
-    CheckBox1: TCheckBox;
+    ButtonClose: TButton;
+    btn4: TButton;
+    btn5: TButton;
+    btn6: TButton;
+    btn7: TButton;
+    btn8: TButton;
+    btn3: TButton;
+    btn9: TButton;
+    btn2: TButton;
+    btn10: TButton;
+    btn1: TButton;
+    btn11: TButton;
     procedure FormCreate(Sender: TObject);
     procedure ScrollBar1Change(Sender: TObject);
-    procedure Button1Click(Sender: TObject);
-    procedure Button3Click(Sender: TObject);
-    procedure Button4Click(Sender: TObject);
-    procedure Button5Click(Sender: TObject);
-    procedure Button6Click(Sender: TObject);
-    procedure Button7Click(Sender: TObject);
+    procedure ButtonCloseClick(Sender: TObject);
+    procedure ButtonColorPresetClick(Sender: TObject);
   private
     { Private declarations }
     ColorChangeEventActive: Boolean;
@@ -76,7 +77,7 @@ begin
   Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.Palette);
   Civ2.UpdateDIBColorTableFromPalette(@GraphicsInfo.DrawPort, GraphicsInfo.WindowInfo.Palette);
   // Also recreate main window brush for background
-  Civ2.RecreateBrush(Civ2.MainWindowInfo, $9E); 
+  Civ2.RecreateBrush(Civ2.MainWindowInfo, $9E);
   // Also set new palette for map overlay - to be consistent with the game look
   Civ2.SetDIBColorTableFromPalette(DrawTestData.DrawPort.DrawInfo, GraphicsInfo.WindowInfo.Palette);
   // Redraw main window with all subwindows
@@ -84,7 +85,7 @@ begin
   RedrawWindow(HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
 end;
 
-procedure TFormSettings.Button1Click(Sender: TObject);
+procedure TFormSettings.ButtonCloseClick(Sender: TObject);
 begin
   Close;
 end;
@@ -105,29 +106,15 @@ begin
   SetScrollbars();
 end;
 
-procedure TFormSettings.Button3Click(Sender: TObject);
+procedure TFormSettings.ButtonColorPresetClick(Sender: TObject);
+var
+  Tag: Integer;
+  Exposure, Gamma: Double;
 begin
-  SetColor(-0.45, 0.8);
-end;
-
-procedure TFormSettings.Button4Click(Sender: TObject);
-begin
-  SetColor(-0.20, 0.9);
-end;
-
-procedure TFormSettings.Button5Click(Sender: TObject);
-begin
-  SetColor(0.00, 1.00);
-end;
-
-procedure TFormSettings.Button6Click(Sender: TObject);
-begin
-  SetColor(0.20, 1.10);
-end;
-
-procedure TFormSettings.Button7Click(Sender: TObject);
-begin
-  SetColor(0.45, 1.20);
+  Tag := TComponent(Sender).Tag;
+  Exposure := 0 + Tag * 0.10;
+  Gamma := 1.0 + Tag * 0.05;
+  SetColor(Exposure, Gamma);
 end;
 
 end.
