@@ -26,7 +26,7 @@ type
     Length: Integer;
   end;
 
-  TShadows = set of (stTopLeft, stTop, stTopRight);
+//  TShadows = set of (stTopLeft, stTop, stTopRight);
 
   TMouseDrag = packed record
     Active: Boolean;
@@ -61,7 +61,7 @@ type
     ColorExposure: Double;
     ColorGamma: Double;
     AdvisorHeights: array [1..12] of Word;
-    ListboxHeights: array [1..3] of Word;
+    DialogLines: array [1..5] of Word;
   end;
 
   PCallerChain = ^TCallerChain;

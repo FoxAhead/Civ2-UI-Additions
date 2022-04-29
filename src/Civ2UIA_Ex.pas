@@ -5,7 +5,8 @@ interface
 uses
   Classes,
   Contnrs,
-  Windows;
+  Windows,
+  Civ2Types;
 
 type
   TEx = class
@@ -24,7 +25,7 @@ type
     procedure LoadSettingsFile();
     procedure SaveSettingsFile();
     procedure LoadDefaultSettings();
-    function GetSizableDialogNameIndex(Section: PChar): Integer;
+    function GetResizableDialogIndex(Dialog: PDialogWindow): Integer;
   published
 
   end;
@@ -37,16 +38,19 @@ implementation
 uses
   SysUtils,
   Civ2Proc,
-  Civ2Types,
   Civ2UIA_Proc,
   Civ2UIA_Global,
   Civ2UIA_MapMessage;
 
 const
-  SizableDialogNames: array[1..3] of PChar = (
+  ResizableDialogSectionNames: array[1..4] of PChar = (
     PChar($00630F1C),                     // PRODUCTION
     PChar($00625F30),                     // INTELLCITY
-    PChar($00624F24)                      // FINDCITY
+    PChar($00624F24),                     // FINDCITY
+    PChar($00634BA4)                      // GOTO
+    );
+  ResizableDialogTitleIndex: array[1..1] of Integer = (
+    $3E                                   // Select Unit To Activate
     );
 
 function CompareCityUnits(Item1, Item2: Pointer): Integer;
@@ -164,19 +168,36 @@ begin
   UIASettings.ColorGamma := 1.0;
 end;
 
-function TEx.GetSizableDialogNameIndex(Section: PChar): Integer;
+function TEx.GetResizableDialogIndex(Dialog: PDialogWindow): Integer;
 var
   i: Integer;
+  StringInList: PChar;
 begin
   Result := 0;
-  for i := Low(SizableDialogNames) to High(SizableDialogNames) do
-  begin
-    if StrComp(Section, SizableDialogNames[i]) = 0 then
+  if (Civ2.LoadedTxtSectionName <> nil) and (Dialog.Flags and $41000 = $1000) then // Has listbox, not system
+    for i := Low(ResizableDialogSectionNames) to High(ResizableDialogSectionNames) do
     begin
-      Result := i;
-      Exit;
+      if StrComp(Civ2.LoadedTxtSectionName, ResizableDialogSectionNames[i]) = 0 then
+      begin
+        Result := i;
+        Exit;
+      end;
     end;
+  if (Integer(Dialog.Proc1) = $00402C11) and (Integer(Dialog.Proc2) = $004018C0) then
+  begin
+    Result := High(ResizableDialogSectionNames) + 1;
+    Exit;
   end;
+  {if Dialog.Title <> nil then
+    for i := Low(ResizableDialogTitleIndex) to High(ResizableDialogTitleIndex) do
+    begin
+      StringInList := Civ2.GetStringInList(PInteger(PInteger($00628420)^ + 4 * ResizableDialogTitleIndex[i])^);
+      if StrComp(Dialog.Title, StringInList) = 0 then
+      begin
+        Result := High(ResizableDialogSectionNames) + i;
+        Exit;
+      end;
+    end;}
 end;
 
 end.

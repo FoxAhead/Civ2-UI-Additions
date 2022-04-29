@@ -80,6 +80,16 @@ begin
   Result := Value * (Zoom + 8) div 8;
 end;
 
+function RectWidth(R: PRect): Integer;
+begin
+  Result := R.Right - R.Left;
+end;
+
+function RectHeight(R: PRect): Integer;
+begin
+  Result := R.Bottom - R.Top;
+end;
+
 procedure OffsetPoint(var Point: TPoint; DX, DY: Integer);
 begin
   Point.X := Point.X + DX;
@@ -277,7 +287,7 @@ var
   DrawTestCityIndex: Integer = -1;
   DrawTestMapPoint: TPoint;
 
-procedure DrawMapOverlay(DeviceContext: HDC);
+procedure DrawMapOverlay(DrawPort: PDrawPort);
 var
   DestDC: HDC;
   SrcDC: HDC;
@@ -299,17 +309,17 @@ var
   CityIndex: Integer;
   Width, Height: Integer;
   UnitTypesCount: array[0..61] of Integer;
-  UnitTypesStrings: TStringList;
+  QuickInfoStrings: TStringList;
   UnitType: Integer;
   StringIndex: Integer;
   City: TCity;
 begin
-  if DeviceContext <> 0 then
+  if DrawPort.DrawInfo.DeviceContext <> 0 then
   begin
-    SavedDC := SaveDC(DeviceContext);
+    SavedDC := SaveDC(DrawPort.DrawInfo.DeviceContext);
     Canvas := TCanvas.Create();
 
-    Canvas.Handle := DeviceContext;
+    Canvas.Handle := DrawPort.DrawInfo.DeviceContext;
     //
     X1 := 100 - DrawTestData.Counter mod 20;
     Y1 := 100 - DrawTestData.Counter mod 20;
@@ -333,21 +343,21 @@ begin
           end;
         end;
         Ex.UnitsList.Pack();
-        UnitTypesStrings := TStringList.Create();
-        UnitTypesStrings.Append('Units Supported');
+        QuickInfoStrings := TStringList.Create();
+        QuickInfoStrings.Append('Units Supported');
         for i := 0 to Ex.UnitsList.Count - 1 do
         begin
           UnitType := PUnit(Ex.UnitsList[i])^.UnitType;
           TextOut := ' ' + IntToStr(UnitTypesCount[UnitType]) + ' x ' + string(Civ2.GetStringInList(Civ2.UnitTypes[UnitType].StringIndex));
-          UnitTypesStrings.Append(TextOut);
+          QuickInfoStrings.Append(TextOut);
         end;
-        UnitTypesStrings.Append('Building');
+        QuickInfoStrings.Append('Building');
         if Civ2.Cities[DrawTestCityIndex].Building < 0 then
           StringIndex := Civ2.Improvements[-Civ2.Cities[DrawTestCityIndex].Building].StringIndex
         else
           StringIndex := Civ2.UnitTypes[Civ2.Cities[DrawTestCityIndex].Building].StringIndex;
         TextOut := ' ' + string(Civ2.GetStringInList(StringIndex));
-        UnitTypesStrings.Append(TextOut);
+        QuickInfoStrings.Append(TextOut);
         Canvas.Font.Handle := CopyFont(Civ2.TimesFontInfo^.Handle^^);
         //        Canvas.Font.Name := 'Times New Roman';
         Canvas.Font.Size := 11;
@@ -356,13 +366,13 @@ begin
         Width := 0;
         Height := 7 + 18;
         FontHeight := 0;
-        for i := 0 to UnitTypesStrings.Count - 1 do
+        for i := 0 to QuickInfoStrings.Count - 1 do
         begin
-          if UnitTypesStrings.Strings[i][1] <> ' ' then
+          if QuickInfoStrings.Strings[i][1] <> ' ' then
             Canvas.Font.Style := [fsBold]
           else
             Canvas.Font.Style := [];
-          TextExtent := Canvas.TextExtent(UnitTypesStrings.Strings[i]);
+          TextExtent := Canvas.TextExtent(QuickInfoStrings.Strings[i]);
           Width := Max(Width, TextExtent.cx + 10);
           FontHeight := Max(FontHeight, TextExtent.cy);
           Height := Height + FontHeight;
@@ -372,8 +382,8 @@ begin
         Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, DrawTestMapPoint.X + 2, DrawTestMapPoint.Y);
         R := Bounds(ScreenPoint.X, ScreenPoint.Y - Height, Width, Height);
         // Move Rect into viewport
-        DX := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.ClientRectangle.Right - R.Right;
-        DY := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.ClientRectangle.Top - R.Top;
+        DX := DrawPort.ClientRectangle.Right - R.Right;
+        DY := DrawPort.ClientRectangle.Top - R.Top;
         if DX > 0 then
           DX := 0;
         if DY < 0 then
@@ -408,36 +418,36 @@ begin
         TextOut := IntToStr(City.TotalFood);
         TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
         OffsetPoint(P, Canvas.TextExtent(TextOut).cx + 1, 0);
-        Civ2.CopySprite(@PSprites($644F00)^[1], @R2, @(DrawTestData.DrawPort), P.X, P.Y + 2);
+        Civ2.CopySprite(@PSprites($644F00)^[1], @R2, DrawPort, P.X, P.Y + 2);
         OffsetPoint(P, R2.Right - R2.Left + 4, 0);
         //
         TextOut := IntToStr(City.TotalShield);
         TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
         OffsetPoint(P, Canvas.TextExtent(TextOut).cx - 1, 0);
-        Civ2.CopySprite(@PSprites($644F00)^[3], @R2, @(DrawTestData.DrawPort), P.X, P.Y + 2);
+        Civ2.CopySprite(@PSprites($644F00)^[3], @R2, DrawPort, P.X, P.Y + 2);
         OffsetPoint(P, R2.Right - R2.Left + 2, 0);
         //
         TextOut := IntToStr(City.Trade);
         TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
         OffsetPoint(P, Canvas.TextExtent(TextOut).cx + 1, 0);
-        Civ2.CopySprite(@PSprites($644F00)^[5], @R2, @(DrawTestData.DrawPort), P.X, P.Y + 2);
+        Civ2.CopySprite(@PSprites($644F00)^[5], @R2, DrawPort, P.X, P.Y + 2);
         OffsetPoint(P, R2.Right - R2.Left + 4, 0);
         //
         P.X := R.Left + 3;
         OffsetPoint(P, 0, 18);
-        for i := 0 to UnitTypesStrings.Count - 1 do
+        for i := 0 to QuickInfoStrings.Count - 1 do
         begin
-          if UnitTypesStrings.Strings[i][1] <> ' ' then
+          if QuickInfoStrings.Strings[i][1] <> ' ' then
             Canvas.Font.Style := [fsBold]
           else
             Canvas.Font.Style := [];
-          TextOut := UnitTypesStrings.Strings[i];
+          TextOut := QuickInfoStrings.Strings[i];
           //TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
           TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
           OffsetPoint(P, 0, FontHeight);
         end;
 
-        UnitTypesStrings.Free();
+        QuickInfoStrings.Free();
       end;
     end;
 
@@ -474,7 +484,7 @@ begin
     //
     Canvas.Handle := 0;
     Canvas.Free;
-    RestoreDC(DeviceContext, SavedDC);
+    RestoreDC(DrawPort.DrawInfo.DeviceContext, SavedDC);
     //end;
     //InvalidateRect(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow, @R, True);
     //BitBlt(DestDC, 0, 0, 500, 500, SrcDC, 0, 0, SRCCOPY);
@@ -639,7 +649,7 @@ var
   nPrevPos: Integer;
   nPos: Integer;
   Delta: Integer;
-  WindowInfo: Pointer;
+  //WindowInfo: Pointer;
   WindowType: TWindowType;
   ScrollLines: Integer;
   CityWindowScrollLines: Integer;
@@ -706,7 +716,7 @@ begin
     end;
   end;
 
-  if WindowType = wtUnitsListPopup then
+  {if WindowType = wtUnitsListPopup then
   begin
     if ChangeListOfUnitsStart(Sign(Delta) * -3) then
     begin
@@ -715,7 +725,7 @@ begin
     end;
     Result := False;
     goto EndOfFunction;
-  end;
+  end;}
 
   if (HWndScrollBar > 0) and IsWindowVisible(HWndScrollBar) then
   begin
@@ -740,8 +750,10 @@ begin
     SetScrollPos(HWndScrollBar, SB_CTL, nPrevPos - Delta * ScrollLines, True);
     nPos := GetScrollPos(HWndScrollBar, SB_CTL);
     ControlInfoScroll^.CurrentPosition := nPos;
-    WindowInfo := ControlInfoScroll^.ControlInfo.WindowInfo;
-    asm
+    //WindowInfo := ControlInfoScroll^.ControlInfo.WindowInfo;
+    Civ2.PrevWindowInfo := ControlInfoScroll^.ControlInfo.WindowInfo;
+    Civ2.CallRedrawAfterScroll(ControlInfoScroll, nPos);
+    {asm
     mov   eax, WindowInfo
     mov   [$00637EA4], eax
     mov   eax, nPos
@@ -749,7 +761,7 @@ begin
     mov   ecx, ControlInfoScroll
     mov   eax, $005CD640    // Call CallRedrawAfterScroll
     call  eax
-    end;
+    end;}
     Result := False;
     goto EndOfFunction;
   end;
@@ -774,7 +786,7 @@ var
   Delta: Integer;
 begin
   Result := True;
-  Delta := 0;
+  {Delta := 0;
   if GuessWindowType(HWindow) = wtUnitsListPopup then
   begin
     case LOWORD(WParam) of
@@ -796,7 +808,7 @@ begin
       Civ2.ClearPopupActive;
       Result := False;
     end;
-  end;
+  end;}
 end;
 
 function PatchMButtonUpHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
@@ -932,7 +944,7 @@ begin
   end;
 end;
 
-procedure PatchMessageProcessingCommon; register;
+procedure PatchWindowProcCommon; register;
 asm
     push  1
     push  [ebp + $14]
@@ -952,7 +964,7 @@ asm
     ret
 end;
 
-procedure PatchMessageProcessing; register;
+procedure PatchWindowProc1; register;
 asm
     push  0
     push  [ebp + $14]
@@ -1576,7 +1588,7 @@ begin
   Civ2.SetScrollPageSize(@CityWindowEx.Support.ControlInfoScroll, 4);
   Civ2.SetScrollPosition(@CityWindowEx.Support.ControlInfoScroll, CityWindowEx.Support.ListStart);
   if SupportedUnits <= Rows * Columns then
-    ShowWindow(CityWindowEx.Support.ControlInfoScroll.ControlInfo.HWindow, 0);
+    ShowWindow(CityWindowEx.Support.ControlInfoScroll.ControlInfo.HWindow, SW_HIDE);
 end;
 
 procedure PatchDrawCityWindowSupport3; register;
@@ -1699,7 +1711,7 @@ begin
   if P^ = '(' then
     P^ := #00;
   Text := string(Civ2.ChText);
-  Text := Text + IntToStr(RealCost) + '#644F00:3#(';
+  Text := Text + IntToStr(RealCost) + '#644F00:3# (';
   StrPCopy(Civ2.ChText, Text);
   Result := Min(Max(1, LeftToDo div Production + 1), 999);
 end;
@@ -1718,11 +1730,11 @@ end;
 
 procedure PatchLoadCityChangeDialog(AEAX, AEDX, ADialogWindow, ASectionName: Integer); register;
 asm
-   push  1
-   push  ASectionName
-   mov   ecx, ADialogWindow
-   mov   eax, $004037CE
-   call  eax
+    push  1
+    push  ASectionName
+    mov   ecx, ADialogWindow
+    mov   eax, $004037CE
+    call  eax
 end;
 
 procedure PatchOnActivateUnitEx; stdcall;
@@ -1882,25 +1894,28 @@ asm
     call  PatchOnWmTimerDrawEx2
 end;
 
-procedure PatchCopyToScreenBitBlt(DestDC: HDC; X, Y, Width, Height: Integer; SrcDC: HDC; XSrc, YSrc: Integer; Rop: Cardinal); stdcall;
+procedure PatchCopyToScreenBitBlt(SrcDI: PDrawInfo; XSrc, YSrc, Width, Height: Integer; DestWS: PWindowStructure; XDest, YDest: Integer); cdecl;
 var
   VSrcDC: HDC;
 begin
-  //  if (Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo <> nil) and (SrcDC = Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo.DeviceContext) then
-  //  begin
-  //    SendMessageToLoader(Width, Height);
-  //  end;
-  if (Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo <> nil) and (SrcDC = Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.DeviceContext) then
+  if SrcDI <> nil then
   begin
-    DrawTestDrawInfoCreate();
-    //VSrcDC := DrawTestData.DeviceContext;
-    VSrcDC := DrawTestData.DrawPort.DrawInfo^.DeviceContext;
-    BitBlt(VSrcDC, 0, 0, Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.Width, Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.Height, SrcDC, 0, 0, Rop);
-    DrawMapOverlay(VSrcDC);
-    BitBlt(DestDC, 0, 0, Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.Width, Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo.Height, VSrcDC, 0, 0, Rop);
-  end
-  else
-    BitBlt(DestDC, X, Y, Width, Height, SrcDC, XSrc, YSrc, Rop);
+    if DestWS <> nil then
+    begin
+      if (DestWS.Palette <> 0) and (PInteger($00638B48)^ = 1) then // V_PaletteBasedDevice_dword_638B48
+        RealizePalette(DestWS.DeviceContext);
+      if (Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo <> nil) and (SrcDI = Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo) then
+      begin
+        DrawTestDrawInfoCreate();
+        VSrcDC := DrawTestData.DrawPort.DrawInfo^.DeviceContext;
+        BitBlt(VSrcDC, 0, 0, SrcDI.Width, SrcDI.Height, SrcDI.DeviceContext, 0, 0, SRCCOPY);
+        DrawMapOverlay(@DrawTestData.DrawPort);
+        BitBlt(DestWS.DeviceContext, 0, 0, SrcDI.Width, SrcDI.Height, VSrcDC, 0, 0, SRCCOPY);
+      end
+      else
+        BitBlt(DestWS.DeviceContext, XDest, YDest, Width, Height, SrcDI.DeviceContext, XSrc, YSrc, SRCCOPY);
+    end;
+  end;
 end;
 
 procedure PatchPopupSimpleMessageEx(A1, A2, A3: Integer); cdecl;
@@ -2182,26 +2197,32 @@ end;
 
 procedure PatchCreateDialogDimensionEx(Dialog: PDialogWindow); stdcall;
 var
-  SectionIndex: Integer;
+  DialogIndex: Integer;
   MinPageSize, MaxPageSize: Integer;
   ListboxItemHeight: Integer;
 begin
-  if ((Dialog.Flags and $41000) = $1000) and (Dialog.ScrollOrientation = 0) then // Has Listbox, not system, vertical
+  DialogIndex := Ex.GetResizableDialogIndex(Dialog);
+  if (DialogIndex > 0) and (Dialog.ScrollOrientation = 0) then // Vertical
   begin
-    SectionIndex := Ex.GetSizableDialogNameIndex(Civ2.LoadedTxtSectionName);
-    if SectionIndex > 0 then
+    Dialog._Extra := Civ2.Heap_Add(@Dialog.Heap, SizeOf(TDialogExtra));
+    Dialog._Extra.DialogIndex := DialogIndex;
+    if DialogIndex in ResizableDialogListbox then
     begin
-      // ! Storing data in unused structure members. [1] - for horizontal scrolls
-      Dialog.ListboxHeight[1] := Dialog.ListboxHeight[0]; // Save original height
-      Dialog.ListboxPageSize[1] := SectionIndex; // Store dialog name index
+      Dialog._Extra.OriginalListboxHeight := Dialog.ListboxHeight[0]; // Save original height
       // Set new dimensions
       Dialog.Flags := Dialog.Flags or $1000000; // Always create scrollbar for sizable listbox
       ListboxItemHeight := Dialog.FontInfo3.Height + 1;
       MinPageSize := Dialog.ListboxPageSize[0];
       MaxPageSize := (Civ2.ScreenRectSize.cy - 125) div ListboxItemHeight;
-      Dialog.ListboxPageSize[0] := Max(Min(MaxPageSize, UIASettings.ListboxHeights[SectionIndex]), MinPageSize);
+      Dialog.ListboxPageSize[0] := Max(Min(MaxPageSize, UIASettings.DialogLines[DialogIndex]), MinPageSize);
       Dialog.ListboxHeight[0] := Dialog.ListboxPageSize[0] * (Dialog.FontInfo3.Height + 1) + 2;
-    end;
+    end
+    else if (DialogIndex in ResizableDialogList) and (Dialog.NumListItems > 9) then
+    begin
+      Dialog._Extra.ListPageStart := 0;
+    end
+    else
+      Dialog._Extra.DialogIndex := 0;
   end;
 end;
 
@@ -2214,20 +2235,70 @@ asm
     ret
 end;
 
-procedure PatchCreateDialogMainWindowEx(Dialog: PDialogWindow; var AStyle: Integer); stdcall;
+procedure PatchCreateDialogDimensionListEx(Dialog: PDialogWindow; var AListHeight: Integer); stdcall;
 var
-  SectionIndex: Integer;
-  OriginalListboxHeight: Integer;
+  ListItem: PListItem;
+  ListItemHeight: Integer;
+  ListItemMaxHeight: Integer;
+  MinPageSize, MaxPageSize: Integer;
+begin
+  // Original code
+  ListItem := Dialog.FirstListItem;
+  ListItemMaxHeight := 0;
+  while ListItem <> nil do
+  begin
+    ListItemHeight := ScaleByZoom(ListItem.Sprite.Rectangle1.Bottom - ListItem.Sprite.Rectangle1.Top, Dialog.Zoom);
+    ListItemMaxHeight := Max(ListItemMaxHeight, ListItemHeight);
+    AListHeight := AListHeight + ListItemHeight;
+    ListItem := ListItem.Next;
+    if ListItem <> nil then
+      AListHeight := AListHeight + Dialog.LineSpacing;
+  end;
+  // Additional part for resizable list
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) then
+  begin
+    if Dialog._Extra.DialogIndex in ResizableDialogList then
+    begin
+      Dialog._Extra.ListItemMaxHeight := ListItemMaxHeight;
+      MinPageSize := 9;
+      MaxPageSize := Min((Civ2.ScreenRectSize.cy - 125) div (ListItemMaxHeight + Dialog.LineSpacing), Dialog.NumListItems);
+      Dialog._Extra.ListPageSize := Max(Min(MaxPageSize, UIASettings.DialogLines[Dialog._Extra.DialogIndex]), MinPageSize);
+      AListHeight := Dialog._Extra.ListPageSize * (ListItemMaxHeight + Dialog.LineSpacing) - Dialog.LineSpacing;
+      Dialog._Extra.OriginalListHeight := AListHeight;
+    end;
+  end;
+end;
+
+procedure PatchCreateDialogDimensionList(); register;
+asm
+// Instead of loop
+// (171) for ( j = this->FirstListItem; j; j = j->Next )
+    lea   eax, [ebp - $24] // var_24 (v35)
+    push  eax
+    push  [ebp - $78] // This
+    call  PatchCreateDialogDimensionListEx
+    push  $005A0263
+    ret
+end;
+
+procedure PatchCreateDialogMainWindowEx(Dialog: PDialogWindow; var AStyle: Integer); stdcall;
 begin
   AStyle := $C02;
-  if ((Dialog.Flags and $41000) = $1000) and (Dialog.ScrollOrientation = 0) then // Has Listbox, not system, vertical
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) then
   begin
-    SectionIndex := Ex.GetSizableDialogNameIndex(Civ2.LoadedTxtSectionName);
-    if SectionIndex > 0 then
+    if Dialog._Extra.DialogIndex > 0 then
     begin
       AStyle := AStyle or $1000;          // Make resizable
-      OriginalListboxHeight := Dialog.ListboxHeight[1]; // ! Storing data in unused structure members. [1] - for horizontal scrolls
-      Dialog.GraphicsInfo.WindowInfo.MinTrackSize.Y := Dialog.ClientSize.cy - (Dialog.ListboxHeight[0] - OriginalListboxHeight) - 1;
+      if Dialog._Extra.DialogIndex in ResizableDialogListbox then
+      begin
+        Dialog.GraphicsInfo.WindowInfo.MinTrackSize.Y := Dialog.ClientSize.cy - (Dialog.ListboxHeight[0] - Dialog._Extra.OriginalListboxHeight) - 1;
+      end
+      else if Dialog._Extra.DialogIndex in ResizableDialogList then
+      begin
+        Dialog._Extra.NonListHeight := Dialog.ClientSize.cy - Dialog._Extra.OriginalListHeight;
+        Dialog.GraphicsInfo.WindowInfo.MinTrackSize.Y := 9 * (Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing) - Dialog.LineSpacing + Dialog._Extra.NonListHeight - 1;
+        Dialog.GraphicsInfo.WindowInfo.MaxTrackSize.Y := Dialog.NumListItems * (Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing) - Dialog.LineSpacing + Dialog._Extra.NonListHeight - 1;
+      end;
     end;
   end;
 end;
@@ -2242,6 +2313,60 @@ asm
     ret
 end;
 
+procedure CallBackDialogListScroll(A1: Integer); cdecl;
+var
+  Dialog: PDialogWindow;
+begin
+  Dialog := Civ2.CurrPopupInfo^;
+  if Dialog <> nil then
+  begin
+    Dialog._Extra.ListPageStart := A1;
+    Civ2.CreateDialog(Dialog);
+  end;
+end;
+
+// Return NumListItems
+function PatchCreateDialogPartsListEx(Dialog: PDialogWindow): Integer; stdcall;
+var
+  ControlInfoScroll: PControlInfoScroll;
+  Rect: TRect;
+  ScrollInfo: TScrollInfo;
+begin
+  Result := Dialog.NumListItems;
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) then
+  begin
+    if Dialog._Extra.DialogIndex > 0 then
+    begin
+      Rect.Left := Dialog.ClientSize.cx - 25;
+      Rect.Top := 36;
+      Rect.Right := Dialog.ClientSize.cx - 9;
+      Rect.Bottom := Dialog.ClientSize.cy - 45;
+      Dialog.ScrollControls1[0] := Civ2.Scroll_Ctr(Civ2.Crt_OperatorNew(SizeOf(TControlInfoScroll)));
+      Civ2.CreateScrollbar(Dialog.ScrollControls1[0], @Dialog.GraphicsInfo.WindowInfo, $0B, @Rect, 1);
+      Civ2.InitControlScrollRange(Dialog.ScrollControls1[0], 0, Dialog.NumListItems - 1);
+      Civ2.SetScrollPosition(Dialog.ScrollControls1[0], Dialog._Extra.ListPageStart);
+      Civ2.SetScrollPageSize(Dialog.ScrollControls1[0], Dialog._Extra.ListPageSize);
+      Dialog.ScrollControls1[0].ProcRedraw := @CallBackDialogListScroll;
+      Dialog.ScrollControls1[0].ProcTrack := @CallBackDialogListScroll;
+
+      ScrollInfo.cbSize := SizeOf(ScrollInfo);
+      ScrollInfo.nPage := Dialog._Extra.ListPageSize;
+      ScrollInfo.fMask := SIF_PAGE;
+      SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, True);
+
+    end;
+  end;
+end;
+
+procedure PatchCreateDialogPartsList(); register;
+asm
+//    mov   [ebp - $108], eax        // saved instruction "mov     [ebp+var_108], eax"
+    push  [ebp - $198]               // This
+    call  PatchCreateDialogPartsListEx
+    push  $005A3391
+    ret
+end;
+
 procedure PatchUpdateDialogWindow(); stdcall;
 var
   Dialog: PDialogWindow;
@@ -2251,25 +2376,43 @@ var
   i: Integer;
   Control: PControlInfo;
   RP: PRect;
-  SectionIndex: Integer;
+  DialogIndex: Integer;
+  ScrollInfo: TScrollInfo;
 begin
   Dialog := Civ2.CurrPopupInfo^;
   if Dialog <> nil then
   begin
-    if Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1 then
+    if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
     begin
-      ListItemHeight := Dialog.FontInfo3.Height + 1;
+      DialogIndex := Dialog._Extra.DialogIndex;
+
       DeltaY := Dialog.GraphicsInfo^.DrawPort.RectHeight - Dialog.ClientSize.cy + 1;
       Dialog.ClientSize.cy := Dialog.GraphicsInfo^.DrawPort.RectHeight + 1;
 
-      Dialog.ListboxPageSize[0] := (Dialog.ListboxHeight[0] + DeltaY - 2) div ListItemHeight;
-      //      ListboxHeight := Dialog.ListboxPageSize[0] * ListItemHeight + 2;
-      //      Dialog.ListboxHeight[0] := ListboxHeight;
-      Dialog.ListboxHeight[0] := Dialog.ListboxHeight[0] + DeltaY;
-      Dialog.Rects1[0].Bottom := Dialog.Rects1[0].Bottom + DeltaY;
-      Dialog.Rects2[0].Bottom := Dialog.Rects2[0].Bottom + DeltaY;
-      Dialog.Rects3[0].Bottom := Dialog.Rects3[0].Bottom + DeltaY;
-      Dialog.ButtonsTop := Dialog.ButtonsTop + DeltaY;
+      if DialogIndex in ResizableDialogListbox then
+      begin
+        ListItemHeight := Dialog.FontInfo3.Height + 1;
+        Dialog.ListboxPageSize[0] := (Dialog.ListboxHeight[0] + DeltaY - 2) div ListItemHeight;
+        Dialog.ListboxHeight[0] := Dialog.ListboxHeight[0] + DeltaY;
+        Dialog.Rects1[0].Bottom := Dialog.Rects1[0].Bottom + DeltaY;
+        Dialog.Rects2[0].Bottom := Dialog.Rects2[0].Bottom + DeltaY;
+        Dialog.Rects3[0].Bottom := Dialog.Rects3[0].Bottom + DeltaY;
+        Dialog.ButtonsTop := Dialog.ButtonsTop + DeltaY;
+        UIASettings.DialogLines[DialogIndex] := Dialog.ListboxPageSize[0];
+      end
+      else if DialogIndex in ResizableDialogList then
+      begin
+        Dialog._Extra.ListPageSize := (Dialog.ClientSize.cy - 79) div (Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing);
+        UIASettings.DialogLines[DialogIndex] := Dialog._Extra.ListPageSize;
+
+        ScrollInfo.cbSize := SizeOf(ScrollInfo);
+        ScrollInfo.nPage := Dialog._Extra.ListPageSize;
+        ScrollInfo.fMask := SIF_PAGE;
+        SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, True);
+        Dialog._Extra.ListPageStart := GetScrollPos(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL);
+        
+      end;
+
       for i := 0 to Dialog.NumButtons + Dialog.NumButtonsStd - 1 do
       begin
         Control := @Dialog.ButtonControls[i].ControlInfo;
@@ -2284,8 +2427,6 @@ begin
         RP.Bottom := RP.Bottom + DeltaY;
         SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOMOVE);
       end;
-      SectionIndex := Dialog.ListboxPageSize[1]; // ! Storing data in unused structure members. [1] - for horizontal scrolls
-      UIASettings.ListboxHeights[SectionIndex] := Dialog.ListboxPageSize[0];
     end;
 
     asm
@@ -2295,6 +2436,9 @@ begin
   end;
 end;
 
+//
+// Insert sprites into listbox item text in format #644F00:3#
+//
 procedure PatchDlgDrawListboxItemText(AEAX, AEDX: Integer; AECX: PDialogWindow; ADisabled, ASelected, ATop, ALeft: Integer; AText: PChar); register;
 var
   RightPart, Bar: PChar;
@@ -2345,6 +2489,124 @@ begin
   end;
 end;
 
+// Return 1 if processed
+function PatchDlgDrawListEx(Dialog: PDialogWindow): Integer; stdcall;
+var
+  i: Integer;
+  ListItem: PListItem;
+  HWindow: HWND;
+  ListItemX, ListItemY: Integer;
+  SpriteW, SpriteH: Integer;
+  FontHeight: Integer;
+  R: TRect;
+  PageStart, PageFinish: Integer;
+begin
+  Result := 0;
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
+  begin
+    if Dialog._Extra.DialogIndex in ResizableDialogList then
+    begin
+      FontHeight := Civ2.GetFontHeightWithExLeading(Dialog.FontInfo1);
+      Civ2.SetSpriteZoom(Dialog.Zoom);
+      ListItemX := Dialog.ListTopLeft.X;
+      ListItemY := Dialog.ListTopLeft.Y;
+      i := 0;
+      ListItem := Dialog.FirstListItem;
+      PageStart := Dialog._Extra.ListPageStart;
+      PageFinish := PageStart + Dialog._Extra.ListPageSize - 1;
+      while ListItem <> nil do
+      begin
+        if i in [PageStart..PageFinish] then
+        begin
+          SpriteW := ScaleByZoom(RectWidth(@ListItem.Sprite.Rectangle1), Dialog.Zoom);
+          SpriteH := ScaleByZoom(RectHeight(@ListItem.Sprite.Rectangle1), Dialog.Zoom);
+          if Assigned(Dialog.Proc3SpriteDraw) then
+            Dialog.Proc3SpriteDraw(ListItem.Sprite, Dialog.GraphicsInfo, ListItem.UnitIndex, ListItem.Unknown_04, ListItemX, ListItemY);
+          if ((Dialog.Flags and $20000) <> 0) and (Dialog.SelectedListItem = ListItem) then
+          begin
+            R := Rect(ListItemX - 1, ListItemY - 1, ListItemX + SpriteW, ListItemY + SpriteH);
+            //R := Rect(ListItemX - 1, ListItemY - 1, Dialog.ClientSize.cx - 27, ListItemY + SpriteH);
+            Civ2.DrawFrame(@Dialog.GraphicsInfo.DrawPort, @R, Dialog.Color4);
+          end;
+          if ListItem.Text <> nil then
+            Civ2.DlgDrawTextLine(Dialog, ListItem.Text, ListItemX + SpriteW + Dialog.TextIndent, ListItemY + ((SpriteH - FontHeight) div 2), 0);
+          ListItemY := ListItemY + SpriteH + Dialog.LineSpacing;
+        end
+        else
+          ShowWindow(Dialog.ListItemControls[i].ControlInfo.HWindow, SW_HIDE);
+        Inc(i);
+        ListItem := ListItem.Next;
+      end;
+      Civ2.ResetSpriteZoom();
+      Result := 1;
+    end;
+  end;
+end;
+
+procedure PatchDlgDrawList(); register;
+asm
+    jz    @@LABEL1
+    push  [ebp - $5C] // P_DialogWindow this
+    call  PatchDlgDrawListEx
+    cmp   eax, 1;
+    je    @@LABEL1
+    mov   eax, $005A5A58
+    jmp   eax
+
+@@LABEL1:
+    push  $005A5C11
+    ret
+end;
+
+procedure PatchCreateDialogShowListEx(Dialog: PDialogWindow);
+var
+  IsResizableDialog: Boolean;
+  i: Integer;
+  HWindow: HWND;
+  PageStart, PageFinish: Integer;
+  RP: PRect;
+  ListItemY: Integer;
+  Control: PControlInfo;
+begin
+  IsResizableDialog := False;
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
+    IsResizableDialog := Dialog._Extra.DialogIndex in ResizableDialogList;
+  if IsResizableDialog then
+  begin
+    PageStart := Dialog._Extra.ListPageStart;
+    PageFinish := PageStart + Dialog._Extra.ListPageSize - 1;
+    ListItemY := Dialog.ListTopLeft.Y;
+    for i := 0 to Dialog.NumListItems - 1 do
+    begin
+      Control := @Dialog.ListItemControls[i];
+      if i in [PageStart..PageFinish] then
+      begin
+        RP := @Control.Rect;
+        OffsetRect(RP^, 0, -RP^.Top + ListItemY);
+        SetWindowPos(Control.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOSIZE or SWP_NOREDRAW);
+        Civ2.ShowWindowInvalidateRect(Control);
+        ListItemY := ListItemY + Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing;
+      end
+      else
+      begin
+        ShowWindow(Control.HWindow, SW_HIDE);
+      end;
+    end;
+    RedrawWindow(Dialog.GraphicsInfo.WindowInfo.WindowStructure.HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
+  end
+  else
+    for i := 0 to Dialog.NumListItems - 1 do
+      Civ2.ShowWindowInvalidateRect(@Dialog.ListItemControls[i].ControlInfo);
+end;
+
+procedure PatchCreateDialogShowList(); register;
+asm
+    push  [ebp - $5C] // P_DialogWindow this
+    call  PatchCreateDialogShowListEx
+    push  $005A5F19
+    ret
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -2359,13 +2621,13 @@ begin
   begin
     //WriteMemory(HProcess, $00403D00, [OP_JMP], @PatchGetInfoOfClickedCitySprite); // Only for debugging City Sprites
     WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
-    WriteMemory(HProcess, $005EB465, [], @PatchMessageProcessingCommon);
-    WriteMemory(HProcess, $005EACDE, [], @PatchMessageProcessing);
+    WriteMemory(HProcess, $005EB465, [], @PatchWindowProcCommon);
+    WriteMemory(HProcess, $005EACDE, [], @PatchWindowProc1);
     WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
     WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
-    WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
-    WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
-    WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
+    //WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
+    //WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
+    //WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
     WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
     //WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
     WriteMemory(HProcess, $0056954A, [OP_JMP], @PatchDrawSideBarV2);
@@ -2451,7 +2713,7 @@ begin
   WriteMemory(HProcess, $0040364D, [OP_JMP], @PatchOnWmTimerDraw);
 
   // Map Overlay
-  WriteMemory(HProcess, $005BCC7D, [OP_NOP, OP_CALL], @PatchCopyToScreenBitBlt);
+  WriteMemory(HProcess, $005C0A2F, [OP_CALL], @PatchCopyToScreenBitBlt);
 
   // Set focus on City Window when opened and back to Advisor when closed
   WriteMemory(HProcess, $0040138E, [OP_JMP], @PatchFocusCityWindow);
@@ -2475,7 +2737,7 @@ begin
   // Tests
   // Suppress specific simple popup message
   //WriteMemory(HProcess, $004034A9, [OP_JMP], @PatchPopupSimpleMessageEx);
-  //HookImportedFunctions(HProcess);
+  HookImportedFunctions(HProcess);
   // Radios hotkey
   WriteMemory(HProcess, $00531163, [OP_JMP], @PatchCreateWindowRadioGroupAfter);
   // BgTiles
@@ -2490,6 +2752,12 @@ begin
   WriteMemory(HProcess, $005A203D, [], @PatchUpdateDialogWindow, True);
   // Draw sprites in listbox item text
   WriteMemory(HProcess, $00403625, [OP_JMP], @PatchDlgDrawListboxItemText);
+  // ListOfUnits Dialog Popup v2
+  WriteMemory(HProcess, $005B6BFE, [OP_NOP, OP_JMP]); // Ignore limit of 9 Units
+  WriteMemory(HProcess, $005A0200, [OP_JMP], @PatchCreateDialogDimensionList);
+  WriteMemory(HProcess, $005A3388, [OP_JMP], @PatchCreateDialogPartsList);
+  WriteMemory(HProcess, $005A5A52, [OP_JMP], @PatchDlgDrawList);
+  WriteMemory(HProcess, $005A5EE7, [OP_JMP], @PatchCreateDialogShowList);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

@@ -18,15 +18,25 @@ type
 
   PControlInfo = ^TControlInfo;
 
+  PControlInfoListItem = ^TControlInfoListItem;
+  
+  PControlInfoListItems = ^TControlInfoListItems;
+
   PControlInfoRadio = ^TControlInfoRadio;
+
   PControlInfoRadios = ^TControlInfoRadios;
 
   PControlInfoRadioGroup = ^TControlInfoRadioGroup;
 
   PControlInfoButton = ^TControlInfoButton;
-  PControlInfoButtons = ^TControlInfoButtons;  
+
+  PControlInfoButtons = ^TControlInfoButtons;
 
   PControlInfoScroll = ^TControlInfoScroll;
+
+  PListItem = ^TListItem;
+
+  PHeap = ^THeap;
 
   PDrawPort = ^TDrawPort;
 
@@ -37,6 +47,8 @@ type
   PWindowStructure = ^TWindowStructure;
 
   PDialogWindow = ^TDialogWindow;
+
+  PDialogExtra = ^TDialogExtra;
 
   PPDialogWindow = ^PDialogWindow;
 
@@ -120,6 +132,7 @@ type
     CitySpritesItems: Integer;            // + 12C0 = 6AA750
   end;
 
+  // TODO: Sync with MSWindow
   TCityWindow = packed record             // 6A91B8 (~TGraphicsInfo) Size = $16E0
     Unknown1: array[0..$13] of Byte;
     ClientRectangle: TRect;
@@ -193,6 +206,17 @@ type
     Unknown_28: Integer;                  // + 0x28
   end;
 
+  // ControlType = 1
+  TControlInfoListItem = packed record    // Size = $40
+    ControlInfo: TControlInfo;
+    Unknown_2C: Integer;
+    ProcMouseMove: Pointer;
+    ProcLButtonUp: Pointer;
+    ProcLButtonDown: Pointer;
+    ProcLButtonDblClk: Pointer;
+  end;
+  TControlInfoListItems = array[0..0] of TControlInfoListItem;
+
   TControlInfoRadio = packed record       // Size = $A4
     HWindow: HWND;
     Rect: TRect;
@@ -202,6 +226,7 @@ type
     HotKey: array[0..3] of Char;
     HotKeyPos: Integer;
   end;
+
   TControlInfoRadios = array[0..0] of TControlInfoRadio;
 
   // ControlType = 3
@@ -226,6 +251,7 @@ type
     Unknown_34: Integer;                  // + 0x34
     Unknown_38: Integer;                  // + 0x38
   end;
+
   TControlInfoButtons = array[0..0] of TControlInfoButton;
 
   // ControlType = 8
@@ -239,12 +265,22 @@ type
   end;
 
   PListboxItem = Pointer;
-  PListItem = Pointer;
+
+  TListItem = packed record
+    UnitIndex: Integer;
+    Unknown_04: Integer;
+    Text: PChar;
+    Sprite: PSprite;
+    Next: PListItem;
+  end;
+
   PDlgTextLine = Pointer;
+
   PEdit = Pointer;
+
   PControlInfoCheckbox = Pointer;
+
   PControlInfoEdit = Pointer;
-  PControlInfoListItem = Pointer;
 
   THeap = packed record                   // Size = $12
     Unknown_00: Byte;
@@ -263,6 +299,8 @@ type
     Left: Integer;
   end;
 
+  TDlgProc3SpriteDraw = procedure (Sprite: PSprite; GraphicsInfo: PGraphicsInfo; A3, A4, A5, A6: Integer); cdecl;
+  
   TDialogWindow = packed record           // Size = $2F4 ?
     GraphicsInfo: PGraphicsInfo;
     DrawPort: PDrawPort;
@@ -280,6 +318,20 @@ type
     NumButtons: Integer;
     Columns: Integer;
     Flags: Integer;
+    // 0x00000001 - Has Cancel button (StdType = 2)
+    // 0x00000004 - Checkboxes
+    // 0x00000008 - Don't show
+    // 0x00000020 - Created
+    // 0x02000000 - Without Ok button (StdType = 0)
+    // 0x00000040 - Has Help button (StdType = 1)
+    // 0x00000200 - Created parts
+    // 0x00000400 - ClearPopup
+    // 0x00001000 - Has ListBox
+    // 0x00002000 - Choose
+    // 0x00004000 - Without background
+    // 0x00010000 - System popup
+    // 0x00040000 - System listbox
+    // 0x01000000 - Force scrollbar for listbox
     ClientSize: SIZE;
     ScrollOrientation: Integer;
     ListboxWidth: array[0..1] of Integer;
@@ -306,12 +358,12 @@ type
     Unknown_AC: Integer;
     Unknown_B0: Integer;
     Unknown_B4: Integer;
-    _ButtonPadding: Integer;
-    Unknown_BC: Integer;
-    Unknown_C0: Integer;
-    Unknown_C4: Integer;
-    Margin: Integer;
-    LRBorder: Integer;
+    VertPadding: Integer;
+    HorzMargin: Integer;
+    LineSpacing: Integer;
+    TextIndent: Integer;
+    Bevel: Integer;
+    LRFrame: Integer;
     CaptionHeight: Integer;
     Unknown_D4: Integer;
     SelectedItem: Cardinal;
@@ -322,8 +374,7 @@ type
     Unknown_F4: Integer;
     Unknown_F8: Integer;
     Unknown_FC: Integer;
-    Unknown_100: Integer;
-    Unknown_104: Integer;
+    ListTopLeft: TPoint;
     Unknown_108: Integer;
     Unknown_10C: Integer;
     _EditsLeft: Integer;
@@ -334,7 +385,7 @@ type
     Unknown_124: Integer;
     Unknown_128: Integer;
     ButtonsWidth: Integer;
-    _Zoom: Integer;
+    Zoom: Integer;
     Title: PChar;
     Rects1: array[0..1] of TRect;
     Rects2: array[0..1] of TRect;
@@ -357,7 +408,7 @@ type
     ListboxSpriteAreaWidth: array[0..1] of Integer;
     PageStartListboxItem: array[0..1] of PListboxItem;
     Unknown_218: Integer;
-    Unknown_21C: Integer;
+    _Extra: PDialogExtra;                 // ! Storing data in unused structure members
     SelectedListboxItem: PListboxItem;
     SelectedListItem: PListItem;
     FirstListboxItem: PListboxItem;
@@ -367,10 +418,10 @@ type
     Edit: PEdit;
     Proc1: Pointer;
     Proc2: Pointer;
-    Proc3: Pointer;
-    Proc4: Pointer;
-    Unknown_24C: Integer;
+    Proc3SpriteDraw: TDlgProc3SpriteDraw;
+    Proc4SpriteDraw: Pointer;
     Proc5: Pointer;
+    Proc6: Pointer;
     Heap: THeap;
     Unknown_266: Word;
     Unknown_268: Integer;
@@ -378,7 +429,7 @@ type
     EditControls: PControlInfoEdit;
     ButtonControls: PControlInfoButtons;
     Unknown_278: array[0..1] of Integer;
-    ListItemControls: PControlInfoListItem;
+    ListItemControls: PControlInfoListItems;
     ScrollControls1: array[0..1] of PControlInfoScroll;
     ScrollControls2: array[0..1] of PControlInfoScroll;
     ButtonTexts: array[0..5] of PChar;
@@ -400,19 +451,6 @@ type
     NumberOfButtons: Integer;             // + 0x34 [D]
     ScrollPageSize: Integer;              // + 0x38 [E]
     Flags: Integer;                       // + 0x3C :
-    // 0x00000001 - Has Cancel button (StdType = 2)
-    // 0x00000004 - Checkboxes
-    // 0x00000008 - Don't show
-    // 0x00000020 - Created
-    // 0x02000000 - Without Ok button (StdType = 0)
-    // 0x00000040 - Has Help button (StdType = 1)
-    // 0x00000200 - Created parts
-    // 0x00000400 - ClearPopup
-    // 0x00001000 - Has ListBox
-    // 0x00002000 - Choose
-    // 0x00010000 - System popup
-    // 0x00040000 - System listbox
-    // 0x01000000 - Force scrollbar for listbox
     Width: Integer;                       // + 0x40
     Height: Integer;                      // + 0x44
     Unknown4: array[$48..$D7] of Byte;    // + 0x48
@@ -431,6 +469,17 @@ type
     ListItems: array of TControlInfo;     // + 0x280
   end;
 }
+
+  TDialogExtra = packed record
+    DialogIndex: Integer;
+    OriginalListboxHeight: Integer;
+    OriginalListHeight: Integer;
+    NonListHeight: Integer;
+    ListPageStart: Integer;
+    ListPageSize: Integer;
+    ListItemMaxHeight: Integer;
+  end;
+
   TDrawPort = packed record               // Part of TGraphicsInfo; TODO: Move to TGraphicsInfo
     _Proc: Pointer;
     RectWidth: Integer;
@@ -505,10 +554,14 @@ type
   end;
 
   TWindowStructure = packed record        // Size = $4C ?
-    Unknown1: Integer;
+    HMem: HGLOBAL;
     HWindow: HWND;                        // + 0x04
-    DeviceContext: HDC;
-    Unknown2: array[$0C..$1F] of Byte;
+    DeviceContext: HDC;                   // + 0x08
+    Unknown_0C: Integer;
+    Unknown_10: Integer;
+    Brush: HBRUSH;                        // + 0x14
+    Palette: HPALETTE;                    // + 0x18
+    Cursor: HCURSOR;                      // + 0x1C
     Icon: HICON;                          // + 0x20
     Unknown_24: Integer;
     Unknown_28: Integer;

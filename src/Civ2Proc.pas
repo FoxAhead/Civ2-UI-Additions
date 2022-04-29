@@ -28,6 +28,7 @@ type
     MainWindowInfo: PWindowInfo;
     MapGraphicsInfo: PGraphicsInfoMap;
     MapGraphicsInfos: ^TMapGraphicsInfos;
+    PrevWindowInfo: PWindowInfo;
     ScreenRectSize: PSize;
     ScienceAdvisorClientRect: PRect;
     ScienceAdvisorGraphicsInfo: PGraphicsInfo;
@@ -73,6 +74,16 @@ type
     procedure RecreateBrush(WindowInfo: PWindowInfo; Color: Integer);
     procedure sub_401BC7(A1: PDialogWindow; A2: PChar; A3, A4, A5, A6: Integer);
     function GetTextExtentX(A1: PFontInfo; A2: PChar): Integer;
+    function Heap_Add(Heap: PHeap; Size: Integer): Pointer;
+    function Crt_OperatorNew(Size: Integer): Pointer;
+    function Scroll_Ctr(ControlInfoScroll: PControlInfoScroll): PControlInfoScroll;
+    procedure ShowWindowInvalidateRect(ControlInfo: PControlInfo);
+    procedure SetSpriteZoom(AZoom: Integer);
+    procedure ResetSpriteZoom();
+    procedure DlgDrawTextLine(Dialog: PDialogWindow; Text: PChar; X, Y, A5: Integer);
+    procedure DrawFrame(DrawPort: PDrawPort; Rect: PRect; Color: Integer);
+    procedure CallRedrawAfterScroll(ControlInfoScroll: PControlInfoScroll; Pos: Integer);
+    procedure CreateDialog(Dialog: PDialogWindow);
   published
   end;
 
@@ -108,6 +119,7 @@ begin
   MainWindowInfo := Pointer($006553D8);
   MapGraphicsInfo := Pointer($0066C7A8);
   MapGraphicsInfos := Pointer($0066C7A8);
+  PrevWindowInfo :=  Pointer($00637EA4);
   ScreenRectSize := Pointer($006AB198);
   ScienceAdvisorClientRect := Pointer($0063EC34);
   ScienceAdvisorGraphicsInfo := Pointer($0063EB10);
@@ -429,6 +441,90 @@ asm
     push  A2
     mov   ecx, A1
     mov   eax, $00402B21
+    call  eax
+end;
+
+function TCiv2.Heap_Add(Heap: PHeap; Size: Integer): Pointer;
+asm
+    push  Size
+    push  Heap
+    mov   eax, $0040389B
+    call  eax
+    add   esp, 8
+    mov   @Result, eax
+end;
+
+function TCiv2.Crt_OperatorNew(Size: Integer): Pointer;
+asm
+    push  Size
+    mov   eax, $005F2470
+    call  eax
+    add   esp, 4
+    mov   @Result, eax
+end;
+
+function TCiv2.Scroll_Ctr(ControlInfoScroll: PControlInfoScroll): PControlInfoScroll;
+asm
+    mov   ecx, ControlInfoScroll
+    mov   eax, $004031E3
+    call  eax
+    mov   @Result, eax
+end;
+
+procedure TCiv2.ShowWindowInvalidateRect(ControlInfo: PControlInfo);
+asm
+    mov   ecx, ControlInfo
+    mov   eax, $0040169A
+    call  eax
+end;
+
+procedure TCiv2.SetSpriteZoom(AZoom: Integer);
+asm
+    push  AZoom
+    mov   eax, $00403350
+    call  eax
+    add   esp, 4
+end;
+
+procedure TCiv2.ResetSpriteZoom();
+asm
+    mov   eax, $004023D3
+    call  eax
+end;
+
+procedure TCiv2.DlgDrawTextLine(Dialog: PDialogWindow; Text: PChar; X, Y, A5: Integer);
+asm
+    push  A5
+    push  Y
+    push  X
+    push  Text
+    mov   ecx, Dialog
+    mov   eax, $00401640
+    call  eax
+end;
+
+procedure TCiv2.DrawFrame(DrawPort: PDrawPort; Rect: PRect; Color: Integer);
+asm
+    push  Color
+    push  Rect
+    push  DrawPort
+    mov   eax, $00401DB1
+    call  eax
+    add   esp, $0C
+end;
+
+procedure TCiv2.CallRedrawAfterScroll(ControlInfoScroll: PControlInfoScroll; Pos: Integer);
+asm
+    push  Pos
+    mov   ecx, ControlInfoScroll
+    mov   eax, $005CD640
+    call  eax
+end;
+
+procedure TCiv2.CreateDialog(Dialog: PDialogWindow);
+asm
+    mov   ecx, Dialog
+    mov   eax, $004026D5
     call  eax
 end;
 

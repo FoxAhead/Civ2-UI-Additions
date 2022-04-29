@@ -7,7 +7,8 @@ procedure HookImportedFunctions(HProcess: THandle);
 implementation
 
 uses
-  Civ2UIA_Global,
+  Civ2UIA_Types,
+  Civ2UIA_Global,  
   Civ2UIA_Proc,
   Civ2UIA_MapMessage,
   Civ2UIA_Ex,
@@ -61,18 +62,23 @@ end;
 
 function PatchShowWindow(HWindow: HWND; nCmdShow: Integer): Integer; stdcall;
 var
-  CallerAddress: Integer;
+  CallerChain: PCallerChain;
   OriginalAddress: Integer;
   CurrGetFocusBefore: HWND;
   CurrGetFocusAfter: HWND;
 begin
   asm
-    mov   eax, [ebp + 4]
-    mov   CallerAddress, eax
+    mov   CallerChain, ebp
   end;
-  CurrGetFocusBefore := GetFocus();
+  //CurrGetFocusBefore := GetFocus();
   //SendMessageToLoader(3, nCmdShow);
-  //SendMessageToLoader(CallerAddress, HWindow);
+  //SendMessageToLoader(HWindow, nCmdShow);
+  if nCmdShow = 5 then
+  begin
+    SendMessageToLoader(HWindow, Integer(CallerChain.Caller));
+    SendMessageToLoader(HWindow, Integer(CallerChain.Prev.Caller));    
+  end;
+  
   OriginalAddress := OriginalAddresses[3];
   asm
     push  nCmdShow
@@ -81,7 +87,7 @@ begin
     call  eax
     mov   @Result, eax
   end;
-  CurrGetFocusAfter := GetFocus();
+  //CurrGetFocusAfter := GetFocus();
   //MapMessagesList.Add(TMapMessage.Create(Format('%.8x => %.6x ShowWindow(%.8x, %.d) => %.8x', [CurrGetFocusBefore,CallerAddress, HWindow, nCmdShow,CurrGetFocusAfter])));
 //  if nCmdShow = 5 then
 //    SetFocus(HWindow);
