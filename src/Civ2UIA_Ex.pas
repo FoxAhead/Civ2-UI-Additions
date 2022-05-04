@@ -5,19 +5,22 @@ interface
 uses
   Classes,
   Contnrs,
+  Graphics,
   Windows,
   Civ2Types;
 
 type
   TEx = class
   private
-
+    FCanvas: TCanvas;
+    FSavedDC: HDC;
   protected
 
   public
     ShowWindowStack: TStack;
     UnitsList: TList;
     UnitsListCursor: Integer;
+    SuppressPopupList: TStringList;
     constructor Create;
     destructor Destroy; override;
     function UnitsListBuildSorted(CityIndex: Integer): Integer;
@@ -25,7 +28,12 @@ type
     procedure LoadSettingsFile();
     procedure SaveSettingsFile();
     procedure LoadDefaultSettings();
+    function SettingsFlagSet(i: Integer): Boolean;
+    procedure SetSettingsFlag(i: Integer; v: Boolean);
     function GetResizableDialogIndex(Dialog: PDialogWindow): Integer;
+    function CanvasGrab(DC: HDC): TCanvas;
+    procedure CanvasRelease();
+    function SimplePopupSuppressed(SectionName: PChar): Boolean;
   published
 
   end;
@@ -43,6 +51,8 @@ uses
   Civ2UIA_MapMessage;
 
 const
+  FilenameCIV2UIADAT = 'CIV2UIA.DAT';
+  FilenameCIV2UIASPTXT = 'Civ2UIASuppressPopup.txt';
   ResizableDialogSectionNames: array[1..4] of PChar = (
     PChar($00630F1C),                     // PRODUCTION
     PChar($00625F30),                     // INTELLCITY
@@ -51,6 +61,13 @@ const
     );
   ResizableDialogTitleIndex: array[1..1] of Integer = (
     $3E                                   // Select Unit To Activate
+    );
+  SimplePopupNames: array[0..4] of PChar = (
+    'WATERSUPPLY',
+    'BOND007',
+    'BOND',
+    'BONDGLORY',
+    'NAILED'
     );
 
 function CompareCityUnits(Item1, Item2: Pointer): Integer;
@@ -84,6 +101,7 @@ begin
   inherited;
   UnitsList := TList.Create();
   ShowWindowStack := TStack.Create();
+  SuppressPopupList := TStringList.Create();
   LoadSettingsFile();
 end;
 
@@ -91,6 +109,7 @@ destructor TEx.Destroy;
 begin
   ShowWindowStack.Free();
   UnitsList.Free();
+  SuppressPopupList.Free();
   inherited;
 end;
 
@@ -132,14 +151,19 @@ var
   BytesRead: Integer;
   SizeOfSettings: Integer;
 begin
+  SuppressPopupList.Clear();
+  try
+    SuppressPopupList.LoadFromFile(FilenameCIV2UIASPTXT);
+  except
+  end;
   SizeOfSettings := SizeOf(UIASettings);
   ZeroMemory(@UIASettings, SizeOfSettings);
-  FileHandle := FileOpen('CIV2UIA.DAT', fmOpenRead);
+  FileHandle := FileOpen(FilenameCIV2UIADAT, fmOpenRead);
   if FileHandle > 0 then
   begin
     BytesRead := FileRead(FileHandle, UIASettings, SizeOfSettings);
     FileClose(FileHandle);
-    if (BytesRead = SizeOfSettings) and (UIASettings.Version = 1) and (UIASettings.Size = SizeOfSettings) then
+    if (BytesRead <= SizeOfSettings) and (UIASettings.Version = 1) and (UIASettings.Size <= SizeOfSettings) then
       Exit;
   end;
   LoadDefaultSettings();
@@ -150,13 +174,14 @@ var
   FileHandle: Integer;
   BytesWritten: Integer;
 begin
-  FileHandle := FileCreate('CIV2UIA.DAT');
+  SuppressPopupList.SaveToFile(FilenameCIV2UIASPTXT);
+  FileHandle := FileCreate(FilenameCIV2UIADAT);
   if FileHandle > 0 then
   begin
     BytesWritten := FileWrite(FileHandle, UIASettings, SizeOf(UIASettings));
     FileClose(FileHandle);
     if BytesWritten <> SizeOf(UIASettings) then
-      DeleteFile('CIV2UIA.DAT');
+      DeleteFile(FilenameCIV2UIADAT);
   end;
 end;
 
@@ -166,6 +191,32 @@ begin
   UIASettings.Size := SizeOf(UIASettings);
   UIASettings.ColorExposure := 0.0;
   UIASettings.ColorGamma := 1.0;
+  SetSettingsFlag(0, True);
+  SetSettingsFlag(1, True);
+  SetSettingsFlag(2, True);
+  SetSettingsFlag(3, True);
+  SetSettingsFlag(4, True);
+end;
+
+function TEx.SettingsFlagSet(i: Integer): Boolean;
+var
+  j, k: Integer;
+begin
+  j := i shr 3;
+  k := 1 shl (i and 7);
+  Result := (UIASettings.Flags[j] and k) <> 0;
+end;
+
+procedure TEx.SetSettingsFlag(i: Integer; v: Boolean);
+var
+  j, k: Integer;
+begin
+  j := i shr 3;
+  k := 1 shl (i and 7);
+  if v then
+    UIASettings.Flags[j] := UIASettings.Flags[j] or k
+  else
+    UIASettings.Flags[j] := UIASettings.Flags[j] and not k;
 end;
 
 function TEx.GetResizableDialogIndex(Dialog: PDialogWindow): Integer;
@@ -198,6 +249,46 @@ begin
         Exit;
       end;
     end;}
+end;
+
+function TEx.CanvasGrab(DC: HDC): TCanvas;
+begin
+  FSavedDC := SaveDC(DC);
+  FCanvas := TCanvas.Create();
+  FCanvas.Handle := DC;
+  Result := FCanvas;
+end;
+
+procedure TEx.CanvasRelease();
+var
+  DC: HDC;
+begin
+  DC := FCanvas.Handle;
+  FCanvas.Handle := 0;
+  FCanvas.Free;
+  FCanvas := nil;
+  RestoreDC(DC, FSavedDC);
+end;
+
+function TEx.SimplePopupSuppressed(SectionName: PChar): Boolean;
+var
+  i, j, k: Integer;
+begin
+  Result := False;
+  if (SectionName <> nil) and SettingsFlagSet(0) then
+  begin
+    for i := 0 to SuppressPopupList.Count - 1 do
+    begin
+      if StrComp(SectionName, PChar(SuppressPopupList[i])) = 0 then
+      begin
+        //        j := i shr 3;
+        //        k := 1 shl (i and 7);
+        //        Result := (UIASettings.SimpleMessages[j] and k) <> 0;
+        Result := True;
+        Exit;
+      end;
+    end;
+  end;
 end;
 
 end.

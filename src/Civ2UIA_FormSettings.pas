@@ -6,16 +6,17 @@ uses
   Classes,
   Controls,
   Forms,
-  StdCtrls;
+  StdCtrls,
+  CheckLst;
 
 type
   TFormSettings = class(TForm)
     ScrollBar1: TScrollBar;
     Label1: TLabel;
-    Label2: TLabel;
+    LabelExposure: TLabel;
     Label3: TLabel;
     ScrollBar2: TScrollBar;
-    Label4: TLabel;
+    LabelGamma: TLabel;
     ButtonClose: TButton;
     btn4: TButton;
     btn5: TButton;
@@ -28,15 +29,25 @@ type
     btn10: TButton;
     btn1: TButton;
     btn11: TButton;
+    ButtonList: TButton;
+    GroupBoxFlags: TGroupBox;
+    CheckBox1: TCheckBox;
+    CheckBox2: TCheckBox;
+    CheckBox3: TCheckBox;
+    CheckBox4: TCheckBox;
+    CheckBox5: TCheckBox;
+    GroupBoxColor: TGroupBox;
     procedure FormCreate(Sender: TObject);
     procedure ScrollBar1Change(Sender: TObject);
     procedure ButtonCloseClick(Sender: TObject);
     procedure ButtonColorPresetClick(Sender: TObject);
+    procedure ButtonListClick(Sender: TObject);
+    procedure CheckBoxFlagsClick(Sender: TObject);
   private
     { Private declarations }
-    ColorChangeEventActive: Boolean;
+    FChangeEventActive: Boolean;
     procedure SetColor(Exposure, Gamma: Double);
-    procedure SetScrollbars();
+    procedure SetControls();
   public
     { Public declarations }
   end;
@@ -53,13 +64,15 @@ uses
   Civ2UIA_Global,
   Civ2UIA_Proc,
   Civ2Types,
-  Civ2Proc;
+  Civ2Proc,
+  CIV2UIA_FormStrings,
+  Civ2UIA_Ex;
 
 {$R *.dfm}
 
 procedure TFormSettings.FormCreate(Sender: TObject);
 begin
-  SetScrollbars();
+  SetControls();
 end;
 
 procedure TFormSettings.ScrollBar1Change(Sender: TObject);
@@ -67,13 +80,11 @@ var
   HWindow: HWND;
   GraphicsInfo: PGraphicsInfo;
 begin
-  if not ColorChangeEventActive then
+  if not FChangeEventActive then
     Exit;
-  GraphicsInfo := @Civ2.MapGraphicsInfo^.GraphicsInfo;
   UIASettings.ColorExposure := ScrollBar1.Position / 20;
   UIASettings.ColorGamma := ScrollBar2.Position / 20;
-  Label2.Caption := FloatToStr(UIASettings.ColorExposure);
-  Label4.Caption := FloatToStr(UIASettings.ColorGamma);
+  GraphicsInfo := @Civ2.MapGraphicsInfo^.GraphicsInfo;
   Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.Palette);
   Civ2.UpdateDIBColorTableFromPalette(@GraphicsInfo.DrawPort, GraphicsInfo.WindowInfo.Palette);
   // Also recreate main window brush for background
@@ -90,12 +101,26 @@ begin
   Close;
 end;
 
-procedure TFormSettings.SetScrollbars();
+procedure TFormSettings.SetControls();
+var
+  i: Integer;
+  Tag: Integer;
 begin
-  ColorChangeEventActive := False;
+  FChangeEventActive := False;
+  // Color correction
   ScrollBar1.Position := Trunc(UIASettings.ColorExposure * 20);
   ScrollBar2.Position := Trunc(UIASettings.ColorGamma * 20);
-  ColorChangeEventActive := True;
+  LabelExposure.Caption := FloatToStr(UIASettings.ColorExposure);
+  LabelGamma.Caption := FloatToStr(UIASettings.ColorGamma);
+  // Flags
+  for i := 0 to GroupBoxFlags.ControlCount - 1 do
+  begin
+    if GroupBoxFlags.Controls[i] is TCheckBox then
+    begin
+      TCheckBox(GroupBoxFlags.Controls[i]).Checked := Ex.SettingsFlagSet(GroupBoxFlags.Controls[i].Tag);
+    end;
+  end;
+  FChangeEventActive := True;
   ScrollBar1Change(nil);
 end;
 
@@ -103,7 +128,7 @@ procedure TFormSettings.SetColor(Exposure, Gamma: Double);
 begin
   UIASettings.ColorExposure := Exposure;
   UIASettings.ColorGamma := Gamma;
-  SetScrollbars();
+  SetControls();
 end;
 
 procedure TFormSettings.ButtonColorPresetClick(Sender: TObject);
@@ -115,6 +140,25 @@ begin
   Exposure := 0 + Tag * 0.10;
   Gamma := 1.0 + Tag * 0.05;
   SetColor(Exposure, Gamma);
+end;
+
+procedure TFormSettings.ButtonListClick(Sender: TObject);
+var
+  FormStrings: TFormStrings;
+begin
+  FormStrings := TFormStrings.Create(Self);
+  FormStrings.Memo1.Lines.Assign(Ex.SuppressPopupList);
+  FormStrings.ShowModal();
+  Ex.SuppressPopupList.Assign(FormStrings.Memo1.Lines);
+  FormStrings.Free();
+end;
+
+procedure TFormSettings.CheckBoxFlagsClick(Sender: TObject);
+var
+  Tag: Integer;
+begin
+  Tag := TComponent(Sender).Tag;
+  Ex.SetSettingsFlag(Tag, TCheckBox(Sender).Checked);
 end;
 
 end.

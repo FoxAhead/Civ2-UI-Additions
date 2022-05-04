@@ -19,7 +19,7 @@ type
   PControlInfo = ^TControlInfo;
 
   PControlInfoListItem = ^TControlInfoListItem;
-  
+
   PControlInfoListItems = ^TControlInfoListItems;
 
   PControlInfoRadio = ^TControlInfoRadio;
@@ -35,6 +35,8 @@ type
   PControlInfoScroll = ^TControlInfoScroll;
 
   PListItem = ^TListItem;
+
+  PDlgTextLine = ^TDlgTextLine;
 
   PHeap = ^THeap;
 
@@ -130,48 +132,6 @@ type
   TCitySpritesInfo = packed record        // 6A9490
     CitySprites: TCitySprites;            //
     CitySpritesItems: Integer;            // + 12C0 = 6AA750
-  end;
-
-  // TODO: Sync with MSWindow
-  TCityWindow = packed record             // 6A91B8 (~TGraphicsInfo) Size = $16E0
-    Unknown1: array[0..$13] of Byte;
-    ClientRectangle: TRect;
-    WindowRectangle: TRect;
-    SpriteArea: Pointer;
-    Unknown1a: Integer;
-    PrevPaletteID: Integer;
-    DrawInfo: PDrawInfo;
-    Unknown1b: Integer;
-    WindowInfo: TWindowInfo;
-    Unknown1c: array[$48 + SizeOf(TWindowInfo)..$2D7] of Byte;
-    CitySpritesInfo: TCitySpritesInfo;    // + 2D8 = 6A9490
-    CityIndex: Integer;                   // + 159C
-    Unknown2: Integer;
-    Unknown3: Integer;
-    Unknown4: Integer;
-    Unknown5: Integer;
-    Unknown6: Integer;
-    ImproveListStart: Integer;
-    ImproveCount: Integer;
-    Unknown7: array[$15BC..$15D3] of Byte; // + 15B8
-    WindowSize: Integer;                  // + 15D4 = 6AA78C  // 1, 2, 3
-    Unknown8: Integer;                    //
-    RectCitizens: TRect;                  //
-    Rect1: TRect;                         // + 15EC
-    RectFoodStorage: TRect;               //
-    Rect3: TRect;                         //
-    Rect4: TRect;                         //
-    RectSupportOut: TRect;                //
-    RectImproveOut: TRect;                //
-    RectInfoOut: TRect;                   //
-    RectResourceMap: TRect;               //
-    RectImproveIn: TRect;                 // + 166C
-    RectSupportIn: TRect;                 //
-    RectInfoIn: TRect;                    //
-    RectImproveScroll: TRect;             //
-    Unknown10: array[$16AE..$16B5] of Byte; //
-    ControlInfo: array[1..10] of Pointer; //
-    ControlInfoScroll: PControlInfoScroll; //
   end;
 
   TControlBlock = packed record           // Size = 0x30  GetWindowLongA(hWnd, 0)  (sub_5C9499)
@@ -274,7 +234,16 @@ type
     Next: PListItem;
   end;
 
-  PDlgTextLine = Pointer;
+  TDlgTextLine = packed record
+    Index: Integer;
+    Flags: Integer;
+    Text: PChar;
+    Size: Integer;
+    Unknown_10: Integer;
+    Unknown_14: Integer;
+    Unknown_18: Integer;
+    Next: PDlgTextLine;
+  end;
 
   PEdit = Pointer;
 
@@ -299,8 +268,8 @@ type
     Left: Integer;
   end;
 
-  TDlgProc3SpriteDraw = procedure (Sprite: PSprite; GraphicsInfo: PGraphicsInfo; A3, A4, A5, A6: Integer); cdecl;
-  
+  TDlgProc3SpriteDraw = procedure(Sprite: PSprite; GraphicsInfo: PGraphicsInfo; A3, A4, A5, A6: Integer); cdecl;
+
   TDialogWindow = packed record           // Size = $2F4 ?
     GraphicsInfo: PGraphicsInfo;
     DrawPort: PDrawPort;
@@ -332,7 +301,7 @@ type
     // 0x00010000 - System popup
     // 0x00040000 - System listbox
     // 0x01000000 - Force scrollbar for listbox
-    ClientSize: SIZE;
+    ClientSize: TSize;
     ScrollOrientation: Integer;
     ListboxWidth: array[0..1] of Integer;
     ListboxHeight: array[0..1] of Integer;
@@ -367,7 +336,7 @@ type
     CaptionHeight: Integer;
     Unknown_D4: Integer;
     SelectedItem: Cardinal;
-    Unknown_DC: Integer;
+    PressedButton: Integer;
     Position: TPoint;
     ClientTopLeft: TPoint;
     Unknown_F0: Integer;
@@ -604,6 +573,38 @@ type
     ClientTopLeft: TPoint;
     ClientSize: TSize;
     Unknown1b: array[1..105] of Integer;
+  end;
+
+  TCityWindow = packed record             // 6A91B8 (~TGraphicsInfo) Size = $16E0
+    MSWindow: TMSWindow;
+    CitySpritesInfo: TCitySpritesInfo;    // + 2D8 = 6A9490
+    CityIndex: Integer;                   // + 159C
+    Unknown2: Integer;
+    Unknown3: Integer;
+    Unknown4: Integer;
+    Unknown5: Integer;
+    Unknown6: Integer;
+    ImproveListStart: Integer;
+    ImproveCount: Integer;
+    Unknown7: array[$15BC..$15D3] of Byte; // + 15B8
+    WindowSize: Integer;                  // + 15D4 = 6AA78C  // 1, 2, 3
+    Unknown8: Integer;                    //
+    RectCitizens: TRect;                  //
+    Rect1: TRect;                         // + 15EC
+    RectFoodStorage: TRect;               //
+    Rect3: TRect;                         //
+    Rect4: TRect;                         //
+    RectSupportOut: TRect;                //
+    RectImproveOut: TRect;                //
+    RectInfoOut: TRect;                   //
+    RectResourceMap: TRect;               //
+    RectImproveIn: TRect;                 // + 166C
+    RectSupportIn: TRect;                 //
+    RectInfoIn: TRect;                    //
+    RectImproveScroll: TRect;             //
+    FontInfo: TFontInfo;                  //
+    ControlInfo: array[1..10] of Pointer; //
+    ControlInfoScroll: PControlInfoScroll; //
   end;
 
   TAdvisorWindow = packed record          // Size = 0x4A4

@@ -57,7 +57,7 @@ type
     procedure InitControlScrollRange(ControlInfoScroll: PControlInfoScroll; MinPos, MaxPos: Integer);
     procedure MapToWindow(var WindowX, WindowY: Integer; MapX, MapY: Integer);
     procedure Palette_SetRandomID(Palette: Pointer);
-    procedure PopupSimpleMessage(A1, A2, A3: Integer);
+    procedure PopupSimpleGameMessage(A1, A2, A3: Integer);
     procedure RedrawMap();
     function ScreenToMap(var MapX, MapY: Integer; ScreenX, ScreenY: Integer): LongBool;
     procedure SetDIBColorTableFromPalette(DrawInfo: PDrawInfo; Palette: Pointer);
@@ -84,6 +84,7 @@ type
     procedure DrawFrame(DrawPort: PDrawPort; Rect: PRect; Color: Integer);
     procedure CallRedrawAfterScroll(ControlInfoScroll: PControlInfoScroll; Pos: Integer);
     procedure CreateDialog(Dialog: PDialogWindow);
+    function CreateDialogAndWait(Dialog: PDialogWindow; TimeOut: Integer): Integer;
     procedure ListItemProcLButtonUp(Code: Integer);
   published
   end;
@@ -120,7 +121,7 @@ begin
   MainWindowInfo := Pointer($006553D8);
   MapGraphicsInfo := Pointer($0066C7A8);
   MapGraphicsInfos := Pointer($0066C7A8);
-  PrevWindowInfo :=  Pointer($00637EA4);
+  PrevWindowInfo := Pointer($00637EA4);
   ScreenRectSize := Pointer($006AB198);
   ScienceAdvisorClientRect := Pointer($0063EC34);
   ScienceAdvisorGraphicsInfo := Pointer($0063EB10);
@@ -321,7 +322,7 @@ asm
     add   esp, 4
 end;
 
-procedure TCiv2.PopupSimpleMessage(A1, A2, A3: Integer);
+procedure TCiv2.PopupSimpleGameMessage(A1, A2, A3: Integer);
 asm
     push  A3
     push  A2
@@ -529,6 +530,15 @@ asm
     call  eax
 end;
 
+function TCiv2.CreateDialogAndWait(Dialog: PDialogWindow; TimeOut: Integer): Integer;
+asm
+    push  TimeOut
+    mov   ecx, Dialog
+    mov   eax, $00401118
+    call  eax
+    mov   @Result, eax
+end;
+
 procedure TCiv2.ListItemProcLButtonUp(Code: Integer);
 asm
     push  Code
@@ -536,5 +546,6 @@ asm
     call  eax
     add   esp, 4
 end;
+
 
 end.

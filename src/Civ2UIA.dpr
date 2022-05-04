@@ -31,7 +31,8 @@ uses
   Civ2UIA_Global in 'Civ2UIA_Global.pas',
   Civ2UIA_MapMessage in 'Civ2UIA_MapMessage.pas',
   Civ2UIA_Ex in 'Civ2UIA_Ex.pas',
-  Civ2UIA_Hooks in 'Civ2UIA_Hooks.pas';
+  Civ2UIA_Hooks in 'Civ2UIA_Hooks.pas',
+  CIV2UIA_FormStrings in 'CIV2UIA_FormStrings.pas' {FormStrings};
 
 {$R *.res}
 
@@ -602,6 +603,58 @@ begin
   end;
 
   Canvas.Free;
+end;
+
+procedure PatchDebugDrawCityWindowEx(CityWindow: PCityWindow); stdcall;
+var
+  Canvas: TCanvas;
+  i: Integer;
+  CitySprite: TCitySprite;
+  DeltaX: Integer;
+begin
+  Canvas := Ex.CanvasGrab(CityWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo.DeviceContext);
+
+  Canvas.Pen.Color := RGB(255, 0, 255);
+  Canvas.Brush.Style := bsClear;
+
+  for i := 0 to CityWindow.CitySpritesInfo.CitySpritesItems - 1 do
+  begin
+    CitySprite := CityWindow.CitySpritesInfo.CitySprites[i];
+    Canvas.Rectangle(CitySprite.X1, CitySprite.Y1, CitySprite.X2, CitySprite.Y2);
+    Canvas.Font.Color := RGB(255, 0, 255);
+    Canvas.TextOut(CitySprite.X1, CitySprite.Y1, IntToStr(CitySprite.SIndex));
+    Canvas.Font.Color := RGB(255, 255, 0);
+    Canvas.TextOut(CitySprite.X1, CitySprite.Y1 + 8, IntToStr(CitySprite.SType));
+    DeltaX := 0;
+    {    if (CitySprite.X1 + DeltaX <= X) and (CitySprite.X2 + DeltaX > X) and (CitySprite.Y1 <= Y) and (CitySprite.Y2 > Y) then
+        begin
+          //      v6 := i;
+                //break;
+        end;}
+  end;
+
+  {  if v6 >= 0 then
+    begin
+      A4 := PCitySprites^[v6].SIndex;
+      A5 := PCitySprites^[v6].SType;
+      Result := v6;
+      Canvas.Pen.Color := RGB(128, 255, 128);
+      Canvas.Rectangle(PCitySprites^[v6].X1, PCitySprites^[v6].Y1, PCitySprites^[v6].X2, PCitySprites^[v6].Y2);
+    end
+    else
+    begin
+      Result := v6;
+    end;}
+
+  Ex.CanvasRelease();
+end;
+
+procedure PatchDebugDrawCityWindow(); register;
+asm
+    push  [ebp - 4]
+    call  PatchDebugDrawCityWindowEx
+    push  $00508C7D
+    ret
 end;
 
 function PatchCalcCitizensSpritesStart(Size: Integer): Integer; stdcall;
@@ -1741,6 +1794,8 @@ procedure PatchOnActivateUnitEx; stdcall;
 var
   i: Integer;
 begin
+  if not Ex.SettingsFlagSet(3) then
+    Exit;
   for i := 0 to Civ2.GameParameters^.TotalUnits - 1 do
   begin
     if Civ2.Units[i].ID > 0 then
@@ -1756,6 +1811,15 @@ asm
     call  eax
     push  $0058D5D4
     ret
+end;
+
+procedure PatchBreakUnitMoving; register;
+begin
+  if not Ex.SettingsFlagSet(2) then
+    asm
+    mov   eax, $0042738C
+    jmp   eax
+    end;
 end;
 
 procedure PatchResetMoveIterationEx; stdcall;
@@ -1783,6 +1847,8 @@ end;
 
 procedure PatchResetEngineersOrderEx(AlreadyWorker: Integer); stdcall;
 begin
+  if not Ex.SettingsFlagSet(1) then
+    Exit;
   Civ2.Units[AlreadyWorker].Counter := 0;
   if Civ2.Units[AlreadyWorker].CivIndex = Civ2.HumanCivIndex^ then
   begin
@@ -1836,19 +1902,22 @@ var
 begin
   Inc(DrawTestData.Counter);
   //
-  for i := 0 to MapMessagesList.Count - 1 do
+  if Civ2.CurrPopupInfo^ = nil then
   begin
-    if i > 35 then
-      Break;
-    MapMessage := TMapMessage(MapMessagesList.Items[i]);
-    Dec(MapMessage.Timer);
-    if MapMessage.Timer <= 0 then
+    for i := 0 to MapMessagesList.Count - 1 do
     begin
-      MapMessage.Free();
-      MapMessagesList.Items[i] := nil;
+      if i > 35 then
+        Break;
+      MapMessage := TMapMessage(MapMessagesList.Items[i]);
+      Dec(MapMessage.Timer);
+      if MapMessage.Timer <= 0 then
+      begin
+        MapMessage.Free();
+        MapMessagesList.Items[i] := nil;
+      end;
     end;
+    MapMessagesList.Pack();
   end;
-  MapMessagesList.Pack();
   //
   DrawTestCityIndex := -1;
   ZeroMemory(@DrawTestMapPoint, SizeOf(DrawTestMapPoint));
@@ -1869,21 +1938,21 @@ begin
   end;
 end;
 
-var
-  PrevGetFocus: HWND;
+{var
+  PrevGetFocus: HWND;}
 
 procedure PatchOnWmTimerDrawEx2(); stdcall;
-var
-  CurrGetFocus: HWND;
+//var
+//  CurrGetFocus: HWND;
 begin
-  //DrawTest();
-  CurrGetFocus := GetFocus();
-  if (CurrGetFocus <> PrevGetFocus) and (CurrGetFocus <> 0) then
-  begin
-    PrevGetFocus := CurrGetFocus;
-    //SendMessageToLoader($FFFF, CurrGetFocus);
-    //MapMessagesList.Add(TMapMessage.Create(Format('GetFocus() = %.8x', [CurrGetFocus])));
-  end;
+  {  //DrawTest();
+    CurrGetFocus := GetFocus();
+    if (CurrGetFocus <> PrevGetFocus) and (CurrGetFocus <> 0) then
+    begin
+      PrevGetFocus := CurrGetFocus;
+      //SendMessageToLoader($FFFF, CurrGetFocus);
+      //MapMessagesList.Add(TMapMessage.Create(Format('GetFocus() = %.8x', [CurrGetFocus])));
+    end;}
 end;
 
 procedure PatchOnWmTimerDraw(); register;
@@ -1918,14 +1987,36 @@ begin
   end;
 end;
 
-procedure PatchPopupSimpleMessageEx(A1, A2, A3: Integer); cdecl;
+function PatchPopupSimpleMessageEx(Dialog: PDialogWindow; SectionName: PChar): Integer; stdcall;
+var
+  TextLine: PDlgTextLine;
+  Text: string;
 begin
-  if A1 = $0062DE50 then
+  Result := 0;
+  if Ex.SimplePopupSuppressed(SectionName) then
   begin
-    MapMessagesList.Add(TMapMessage.Create('Test'));
+    if Dialog.Title <> nil then
+      Text := string(Dialog.Title) + ': ';
+    TextLine := Dialog.FirstTextLine;
+    while TextLine <> nil do
+    begin
+      Text := Text + ' ' + string(TextLine.Text);
+      TextLine := TextLine.Next;
+    end;
+    MapMessagesList.Add(TMapMessage.Create(Text));
   end
   else
-    Civ2.PopupSimpleMessage(A1, A2, A3);
+    Result := Civ2.CreateDialogAndWait(Dialog, 0);
+end;
+
+procedure PatchPopupSimpleMessage(); register;
+asm
+    push  [ebp + $0C]  // char *aSectionName
+    lea   ecx, [ebp - $300] // T_DialogWindow vDlg
+    push  ecx
+    call  PatchPopupSimpleMessageEx
+    push  $0051D5E2
+    ret
 end;
 
 procedure PatchFocusCityWindow(); stdcall; // __thiscall
@@ -1938,7 +2029,7 @@ begin
     mov   eax, $004085F0
     call  eax
   end;
-  HWindow := ACityWindow^.WindowInfo.WindowStructure.HWindow;
+  HWindow := ACityWindow^.MSWindow.GraphicsInfo.WindowInfo.WindowStructure.HWindow;
   if GuessWindowType(HWindow) = wtCityWindow then
   begin
     SetFocus(HWindow);
@@ -2164,6 +2255,8 @@ var
   HotKey: string;
   HotKeysList: TStringList;
 begin
+  if not Ex.SettingsFlagSet(4) then
+    Exit;
   HotKeysList := TStringList.Create();
   Radios := Group.pRadios;
   for i := 0 to Group.NRadios - 1 do
@@ -2238,7 +2331,6 @@ begin
         ScrollInfo.fMask := SIF_PAGE;
         SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, False);
         Dialog._Extra.ListPageStart := GetScrollPos(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL);}
-
       end;
 
       for i := 0 to Dialog.NumButtons + Dialog.NumButtonsStd - 1 do
@@ -2567,7 +2659,6 @@ begin
 
     RedrawWindow(Dialog.GraphicsInfo.WindowInfo.WindowStructure.HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
     //    Civ2.ShowWindowInvalidateRect(@Dialog.ScrollControls1[0].ControlInfo);
-
   end
   else
     // Original code
@@ -2681,7 +2772,6 @@ begin
             begin
               Civ2.ListItemProcLButtonUp(Dialog.SelectedListItem.UnitIndex);
             end;
-
           end;
       end;
       if Pos <> NewPos then
@@ -2708,6 +2798,7 @@ asm
     je    @@LABEL1
     push  $005A41D5
     ret
+
 @@LABEL1:
     push  $005A4240
     ret
@@ -2726,6 +2817,8 @@ begin
   if UIAOPtions.UIAEnable then
   begin
     //WriteMemory(HProcess, $00403D00, [OP_JMP], @PatchGetInfoOfClickedCitySprite); // Only for debugging City Sprites
+    //WriteMemory(HProcess, $00508C78, [OP_JMP], @PatchDebugDrawCityWindow); // For debugging City Sprites
+
     WriteMemory(HProcess, $00502203, [OP_CALL], @PatchCalcCitizensSpritesStart);
     WriteMemory(HProcess, $005EB465, [], @PatchWindowProcCommon);
     WriteMemory(HProcess, $005EACDE, [], @PatchWindowProc1);
@@ -2791,31 +2884,34 @@ begin
   // Color correction
   //WriteMemory(HProcess, $005DEB12, [OP_JMP], @PatchPaletteGamma);
   WriteMemory(HProcess, $005DEAD1, [OP_JMP], @PatchPaletteGammaV2);
+
   // Celebrating city yellow color instead of white in Attitude Advisor (F4)
   WriteMemory(HProcess, $0042DE86, [WLTDKColorIndex]); // (Color index = Idx + 10)
-  // Show Unit shields cost in City Change list and fix Turns calculation for high numbers production
+  // Change color in City Window for We Love The King Day
+  WriteMemory(HProcess, $00502109, [OP_JMP], @PatchDrawCityWindowTopWLTKD);
+
+  // Show Unit shields cost in City Change list and fix Turns calculation for high production numbers
   WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListUnitCost);
 
   // Add Cancel button to City Change list
   WriteMemory(HProcess, $0050AA86, [OP_CALL], @PatchLoadCityChangeDialog);
 
-  // Reset Units wait flag after activating
+  // (0) Suppress specific simple popup message
+  WriteMemory(HProcess, $0051D5D5, [OP_JMP], @PatchPopupSimpleMessage);
+  // (1) Reset Engineer's order after passing its work to coworker
+  WriteMemory(HProcess, $004C4528, [OP_JMP], @PatchResetEngineersOrder);
+  // (2) Don't break unit movement
+  WriteMemory(HProcess, $00402112, [OP_JMP], @PatchBreakUnitMoving);
+  // (3) Reset Units wait flag after activating
   WriteMemory(HProcess, $0058D5CF, [OP_JMP], @PatchOnActivateUnit);
-
-  // Don't break unit movement
-  WriteMemory(HProcess, $004273A0, [$00]);
+  // (4) Radios hotkeys
+  WriteMemory(HProcess, $00531163, [OP_JMP], @PatchCreateWindowRadioGroupAfter);
 
   // Reset MoveIteration before start moving to prevent wrong warning
   WriteMemory(HProcess, $00411419, [OP_JMP], @PatchResetMoveIteration);
   WriteMemory(HProcess, $0058DDA0, [OP_JMP], @PatchResetMoveIteration2);
 
-  // Reset Engineer's order after passing its work to coworker
-  WriteMemory(HProcess, $004C4528, [OP_JMP], @PatchResetEngineersOrder);
-
-  // Change color in City Window for We Love The King Day
-  WriteMemory(HProcess, $00502109, [OP_JMP], @PatchDrawCityWindowTopWLTKD);
-
-  // Test On_WM_TIMER Draw
+  // On_WM_TIMER Draw
   WriteMemory(HProcess, $0040364D, [OP_JMP], @PatchOnWmTimerDraw);
 
   // Map Overlay
@@ -2840,24 +2936,15 @@ begin
   WriteMemory(HProcess, $00408476, [OP_JMP], @PatchUpdateAdvisorRepositionControls);
   WriteMemory(HProcess, $005DCA69, [OP_JMP], @PatchWindowProcMSWindowWmNcHitTest); // Set cursor at window edges
   WriteMemory(HProcess, $0042A7B2, [OP_CALL], @PatchCloseAdvisorWindowAfter); // Save UIA settings after closing Advisor
-  // Tests
-  // Suppress specific simple popup message
-  //WriteMemory(HProcess, $004034A9, [OP_JMP], @PatchPopupSimpleMessageEx);
-  HookImportedFunctions(HProcess);
-  // Radios hotkey
-  WriteMemory(HProcess, $00531163, [OP_JMP], @PatchCreateWindowRadioGroupAfter);
-  // BgTiles
-//  WriteMemory(HProcess, $00402C9D, [OP_RET]);
-//  WriteMemory(HProcess, $00401C53, [OP_RET]);
-//  WriteMemory(HProcess, $005A9A4C, [$5F, $5E, $5B, $C9, $C3]);
-//  WriteMemory(HProcess, $00633588, [$0F]);
-//  WriteMemory(HProcess, $0063358C, [$0F]);
+
   // Resizable Dialog window
   WriteMemory(HProcess, $0059FD36, [OP_JMP], @PatchCreateDialogDimension);
   WriteMemory(HProcess, $005A1EDC, [OP_JMP], @PatchCreateDialogMainWindow);
   WriteMemory(HProcess, $005A203D, [], @PatchUpdateDialogWindow, True);
+
   // Draw sprites in listbox item text
   WriteMemory(HProcess, $00403625, [OP_JMP], @PatchDlgDrawListboxItemText);
+
   // ListOfUnits Dialog Popup v2
   WriteMemory(HProcess, $005B6BFE, [OP_NOP, OP_JMP]); // Ignore limit of 9 Units
   WriteMemory(HProcess, $005A0200, [OP_JMP], @PatchCreateDialogDimensionList);
@@ -2866,11 +2953,8 @@ begin
   WriteMemory(HProcess, $005A5EE7, [OP_JMP], @PatchCreateDialogShowList);
   WriteMemory(HProcess, $005A40D7, [OP_JMP], @PatchDlgKeyDownList);
 
-  //
-  //WriteMemory(HProcess, $005A5CDA, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
-  //WriteMemory(HProcess, $005A5CDF, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
-  //WriteMemory(HProcess, $00408637, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
-
+  // Tests
+  // HookImportedFunctions(HProcess);
   // civ2patch
   if UIAOPtions.civ2patchEnable then
   begin

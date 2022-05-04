@@ -26,7 +26,7 @@ type
     Length: Integer;
   end;
 
-//  TShadows = set of (stTopLeft, stTop, stTopRight);
+  //  TShadows = set of (stTopLeft, stTop, stTopRight);
 
   TMouseDrag = packed record
     Active: Boolean;
@@ -60,14 +60,15 @@ type
     Size: Integer;
     ColorExposure: Double;
     ColorGamma: Double;
-    AdvisorHeights: array [1..12] of Word;
-    DialogLines: array [1..5] of Word;
+    AdvisorHeights: array[1..12] of Word;
+    DialogLines: array[1..16] of Byte;
+    Flags: array[0..31] of Byte;          // 256 flags
   end;
 
   PCallerChain = ^TCallerChain;
   TCallerChain = packed record
-     Prev: PCallerChain;
-     Caller: Pointer; 
+    Prev: PCallerChain;
+    Caller: Pointer;
   end;
 
 const
