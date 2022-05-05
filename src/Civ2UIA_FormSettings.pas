@@ -145,12 +145,20 @@ end;
 procedure TFormSettings.ButtonListClick(Sender: TObject);
 var
   FormStrings: TFormStrings;
+  i: Integer;
 begin
   FormStrings := TFormStrings.Create(Self);
   FormStrings.Memo1.Lines.Assign(Ex.SuppressPopupList);
   FormStrings.ShowModal();
+  for i := 0 to FormStrings.Memo1.Lines.Count - 1 do
+    FormStrings.Memo1.Lines[i] := UpperCase(FormStrings.Memo1.Lines[i]);
   Ex.SuppressPopupList.Assign(FormStrings.Memo1.Lines);
   FormStrings.Free();
+  for i := Ex.SuppressPopupList.Count - 1 downto 0 do
+  begin
+    if Ex.SuppressPopupList[i] = '' then
+      Ex.SuppressPopupList.Delete(i);
+  end;
 end;
 
 procedure TFormSettings.CheckBoxFlagsClick(Sender: TObject);

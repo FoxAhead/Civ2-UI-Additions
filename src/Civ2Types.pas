@@ -67,32 +67,32 @@ type
   PUnit = ^TUnit;
 
   TWindowProcs = packed record            // Size 0x68  GetWindowLongA(hWnd, 4) + 0x10
-    MouseFirst: Pointer;
-    LButtonDown: Pointer;                 // + 0x04
-    LButtonUpEnd: Pointer;                // + 0x08
-    LButtonUp: Pointer;                   // + 0x0C
-    RButtonDown: Pointer;                 // + 0x10
-    RButtonUpEnd: Pointer;                // + 0x14
-    RButtonUp: Pointer;                   // + 0x18
-    LButtonDblClk: Pointer;               // + 0x1C
-    KeyDown1: Pointer;                    // + 0x20
-    KeyUp: Pointer;                       // + 0x24
-    KeyDown2: Pointer;                    // + 0x28
-    WM_CHAR: Pointer;                     // + 0x2C
-    _Unknown1: Pointer;                   // + 0x30
-    _Unknown2: Pointer;                   // + 0x34
-    _Unknown3: Pointer;                   // + 0x38
-    WM_SETFOCUS: Pointer;                 // + 0x3C
-    WM_SIZE: Pointer;                     // + 0x40
-    WM_MOVE: Pointer;                     // + 0x44
-    WM_COMMNOTIFY: Pointer;               // + 0x48
-    _Unknown8: Pointer;                   // + 0x4C
-    Proc21: Pointer;                      // + 0x50
-    Proc22: Pointer;                      // + 0x54
-    Proc23: Pointer;                      // + 0x58
+    ProcMouseMove: Pointer;
+    ProcLButtonDown: Pointer;             // + 0x04
+    ProcLButtonUpEnd: Pointer;            // + 0x08
+    ProcLButtonUp: Pointer;               // + 0x0C
+    ProcRButtonDown: Pointer;             // + 0x10
+    ProcRButtonUpEnd: Pointer;            // + 0x14
+    ProcRButtonUp: Pointer;               // + 0x18
+    ProcLButtonDblClk: Pointer;           // + 0x1C
+    ProcKeyDown1: Pointer;                // + 0x20
+    ProcKeyUp: Pointer;                   // + 0x24
+    ProcKeyDown2: Pointer;                // + 0x28
+    ProcChar: Pointer;                    // + 0x2C
+    ProcClose: Pointer;                   // + 0x30
+    ProcSysCommandMinimize: Pointer;      // + 0x34
+    ProcSysCommandRestore: Pointer;       // + 0x38
+    ProcSetFocus: Pointer;                // + 0x3C
+    ProcSize: Pointer;                    // + 0x40
+    ProcMove: Pointer;                    // + 0x44
+    ProcCommNotify: Pointer;              // + 0x48
+    ProcHScroll: Pointer;                 // + 0x4C
+    ProcHScrollThumbTrack: Pointer;       // + 0x50
+    ProcVScroll: Pointer;                 // + 0x54
+    ProcVScrollThumbTrack: Pointer;       // + 0x58
     Proc24: Pointer;                      // + 0x5C
-    Proc25: Pointer;                      // + 0x60
-    Proc26: Pointer;                      // + 0x64
+    ProcEnterSizeMove: Pointer;           // + 0x60
+    ProcExitSizeMove: Pointer;            // + 0x64
   end;
 
   TWindowInfo = packed record             // GetWindowLongA(hWnd, 4),  GetWindowLongA(hWnd, 8)
@@ -105,8 +105,17 @@ type
     MinTrackSize: TPoint;                 // + 0x7C
     MaxTrackSize: TPoint;                 // + 0x84
     PopupActive: Cardinal;                // + 0x8C
-    Unknown_90: array[$90..$B7] of Byte;  // + 0x90
-    ControlInfo: PControlInfo;            // + 0x94
+    Unknown_90: Integer;                  // + 0x90
+    Unknown_94: Integer;                  // + 0x94
+    Unknown_98: Integer;                  // + 0x98
+    Unknown_9C: Integer;                  // + 0x9C
+    Unknown_A0: Integer;                  // + 0xA0
+    Unknown_A4: Integer;                  // + 0xA4
+    LButtonDown: Integer;                 // + 0xA8
+    RButtonDown: Integer;                 // + 0xAC
+    HScrollPos: Integer;                  // + 0xB0
+    VScrollPos: Integer;                  // + 0xB4
+    ControlInfo: PControlInfo;            // + 0xB8
     ButtonInfoOK: PControlInfoButton;     // + 0xBC
     ButtonInfoCANCEL: PControlInfoButton; // + 0xC0
     Unknown_C4: Byte;                     // + 0xC4

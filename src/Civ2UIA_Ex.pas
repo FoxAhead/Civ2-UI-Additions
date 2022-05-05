@@ -102,6 +102,8 @@ begin
   UnitsList := TList.Create();
   ShowWindowStack := TStack.Create();
   SuppressPopupList := TStringList.Create();
+  SuppressPopupList.Sorted := True;
+  SuppressPopupList.Duplicates := dupIgnore;
   LoadSettingsFile();
 end;
 
@@ -271,23 +273,11 @@ begin
 end;
 
 function TEx.SimplePopupSuppressed(SectionName: PChar): Boolean;
-var
-  i, j, k: Integer;
 begin
   Result := False;
   if (SectionName <> nil) and SettingsFlagSet(0) then
   begin
-    for i := 0 to SuppressPopupList.Count - 1 do
-    begin
-      if StrComp(SectionName, PChar(SuppressPopupList[i])) = 0 then
-      begin
-        //        j := i shr 3;
-        //        k := 1 shl (i and 7);
-        //        Result := (UIASettings.SimpleMessages[j] and k) <> 0;
-        Result := True;
-        Exit;
-      end;
-    end;
+    Result := (SuppressPopupList.IndexOf(string(SectionName)) > -1);
   end;
 end;
 

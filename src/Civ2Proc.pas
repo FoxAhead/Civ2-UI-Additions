@@ -53,6 +53,7 @@ type
     procedure DrawStringRight(ChText: PChar; Right, Top, Shift: Integer);
     function GetCityIndexAtXY(X, Y: Integer): Integer;
     function GetInfoOfClickedCitySprite(CitySpritesInfo: PCitySpritesInfo; X, Y: Integer; var SIndex, SType: Integer): Integer;
+    procedure SetSpecialist(ClickedCitizenIndex: Integer);
     function GetStringInList(StringIndex: Integer): PChar;
     procedure InitControlScrollRange(ControlInfoScroll: PControlInfoScroll; MinPos, MaxPos: Integer);
     procedure MapToWindow(var WindowX, WindowY: Integer; MapX, MapY: Integer);
@@ -210,6 +211,14 @@ asm
     call  eax
     mov   @Result, eax
 end;
+
+procedure TCiv2.SetSpecialist(ClickedCitizenIndex: Integer);
+asm
+    push  ClickedCitizenIndex 
+    mov   eax, $0040204A
+    call  eax
+    add   esp, 4
+end;  
 
 procedure TCiv2.InitControlScrollRange(ControlInfoScroll: PControlInfoScroll; MinPos, MaxPos: Integer);
 asm

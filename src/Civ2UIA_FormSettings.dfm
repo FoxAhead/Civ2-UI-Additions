@@ -51,7 +51,7 @@ object FormSettings: TFormSettings
       Top = 16
       Width = 233
       Height = 17
-      Caption = 'Suppress simple popups from GAME.TXT'
+      Caption = 'Suppress simple GAME.TXT popups'
       TabOrder = 0
       OnClick = CheckBoxFlagsClick
     end
@@ -82,7 +82,7 @@ object FormSettings: TFormSettings
       Width = 289
       Height = 17
       Hint = 'asdfasf sdaf sdf'
-      Caption = 'Reset Units wait flag after activating'
+      Caption = 'Reset units Wait flag after activating'
       ParentShowHint = False
       ShowHint = True
       TabOrder = 4
@@ -94,7 +94,7 @@ object FormSettings: TFormSettings
       Top = 112
       Width = 289
       Height = 17
-      Caption = 'Radios hotkeys'
+      Caption = 'Radiobuttons hotkeys'
       TabOrder = 5
       OnClick = CheckBoxFlagsClick
     end

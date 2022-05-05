@@ -741,17 +741,10 @@ begin
   if WindowType = wtCityWindow then
   begin
     Civ2.GetInfoOfClickedCitySprite(@Civ2.CityWindow^.CitySpritesInfo, CursorClient.X, CursorClient.Y, SIndex, SType);
-    //SendMessageToLoader(Sindex,SType);
     if SType = 2 then                     // Citizens
     begin
       ChangeSpecialistDown := (Delta = -1);
-      asm
-    mov   eax, SIndex
-    push  eax
-    mov   eax, $00501819 // Set_Specialist
-    call  eax
-    add   esp, 4
-      end;
+      Civ2.SetSpecialist(SIndex);
       ChangeSpecialistDown := False;
       Result := False;
       goto EndOfFunction;
@@ -806,15 +799,6 @@ begin
     //WindowInfo := ControlInfoScroll^.ControlInfo.WindowInfo;
     Civ2.PrevWindowInfo := ControlInfoScroll^.ControlInfo.WindowInfo;
     Civ2.CallRedrawAfterScroll(ControlInfoScroll, nPos);
-    {asm
-    mov   eax, WindowInfo
-    mov   [$00637EA4], eax
-    mov   eax, nPos
-    push  eax
-    mov   ecx, ControlInfoScroll
-    mov   eax, $005CD640    // Call CallRedrawAfterScroll
-    call  eax
-    end;}
     Result := False;
     goto EndOfFunction;
   end;
@@ -2019,6 +2003,41 @@ asm
     ret
 end;
 
+procedure PatchLoadPopupDialogAfterEx(Dialog: PDialogWindow; FileName, SectionName: PChar); stdcall;
+var
+  TextLine: PDlgTextLine;
+  Text: string;
+begin
+  if (FileName <> nil) and (StrComp(FileName, 'GAME') = 0) then
+  begin
+    if Ex.SimplePopupSuppressed(SectionName) then
+    begin
+      if Dialog.Title <> nil then
+        Text := string(Dialog.Title) + ': ';
+      TextLine := Dialog.FirstTextLine;
+      while TextLine <> nil do
+      begin
+        Text := Text + ' ' + string(TextLine.Text);
+        TextLine := TextLine.Next;
+      end;
+      MapMessagesList.Add(TMapMessage.Create(Text));
+      Dialog.Flags := Dialog.Flags or 8;
+    end
+  end;
+end;
+
+procedure PatchLoadPopupDialogAfter(); register;
+asm
+    push  eax
+    push  [ebp + $0C]  // char *aSectionName
+    push  [ebp + $08]  // char *aFileName
+    push  [ebp - $180] // P_DialogWindow this
+    call  PatchLoadPopupDialogAfterEx
+    pop   eax
+    push  $005A6C1C
+    ret
+end;
+
 procedure PatchFocusCityWindow(); stdcall; // __thiscall
 var
   ACityWindow: PCityWindow;
@@ -2839,7 +2858,7 @@ begin
     WriteMemory(HProcess, $0042C107, [$00, $00, $00, $00]); // Show buildings even with zero maintenance cost in Trade Advisor
     // CityWindow
     WriteMemory(HProcess, $004013A2, [OP_JMP], @PatchCityWindowInitRectangles);
-    WriteMemory(HProcess, $00505987, [OP_JMP], @PatchDrawCityWindowSupport1);
+    WriteMemory(HProcess, $00505987, [OP_JMP], @PatchDrawCityWindowSupport1); // Add scrollbar, sort units list
     WriteMemory(HProcess, $005059B2, [OP_JMP], @PatchDrawCityWindowSupport1a);
     WriteMemory(HProcess, $005059D7, [OP_JMP], @PatchDrawCityWindowSupport1a);
     WriteMemory(HProcess, $00505D0B, [OP_JMP], @PatchDrawCityWindowSupport1a);
@@ -2897,7 +2916,8 @@ begin
   WriteMemory(HProcess, $0050AA86, [OP_CALL], @PatchLoadCityChangeDialog);
 
   // (0) Suppress specific simple popup message
-  WriteMemory(HProcess, $0051D5D5, [OP_JMP], @PatchPopupSimpleMessage);
+  //WriteMemory(HProcess, $0051D5D5, [OP_JMP], @PatchPopupSimpleMessage);
+  WriteMemory(HProcess, $005A6C12, [OP_JMP], @PatchLoadPopupDialogAfter);
   // (1) Reset Engineer's order after passing its work to coworker
   WriteMemory(HProcess, $004C4528, [OP_JMP], @PatchResetEngineersOrder);
   // (2) Don't break unit movement
@@ -2955,6 +2975,8 @@ begin
 
   // Tests
   // HookImportedFunctions(HProcess);
+  WriteMemory(HProcess, $005DBC7B, [$18]); // MSWindowClass cbWndExtra
+
   // civ2patch
   if UIAOPtions.civ2patchEnable then
   begin
