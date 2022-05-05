@@ -39,6 +39,7 @@ type
     GroupBoxColor: TGroupBox;
     procedure FormCreate(Sender: TObject);
     procedure ScrollBar1Change(Sender: TObject);
+    procedure PropagatePaletteChanges();
     procedure ButtonCloseClick(Sender: TObject);
     procedure ButtonColorPresetClick(Sender: TObject);
     procedure ButtonListClick(Sender: TObject);
@@ -76,14 +77,19 @@ begin
 end;
 
 procedure TFormSettings.ScrollBar1Change(Sender: TObject);
-var
-  HWindow: HWND;
-  GraphicsInfo: PGraphicsInfo;
 begin
   if not FChangeEventActive then
     Exit;
   UIASettings.ColorExposure := ScrollBar1.Position / 20;
   UIASettings.ColorGamma := ScrollBar2.Position / 20;
+  SetControls();
+end;
+
+procedure TFormSettings.PropagatePaletteChanges;
+var
+  HWindow: HWND;
+  GraphicsInfo: PGraphicsInfo;
+begin
   GraphicsInfo := @Civ2.MapGraphicsInfo^.GraphicsInfo;
   Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.Palette);
   Civ2.UpdateDIBColorTableFromPalette(@GraphicsInfo.DrawPort, GraphicsInfo.WindowInfo.Palette);
@@ -121,7 +127,7 @@ begin
     end;
   end;
   FChangeEventActive := True;
-  ScrollBar1Change(nil);
+  PropagatePaletteChanges();
 end;
 
 procedure TFormSettings.SetColor(Exposure, Gamma: Double);

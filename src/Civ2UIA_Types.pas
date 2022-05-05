@@ -19,7 +19,7 @@ type
     wtTop5Cities,                         //F8
     wtCivilizationScore,                  //F9
     wtDemographics,                       //F11
-    wtCityWindow, wtTaxRate, wtCivilopedia, wtUnitsListPopup);
+    wtCityWindow, wtTaxRate, wtCivilopedia, wtUnitsListPopup, wtMap);
 
   TListOfUnits = packed record
     Start: Integer;

@@ -10,6 +10,8 @@ library Civ2UIA;
   with your DLL. To avoid using BORLNDMM.DLL, pass string information
   using PChar or ShortString parameters. }
 
+{$R 'Civ2UIA_GIFS.res' 'Civ2UIA_GIFS.rc'}
+
 uses
   Classes,
   Graphics,
@@ -32,7 +34,7 @@ uses
   Civ2UIA_MapMessage in 'Civ2UIA_MapMessage.pas',
   Civ2UIA_Ex in 'Civ2UIA_Ex.pas',
   Civ2UIA_Hooks in 'Civ2UIA_Hooks.pas',
-  CIV2UIA_FormStrings in 'CIV2UIA_FormStrings.pas' {FormStrings};
+  Civ2UIA_FormStrings in 'Civ2UIA_FormStrings.pas' {FormStrings};
 
 {$R *.res}
 
@@ -51,18 +53,25 @@ end;
 
 function GuessWindowType(HWindow: HWND): TWindowType; stdcall;
 var
-  v27: Integer;
+  WindowInfo: Integer;
   i: TWindowType;
+  Dialog: PDialogWindow;
 begin
   Result := wtUnknown;
-  v27 := GetWindowLongA(HWindow, 4);
-  if v27 = $006A9200 then                 //TWindowInfo
-    Result := wtCityWindow;
-  if v27 = $006A66B0 then
-    Result := wtCivilopedia;
-  if (Civ2.CurrPopupInfo^ <> nil) then
-    if (Civ2.CurrPopupInfo^^.GraphicsInfo = Pointer(GetWindowLongA(HWindow, $0C))) and (Civ2.CurrPopupInfo^^.NumListItems > 0) and (Civ2.CurrPopupInfo^^.NumLines = 0) then
-      Result := wtUnitsListPopup;
+  WindowInfo := GetWindowLongA(HWindow, 4);
+  if WindowInfo = $006A9200 then
+    Result := wtCityWindow
+  else if WindowInfo = $006A66B0 then
+    Result := wtCivilopedia
+  else if WindowInfo = $0066C7F0 then
+    Result := wtMap
+  else
+  begin
+    Dialog := Civ2.CurrPopupInfo^;
+    if (Dialog <> nil) then
+      if (Dialog.GraphicsInfo = Pointer(GetWindowLongA(HWindow, $0C))) and (Dialog.NumListItems > 0) and (Dialog.NumLines = 0) then
+        Result := wtUnitsListPopup;
+  end;
   if Result = wtUnknown then
   begin
     for i := Low(TWindowType) to High(TWindowType) do
@@ -467,7 +476,7 @@ begin
     // OffsetRect(R, 50, 50);
     //DrawTestColor := DrawTestColor xor $00FFFFFF;
     //Canvas.Rectangle(R);
-    TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 0, clWhite, clBlack, SHADOW_ALL);
+    //TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 0, clWhite, clBlack, SHADOW_ALL);
 
     // Message Queue
     for i := 0 to MapMessagesList.Count - 1 do
@@ -670,6 +679,54 @@ begin
   Result := (PCityWindow^.WindowSize * (Size + $E) - ClickWidth) div 2 - 1;
 end;
 
+procedure ChangeSpecialistUpOrDown(var SpecialistType: Integer); stdcall;
+begin
+  if ChangeSpecialistDown then
+    Dec(SpecialistType)
+  else
+    Inc(SpecialistType);
+  if SpecialistType > 3 then
+    SpecialistType := 1;
+  if SpecialistType < 1 then
+    SpecialistType := 3;
+end;
+
+procedure CityChangeAllSpecialists(CitizenIndex, DeltaSign: Integer);
+var
+  City: Integer;
+  i: Integer;
+  SpecialistIndex, Specialist: Integer;
+begin
+  City := Civ2.CityWindow.CityIndex;
+  SpecialistIndex := CitizenIndex - (Civ2.Cities[City].Size - Civ2.CityGlobals.FreeCitizens);
+  if SpecialistIndex >= 0 then
+  begin
+    if Civ2.Cities[City].Size < 5 then
+      Specialist := 1
+    else
+    begin
+      if DeltaSign <> 0 then
+        SpecialistIndex := 0;
+      Specialist := Civ2.GetSpecialist(City, SpecialistIndex);
+      Specialist := ((Specialist + DeltaSign + 2) mod 3) + 1;
+    end;
+    for i := 0 to Civ2.CityGlobals.FreeCitizens - 1 do
+    begin
+      Civ2.SetSpecialist(City, i, Specialist);
+    end;
+  end;
+  Civ2.UpdateCityWindow(Civ2.CityWindow, 1);
+end;
+
+{procedure CityWindowButtonUp(X, Y: Integer); stdcall;
+var
+  SIndex, SType: Integer;
+begin
+  Civ2.GetInfoOfClickedCitySprite(@Civ2.CityWindow.CitySpritesInfo, X, Y, SIndex, SType);
+  if SType = 2 then
+    CityChangeAllSpecialists(SIndex, 0);
+end;}
+
 function PatchCommandHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 begin
   Result := True;
@@ -744,7 +801,10 @@ begin
     if SType = 2 then                     // Citizens
     begin
       ChangeSpecialistDown := (Delta = -1);
-      Civ2.SetSpecialist(SIndex);
+      if (LOWORD(WParam) and MK_SHIFT) <> 0 then
+        CityChangeAllSpecialists(SIndex, Sign(Delta))
+      else
+        Civ2.CityCitizenClicked(SIndex);
       ChangeSpecialistDown := False;
       Result := False;
       goto EndOfFunction;
@@ -856,14 +916,17 @@ var
   Xc, Yc: Integer;
   MButtonIsDown: Boolean;
   IsMapWindow: Boolean;
+  WindowType: TWindowType;
 begin
   Result := True;
   Screen.X := Smallint(LParam and $FFFF);
   Screen.Y := Smallint((LParam shr 16) and $FFFF);
   MButtonIsDown := (LOWORD(WParam) and MK_MBUTTON) <> 0;
-  IsMapWindow := False;
+  WindowType := GuessWindowType(HWindow);
+  {IsMapWindow := False;
   if Civ2.MapGraphicsInfo^.GraphicsInfo.WindowInfo.WindowStructure <> nil then
-    IsMapWindow := (HWindow = Civ2.MapGraphicsInfo^.GraphicsInfo.WindowInfo.WindowStructure^.HWindow);
+    IsMapWindow := (HWindow = Civ2.MapGraphicsInfo^.GraphicsInfo.WindowInfo.WindowStructure^.HWindow);}
+  IsMapWindow := (WindowType = wtMap);
   case Msg of
     WM_MBUTTONDOWN:
       if (LOWORD(WParam) and MK_CONTROL) <> 0 then
@@ -943,22 +1006,53 @@ begin
         end;
       end;
     WM_MBUTTONUP:
-      begin
-        if MouseDrag.Active then
-        begin
-          MouseDrag.Active := False;
-          if MouseDrag.Moved < 5 then
+      case WindowType of
+        wtMap:
           begin
-            if not Civ2.ScreenToMap(Xc, Yc, MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y) then
+            if MouseDrag.Active then
             begin
-              if ((Civ2.MapGraphicsInfo^.MapCenter.X <> Xc) or (Civ2.MapGraphicsInfo^.MapCenter.Y <> Yc)) then
+              MouseDrag.Active := False;
+              if MouseDrag.Moved < 5 then
               begin
-                PInteger($0062BCB0)^ := 1; // Don't flush messages
-                Civ2.CenterView(Xc, Yc);
-                PInteger($0062BCB0)^ := 0;
+                if not Civ2.ScreenToMap(Xc, Yc, MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y) then
+                begin
+                  if ((Civ2.MapGraphicsInfo^.MapCenter.X <> Xc) or (Civ2.MapGraphicsInfo^.MapCenter.Y <> Yc)) then
+                  begin
+                    PInteger($0062BCB0)^ := 1; // Don't flush messages
+                    Civ2.CenterView(Xc, Yc);
+                    PInteger($0062BCB0)^ := 0;
+                  end;
+                end;
               end;
+              Result := False;
             end;
           end;
+        {        wtCityWindow:
+                  begin
+                    CityWindowButtonUp(Screen.X, Screen.Y);
+                    Result := False;
+                  end;}
+      end;
+  end;
+end;
+
+function PatchLButtonUpHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
+var
+  Screen: TPoint;
+  WindowType: TWindowType;
+  SIndex, SType: Integer;
+begin
+  Result := True;
+  Screen.X := Smallint(LParam and $FFFF);
+  Screen.Y := Smallint((LParam shr 16) and $FFFF);
+  WindowType := GuessWindowType(HWindow);
+  case WindowType of
+    wtCityWindow:
+      begin
+        Civ2.GetInfoOfClickedCitySprite(@Civ2.CityWindow.CitySpritesInfo, Screen.X, Screen.Y, SIndex, SType);
+        if (SType = 2) and ((LOWORD(WParam) and MK_SHIFT) <> 0) then
+        begin
+          CityChangeAllSpecialists(SIndex, 0);
           Result := False;
         end;
       end;
@@ -976,8 +1070,10 @@ begin
       Result := PatchVScrollHandler(HWindow, Msg, WParam, LParam, FromCommon);
     WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE:
       Result := PatchMButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
+    WM_LBUTTONUP:
+      Result := PatchLButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
   else
-    Result := True;
+    Result := True;                       // Message not handled
   end;
 end;
 
@@ -1021,23 +1117,11 @@ asm
     ret
 end;
 
-procedure PatchChangeSpecialistUpOrDown(var SpecialistType: Integer); stdcall;
-begin
-  if ChangeSpecialistDown then
-    Dec(SpecialistType)
-  else
-    Inc(SpecialistType);
-  if SpecialistType > 3 then
-    SpecialistType := 1;
-  if SpecialistType < 1 then
-    SpecialistType := 3;
-end;
-
 procedure PatchCallChangeSpecialist; register;
 asm
     lea   eax, [ebp - $0C]
     push  eax
-    call  PatchChangeSpecialistUpOrDown
+    call  ChangeSpecialistUpOrDown
     push  $00501990
     ret
 end;
@@ -2823,6 +2907,40 @@ asm
     ret
 end;
 
+function PatchFindAndLoadResourceEx(ResType: PChar; ResNum: Integer; var Module: HMODULE; var ResInfo: HRSRC): HGLOBAL; stdcall;
+var
+  MyResInfo: HRSRC;
+  Gifs: array[0..4] of char;
+begin
+  Gifs := 'GIFS';
+  if StrLComp(ResType, Gifs, 4) = 0 then
+  begin
+    if Ex.DllGifNeedFixing(ResNum) then
+    begin
+      MyResInfo := FindResource(HInstance, MakeIntResource(ResNum), Gifs);
+      if MyResInfo <> 0 then
+      begin
+        Module := HInstance;
+        ResInfo := MyResInfo;
+      end;
+    end;
+  end;
+  Result := LoadResource(Module, ResInfo);
+end;
+
+procedure PatchFindAndLoadResource(); register;
+asm
+    lea   eax, [ebp - $0C] // HRSRC hResInfo
+    push  eax
+    lea   eax, [ebp - $18] // HMODULE hModule
+    push  eax
+    push  [ebp + $0C]      // char *aResName
+    push  [ebp + $08]      // char *aResType
+    call  PatchFindAndLoadResourceEx
+    push  $005DB2F3
+    ret
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -2975,7 +3093,8 @@ begin
 
   // Tests
   // HookImportedFunctions(HProcess);
-  WriteMemory(HProcess, $005DBC7B, [$18]); // MSWindowClass cbWndExtra
+  //WriteMemory(HProcess, $005DBC7B, [$18]); // MSWindowClass cbWndExtra
+  WriteMemory(HProcess, $005DB2D4, [OP_JMP], @PatchFindAndLoadResource);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

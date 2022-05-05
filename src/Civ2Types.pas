@@ -8,6 +8,8 @@ uses
 type
   PCityWindow = ^TCityWindow;
 
+  PCityGlobals = ^TCityGlobals;
+
   PCitySpritesInfo = ^TCitySpritesInfo;
 
   PWindowInfo = ^TWindowInfo;
@@ -66,7 +68,7 @@ type
 
   PUnit = ^TUnit;
 
-  TWindowProcs = packed record            // Size 0x68  GetWindowLongA(hWnd, 4) + 0x10
+  TWindowProcs = packed record            // Size = 0x68
     ProcMouseMove: Pointer;
     ProcLButtonDown: Pointer;             // + 0x04
     ProcLButtonUpEnd: Pointer;            // + 0x08
@@ -95,8 +97,11 @@ type
     ProcExitSizeMove: Pointer;            // + 0x64
   end;
 
-  TWindowInfo = packed record             // GetWindowLongA(hWnd, 4),  GetWindowLongA(hWnd, 8)
-    Style: Integer;                       // = 0x00000C02 ...
+  // WindowProc1        - GetWindowLongA(hWnd, 8)
+  // WindowProcCommon   - GetWindowLongA(hWnd, 4)
+  // WindowProcMSWindow - GetWindowLongA(hWnd, 0)
+  TWindowInfo = packed record             // Size = 0xC5
+    Style: Integer;                       //
     Palette: Pointer;                     // + 0x04
     WindowStructure: PWindowStructure;    // + 0x08
     Unknown_0C: Integer;                  // + 0x0C
@@ -184,6 +189,7 @@ type
     ProcLButtonDown: Pointer;
     ProcLButtonDblClk: Pointer;
   end;
+
   TControlInfoListItems = array[0..0] of TControlInfoListItem;
 
   TControlInfoRadio = packed record       // Size = $A4
@@ -473,7 +479,8 @@ type
     ColorDepth: Integer;
   end;
 
-  TGraphicsInfo = packed record           // GetWindowLongA(hWnd, 0x0C), Size = 0x114 (sub_5DEE28)
+  // WindowProc2 - GetWindowLongA(hWnd, 0xC)
+  TGraphicsInfo = packed record           // Size = 0x114 (sub_5DEE28)
     DrawPort: TDrawPort;
     WindowInfo: TWindowInfo;              // + 0x48
     Unknown_10D: Byte;
@@ -614,6 +621,74 @@ type
     FontInfo: TFontInfo;                  //
     ControlInfo: array[1..10] of Pointer; //
     ControlInfoScroll: PControlInfoScroll; //
+  end;
+
+  TCityGlobals = packed record
+    BuildProgress: Integer;
+    field_4: array [1..4] of char;
+    field_8: array [1..28] of char;
+    field_24: Integer;
+    HappyCitizens: Integer;
+    field_2C: Integer;
+    field_30: Integer;
+    field_34: Integer;
+    RowsInFoodBox: Integer;
+    field_3C: Integer;
+    Support: Integer;
+    field_44: Integer;
+    field_48: Integer;
+    field_4C: Integer;
+    field_50: Integer;
+    ShieldsInRow: Integer;
+    field_58: Integer;
+    field_5C: Integer;
+    field_60: Integer;
+    field_64: array [1..4] of char;
+    field_68: array [1..3] of Integer;
+    field_74: Integer;
+    field_78: Integer;
+    BuildingType: Integer;
+    UnhappyCitizens: Integer;
+    field_84: Integer;
+    field_88: Integer;
+    field_8C: array [1..4] of char;
+    field_90: Integer;
+    field_94: Integer;
+    field_98: Integer;
+    field_9C: Integer;
+    field_A0: Integer;
+    field_A4: Integer;
+    field_A8: Integer;
+    field_AC: Integer;
+    field_B0: Integer;
+    field_B4: Integer;
+    field_B8: Integer;
+    field_BC: Integer;
+    field_C0: Integer;
+    field_C4: array [1..4] of char;
+    field_C8: char;
+    field_C9: char;
+    gapCA: BYTE;
+    field_CB: char;
+    field_CC: char;
+    field_CD: array [1..3] of char;
+    field_D0: Integer;
+    field_D4: Integer;
+    field_D8: Integer;
+    FreeCitizens: Integer;
+    SettlersEat: Integer;
+    field_E4: Integer;
+    field_E8: Integer;
+    field_EC: array [1..4] of char;
+    field_F0: Integer;
+    field_F4: Integer;
+    field_F8: char;
+    field_F9: char;
+    gapFA: BYTE;
+    field_FB: char;
+    field_FC: char;
+    field_FD: array [1..3] of char;
+    field_100: array [1..64] of char;
   end;
 
   TAdvisorWindow = packed record          // Size = 0x4A4

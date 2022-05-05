@@ -14,6 +14,7 @@ type
     AdvisorWindow: PAdvisorWindow;
     ChText: PChar;
     Cities: ^TCities;
+    CityGlobals: PCityGlobals;
     CityWindow: PCityWindow;
     Civs: ^TCivs;
     CurrCivIndex: PInteger;
@@ -48,12 +49,15 @@ type
     function CreateScrollbar(ControlInfoScroll: PControlInfoScroll; WindowInfo: PWindowInfo; Code: Integer; Rect: PRect; Flag: Integer): PControlInfoScroll;
     procedure DestroyScrollBar(ControlInfoScroll: PControlInfoScroll; Flag: LongBool);
     function DrawCityWindowSupport(CityWindow: PCityWindow; Flag: LongBool): PCityWindow;
+    procedure UpdateCityWindow(CityWindow: PCityWindow; A2: Integer);
     function DrawInfoCreate(A1: PRect): PDrawInfo;
     procedure DrawString(ChText: PChar; Left, Top: Integer);
     procedure DrawStringRight(ChText: PChar; Right, Top, Shift: Integer);
     function GetCityIndexAtXY(X, Y: Integer): Integer;
     function GetInfoOfClickedCitySprite(CitySpritesInfo: PCitySpritesInfo; X, Y: Integer; var SIndex, SType: Integer): Integer;
-    procedure SetSpecialist(ClickedCitizenIndex: Integer);
+    function GetSpecialist(City, SpecialistIndex: Integer): Integer;
+    procedure SetSpecialist(City, SpecialistIndex, Specialist: Integer);
+    procedure CityCitizenClicked(CitizenIndex: Integer);
     function GetStringInList(StringIndex: Integer): PChar;
     procedure InitControlScrollRange(ControlInfoScroll: PControlInfoScroll; MinPos, MaxPos: Integer);
     procedure MapToWindow(var WindowX, WindowY: Integer; MapX, MapY: Integer);
@@ -109,6 +113,7 @@ begin
   ChText := Pointer($00679640);
   Cities := Pointer($0064F340);
   CityWindow := Pointer($006A91B8);
+  CityGlobals := Pointer($006A6528);
   Civs := Pointer($0064C6A0);
   CurrCivIndex := Pointer($0063EF6C);
   CurrPopupInfo := Pointer($006CEC84);
@@ -157,6 +162,8 @@ begin
     raise Exception.Create('Wrong size of TAdvisorWindow');
   if SizeOf(TDialogWindow) <> $2F4 then
     raise Exception.Create('Wrong size of TDialogWindow');
+  if SizeOf(TCityGlobals) <> $140 then
+    raise Exception.Create('Wrong size of TCityGlobals');
 end;
 
 destructor TCiv2.Destroy;
@@ -200,6 +207,14 @@ asm
     mov   @Result, eax
 end;
 
+procedure TCiv2.UpdateCityWindow(CityWindow: PCityWindow; A2: Integer);
+asm
+    push  A2
+    mov   ecx, CityWindow
+    mov   eax, $00402833
+    call  eax
+end;
+
 function TCiv2.GetInfoOfClickedCitySprite(CitySpritesInfo: PCitySpritesInfo; X, Y: Integer; var SIndex, SType: Integer): Integer;
 asm
     push  SType
@@ -212,13 +227,33 @@ asm
     mov   @Result, eax
 end;
 
-procedure TCiv2.SetSpecialist(ClickedCitizenIndex: Integer);
+function TCiv2.GetSpecialist(City, SpecialistIndex: Integer): Integer;
 asm
-    push  ClickedCitizenIndex 
+    push  SpecialistIndex
+    push  City
+    mov   eax, $004013C0
+    call  eax
+    add   esp, 8
+    mov   @Result, eax
+end;
+
+procedure TCiv2.SetSpecialist(City, SpecialistIndex, Specialist: Integer);
+asm
+    push  Specialist
+    push  SpecialistIndex
+    push  City
+    mov   eax, $004022C5
+    call  eax
+    add   esp, $0C
+end;
+
+procedure TCiv2.CityCitizenClicked(CitizenIndex: Integer);
+asm
+    push  CitizenIndex
     mov   eax, $0040204A
     call  eax
     add   esp, 4
-end;  
+end;
 
 procedure TCiv2.InitControlScrollRange(ControlInfoScroll: PControlInfoScroll; MinPos, MaxPos: Integer);
 asm
@@ -555,6 +590,5 @@ asm
     call  eax
     add   esp, 4
 end;
-
 
 end.

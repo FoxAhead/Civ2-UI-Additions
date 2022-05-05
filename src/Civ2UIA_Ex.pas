@@ -6,6 +6,7 @@ uses
   Classes,
   Contnrs,
   Graphics,
+  PsAPI,
   Windows,
   Civ2Types;
 
@@ -14,6 +15,8 @@ type
   private
     FCanvas: TCanvas;
     FSavedDC: HDC;
+    FDllGifsNeedFixing: Integer;
+    procedure DecideIfDllGifsNeedFixing;
   protected
 
   public
@@ -34,6 +37,7 @@ type
     function CanvasGrab(DC: HDC): TCanvas;
     procedure CanvasRelease();
     function SimplePopupSuppressed(SectionName: PChar): Boolean;
+    function DllGifNeedFixing(ResNum: Integer): Boolean;
   published
 
   end;
@@ -50,6 +54,11 @@ uses
   Civ2UIA_Global,
   Civ2UIA_MapMessage;
 
+type
+  TDllGifsToBeFixed = packed record
+    ResNum: Integer;
+    WrongSize: Cardinal;
+  end;
 const
   FilenameCIV2UIADAT = 'CIV2UIA.DAT';
   FilenameCIV2UIASPTXT = 'Civ2UIASuppressPopup.txt';
@@ -62,13 +71,14 @@ const
   ResizableDialogTitleIndex: array[1..1] of Integer = (
     $3E                                   // Select Unit To Activate
     );
-  SimplePopupNames: array[0..4] of PChar = (
-    'WATERSUPPLY',
-    'BOND007',
-    'BOND',
-    'BONDGLORY',
-    'NAILED'
+  DllGifsToBeFixed: array[1..3] of TDllGifsToBeFixed = (
+    (ResNum: 105; WrongSize: 74478),
+    (ResNum: 229; WrongSize: 29923),
+    (ResNum: 250; WrongSize: 27741)
     );
+
+var
+  ResNumsDoFixCache: array[105..250] of Shortint; // 1 - Yes, 0 - Undefined, -1 - No
 
 function CompareCityUnits(Item1, Item2: Pointer): Integer;
 var
@@ -113,6 +123,11 @@ begin
   UnitsList.Free();
   SuppressPopupList.Free();
   inherited;
+end;
+
+procedure TEx.DecideIfDllGifsNeedFixing;
+begin
+
 end;
 
 function TEx.UnitsListBuildSorted(CityIndex: Integer): Integer;
@@ -278,6 +293,51 @@ begin
   if (SectionName <> nil) and SettingsFlagSet(0) then
   begin
     Result := (SuppressPopupList.IndexOf(string(SectionName)) > -1);
+  end;
+end;
+
+function TEx.DllGifNeedFixing(ResNum: Integer): Boolean;
+type
+  TModules = array[0..34] of HMODULE;
+var
+  i, j, k, l: Integer;
+  ResInfo: HRSRC;
+  ModulesCount: Integer;
+  HModules: ^TModules;
+  ModuleInfo: _MODULEINFO;
+  ModuleInfoSize: Integer;
+  ResSize: Cardinal;
+begin
+  Result := False;
+  if ResNum in [Low(ResNumsDoFixCache)..High(ResNumsDoFixCache)] then
+  begin
+    ModulesCount := PInteger($006387CC)^;
+    HModules := Pointer($006E4F60);
+    if ResNumsDoFixCache[ResNum] = 0 then // Undefined
+    begin
+      ResNumsDoFixCache[ResNum] := -1;
+      for i := Low(DllGifsToBeFixed) to High(DllGifsToBeFixed) do
+      begin
+        if DllGifsToBeFixed[i].ResNum = ResNum then
+        begin
+          for j := 0 to ModulesCount - 1 do
+          begin
+            ResInfo := FindResource(HModules^[j], MakeIntResource(ResNum), 'GIFS');
+            if ResInfo <> 0 then
+            begin
+              Inc(l);
+              ResSize := SizeofResource(HModules^[j], ResInfo);
+              if ResSize = DllGifsToBeFixed[i].WrongSize then
+                ResNumsDoFixCache[ResNum] := 1;
+              Break;
+            end;
+          end;
+          Break;
+        end;
+      end;
+      SendMessageToLoader(ResNum, ResNumsDoFixCache[ResNum]);
+    end;
+    Result := (ResNumsDoFixCache[ResNum] = 1);
   end;
 end;
 
