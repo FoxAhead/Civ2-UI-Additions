@@ -37,6 +37,7 @@ type
     CheckBox4: TCheckBox;
     CheckBox5: TCheckBox;
     GroupBoxColor: TGroupBox;
+    CheckBox6: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure ScrollBar1Change(Sender: TObject);
     procedure PropagatePaletteChanges();
@@ -72,7 +73,16 @@ uses
 {$R *.dfm}
 
 procedure TFormSettings.FormCreate(Sender: TObject);
+var
+  i: Integer;
 begin
+  for i := 0 to GroupBoxFlags.ControlCount - 1 do
+  begin
+    if GroupBoxFlags.Controls[i] is TCheckBox then
+    begin
+      TCheckBox(GroupBoxFlags.Controls[i]).OnClick := CheckBoxFlagsClick;
+    end;
+  end;
   SetControls();
 end;
 

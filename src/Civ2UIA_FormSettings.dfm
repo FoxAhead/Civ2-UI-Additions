@@ -3,7 +3,7 @@ object FormSettings: TFormSettings
   Top = 263
   BorderStyle = bsDialog
   Caption = 'UIA Settings'
-  ClientHeight = 300
+  ClientHeight = 324
   ClientWidth = 321
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -16,12 +16,12 @@ object FormSettings: TFormSettings
   OnCreate = FormCreate
   DesignSize = (
     321
-    300)
+    324)
   PixelsPerInch = 96
   TextHeight = 13
   object ButtonClose: TButton
     Left = 120
-    Top = 272
+    Top = 296
     Width = 81
     Height = 25
     Anchors = [akBottom]
@@ -34,7 +34,7 @@ object FormSettings: TFormSettings
     Left = 8
     Top = 128
     Width = 305
-    Height = 137
+    Height = 161
     Caption = 'Options'
     TabOrder = 2
     object ButtonList: TButton
@@ -97,6 +97,15 @@ object FormSettings: TFormSettings
       Caption = 'Radiobuttons hotkeys'
       TabOrder = 5
       OnClick = CheckBoxFlagsClick
+    end
+    object CheckBox6: TCheckBox
+      Tag = 5
+      Left = 8
+      Top = 136
+      Width = 97
+      Height = 17
+      Caption = 'CheckBox6'
+      TabOrder = 6
     end
   end
   object GroupBoxColor: TGroupBox

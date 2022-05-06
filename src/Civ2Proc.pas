@@ -51,7 +51,7 @@ type
     function DrawCityWindowSupport(CityWindow: PCityWindow; Flag: LongBool): PCityWindow;
     procedure UpdateCityWindow(CityWindow: PCityWindow; A2: Integer);
     function DrawInfoCreate(A1: PRect): PDrawInfo;
-    procedure DrawString(ChText: PChar; Left, Top: Integer);
+    function DrawString(ChText: PChar; Left, Top: Integer): Integer;
     procedure DrawStringRight(ChText: PChar; Right, Top, Shift: Integer);
     function GetCityIndexAtXY(X, Y: Integer): Integer;
     function GetInfoOfClickedCitySprite(CitySpritesInfo: PCitySpritesInfo; X, Y: Integer; var SIndex, SType: Integer): Integer;
@@ -91,6 +91,10 @@ type
     procedure CreateDialog(Dialog: PDialogWindow);
     function CreateDialogAndWait(Dialog: PDialogWindow; TimeOut: Integer): Integer;
     procedure ListItemProcLButtonUp(Code: Integer);
+    procedure DrawCitySprite(DrawPort: PDrawPort; CityIndex, A3, Left, Top, Zoom: Integer);
+    procedure SetFontColorWithShadow(A1, A2, A3, A4: Integer);
+    function Clamp(A1, AMin, AMax: Integer): Integer;
+    procedure SetCurrFont(A1: Integer);
   published
   end;
 
@@ -280,7 +284,7 @@ asm
     call  eax
 end;
 
-procedure TCiv2.DrawString(ChText: PChar; Left, Top: Integer);
+function TCiv2.DrawString(ChText: PChar; Left, Top: Integer): Integer;
 asm
     push  Top
     push  Left
@@ -288,6 +292,7 @@ asm
     mov   eax, $00401E0B
     call  eax
     add   esp, $0C
+    mov   @Result, eax
 end;
 
 procedure TCiv2.DrawStringRight(ChText: PChar; Right, Top, Shift: Integer);
@@ -589,6 +594,49 @@ asm
     mov   eax, $005A3CCA
     call  eax
     add   esp, 4
+end;
+
+procedure TCiv2.DrawCitySprite(DrawPort: PDrawPort; CityIndex, A3, Left, Top, Zoom: Integer);
+asm
+    push  Zoom
+    push  Top
+    push  Left
+    push  A3
+    push  CityIndex
+    push  DrawPort
+    mov   eax, $00402A45
+    call  eax
+    add   esp, $18
+end;
+
+procedure TCiv2.SetFontColorWithShadow(A1, A2, A3, A4: Integer);
+asm
+    push  A4
+    push  A3
+    push  A2
+    push  A1
+    mov   eax, $00403BB6
+    call  eax
+    add   esp, $10
+end;
+
+function TCiv2.Clamp(A1, AMin, AMax: Integer): Integer;
+asm
+    push  AMax
+    push  AMin
+    push  A1
+    mov   eax, $00402D56
+    call  eax
+    add   esp, $0C
+    mov   @Result, eax
+end;
+
+procedure TCiv2.SetCurrFont(A1: Integer);
+asm
+    push  A1
+    mov   eax, $0040233D
+    call  eax
+    add   esp, $4
 end;
 
 end.

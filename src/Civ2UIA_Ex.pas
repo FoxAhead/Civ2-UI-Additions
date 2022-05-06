@@ -15,8 +15,6 @@ type
   private
     FCanvas: TCanvas;
     FSavedDC: HDC;
-    FDllGifsNeedFixing: Integer;
-    procedure DecideIfDllGifsNeedFixing;
   protected
 
   public
@@ -123,11 +121,6 @@ begin
   UnitsList.Free();
   SuppressPopupList.Free();
   inherited;
-end;
-
-procedure TEx.DecideIfDllGifsNeedFixing;
-begin
-
 end;
 
 function TEx.UnitsListBuildSorted(CityIndex: Integer): Integer;

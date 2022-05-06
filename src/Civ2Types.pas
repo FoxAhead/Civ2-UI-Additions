@@ -625,8 +625,8 @@ type
 
   TCityGlobals = packed record
     BuildProgress: Integer;
-    field_4: array [1..4] of char;
-    field_8: array [1..28] of char;
+    field_4: array[1..4] of char;
+    field_8: array[1..28] of char;
     field_24: Integer;
     HappyCitizens: Integer;
     field_2C: Integer;
@@ -643,15 +643,15 @@ type
     field_58: Integer;
     field_5C: Integer;
     field_60: Integer;
-    field_64: array [1..4] of char;
-    field_68: array [1..3] of Integer;
+    field_64: array[1..4] of char;
+    field_68: array[1..3] of Integer;
     field_74: Integer;
     field_78: Integer;
     BuildingType: Integer;
     UnhappyCitizens: Integer;
     field_84: Integer;
     field_88: Integer;
-    field_8C: array [1..4] of char;
+    field_8C: array[1..4] of char;
     field_90: Integer;
     field_94: Integer;
     field_98: Integer;
@@ -665,13 +665,13 @@ type
     field_B8: Integer;
     field_BC: Integer;
     field_C0: Integer;
-    field_C4: array [1..4] of char;
+    field_C4: array[1..4] of char;
     field_C8: char;
     field_C9: char;
     gapCA: BYTE;
     field_CB: char;
     field_CC: char;
-    field_CD: array [1..3] of char;
+    field_CD: array[1..3] of char;
     field_D0: Integer;
     field_D4: Integer;
     field_D8: Integer;
@@ -679,7 +679,7 @@ type
     SettlersEat: Integer;
     field_E4: Integer;
     field_E8: Integer;
-    field_EC: array [1..4] of char;
+    field_EC: array[1..4] of char;
     field_F0: Integer;
     field_F4: Integer;
     field_F8: char;
@@ -687,8 +687,8 @@ type
     gapFA: BYTE;
     field_FB: char;
     field_FC: char;
-    field_FD: array [1..3] of char;
-    field_100: array [1..64] of char;
+    field_FD: array[1..3] of char;
+    field_100: array[1..64] of char;
   end;
 
   TAdvisorWindow = packed record          // Size = 0x4A4
@@ -709,17 +709,22 @@ type
     //  9 - F11 Demographics
     // 10 - F9  Civilization Score
     // 12 - Ctrl-D Casaulty Timeline
-    Unknown2: array[1..2] of Integer;
+    Unknown_454: Integer;
+    Unknown_458: Integer;
     CurrCivIndex: Integer;
-    aPosition: Integer;
-    aPageSize: Integer;
-    Unknown2a: array[1..3] of Integer;
+    ScrollPosition: Integer;
+    ScrollPageSize: Integer;
+
+    ListTop: Integer;
+    ListHeight: Integer;
+    LineHeight: Integer;
+
     Height: Integer;
     Unknown3: array[1..5] of Integer;
     Width: Integer;
     Unknown_490: Integer;
     ScrollBarWidth: Integer;
-    Unknown_498: Integer;
+    ScrollBarCreated: Integer;
     Unknown_49C: Integer;
     Popup: Integer;
   end;
