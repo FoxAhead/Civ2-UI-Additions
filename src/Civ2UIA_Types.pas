@@ -21,14 +21,14 @@ type
     wtDemographics,                       //F11
     wtCityWindow, wtTaxRate, wtCivilopedia, wtUnitsListPopup, wtMap);
 
-  TListOfUnits = packed record
+  TListOfUnits = record
     Start: Integer;
     Length: Integer;
   end;
 
   //  TShadows = set of (stTopLeft, stTop, stTopRight);
 
-  TMouseDrag = packed record
+  TMouseDrag = record
     Active: Boolean;
     Moved: Integer;
     StartScreen: TPoint;
@@ -49,6 +49,10 @@ type
     Support: TCityWindowSupport;
   end;
 
+  TAdvisorWindowEx = record
+    Rects: array[1..16] of TRect;
+  end;
+
   TDrawTestData = record
     MapDeviceContext: HDC;
     Counter: Cardinal;
@@ -63,6 +67,7 @@ type
     AdvisorHeights: array[1..12] of Word;
     DialogLines: array[1..16] of Byte;
     Flags: array[0..31] of Byte;          // 256 flags
+    AdvisorSorts: array[1..12] of ShortInt;   // 0 - no sort, 1 - sort by first column ascending, -1 - sort by first column descending, etc...
   end;
 
   PCallerChain = ^TCallerChain;

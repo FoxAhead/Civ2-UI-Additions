@@ -1919,13 +1919,13 @@ begin
   Civ2.Units[AlreadyWorker].Counter := 0;
   if Civ2.Units[AlreadyWorker].CivIndex = Civ2.HumanCivIndex^ then
   begin
-    Civ2.Units[AlreadyWorker].Orders := 0;
+    Civ2.Units[AlreadyWorker].Orders := $FF;
   end;
 end;
 
 procedure PatchResetEngineersOrder(); register;
 asm
-    push  [ebp - $10]
+    push  [ebp - $10] // int vAlreadyWorker
     call  PatchResetEngineersOrderEx
     push  $004C452F
     ret
@@ -2104,7 +2104,8 @@ begin
         TextLine := TextLine.Next;
       end;
       MapMessagesList.Add(TMapMessage.Create(Text));
-      Dialog.Flags := Dialog.Flags or 8;
+      //Dialog.Flags := Dialog.Flags or 8;
+      Dialog.PressedButton := $12345678;
     end
   end;
 end;
@@ -2118,6 +2119,21 @@ asm
     call  PatchLoadPopupDialogAfterEx
     pop   eax
     push  $005A6C1C
+    ret
+end;
+
+procedure PatchCreateDialogAndWaitBefore(); register;
+asm
+    mov  [ebp - $114], ecx
+    cmp  [ecx + $DC], $12345678 // Dialog.PressedButton
+    je   @LABEL_NODIAOLOG
+    push  $005A5F46
+    ret
+
+@LABEL_NODIAOLOG:
+    mov  [ecx + $DC], 0
+    xor  eax, eax
+    push  $005A6323
     ret
 end;
 
@@ -2940,12 +2956,69 @@ asm
     ret
 end;
 
-// Return 1 if processed
+//
+// Enhanced City Status advisor
+//
+procedure WndProcAdvisorCityStatusButtonUp(X, Y, Button: Integer); stdcall;
+var
+  i: Integer;
+  ListIndex: Integer;
+  Y1: Integer;
+  City: PCity;
+  CityIndex: Integer;
+  SortCriteria, SortSign: Integer;
+begin
+  Y1 := Y - Civ2.AdvisorWindow.ListTop;
+  i := Floor(Y1 / Civ2.AdvisorWindow.LineHeight);
+  ListIndex := Civ2.AdvisorWindow.ScrollPosition + i;
+  if (i >= 0) and (ListIndex >= 0) and (ListIndex < Ex.CitiesList.Count) and (i < Civ2.AdvisorWindow.ScrollPageSize) and (Button = 0) then
+  begin
+    City := Ex.CitiesList[ListIndex];
+    CityIndex := (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
+    Civ2.ShowCityWindow(Civ2.CityWindow, CityIndex);
+  end
+  else if i = -1 then
+  begin
+    SortCriteria := Abs(UIASettings.AdvisorSorts[1]);
+    SortSign := Sign(UIASettings.AdvisorSorts[1]);
+    for i := Low(AdvisorWindowEx.Rects) to High(AdvisorWindowEx.Rects) do
+    begin
+      if PtInRect(AdvisorWindowEx.Rects[i], Point(X, Y)) then
+      begin
+        if i = SortCriteria then
+          if Button = 1 then
+            UIASettings.AdvisorSorts[1] := 0
+          else
+            UIASettings.AdvisorSorts[1] := -UIASettings.AdvisorSorts[1]
+        else if Button = 0 then
+        begin
+          UIASettings.AdvisorSorts[1] := i;
+          if SortSign <> 0 then
+          begin
+            UIASettings.AdvisorSorts[1] := UIASettings.AdvisorSorts[1] * SortSign;
+          end;
+        end;
+        Civ2.UpdateAdvisorCityStatus();
+        Break;
+      end;
+    end;
+  end;
+end;
+
+procedure PatchWndProcAdvisorCityStatusLButtonUp(X, Y: Integer); cdecl;
+begin
+  WndProcAdvisorCityStatusButtonUp(X, Y, 0);
+end;
+
+procedure PatchWndProcAdvisorCityStatusRButtonUp(X, Y: Integer); cdecl;
+begin
+  WndProcAdvisorCityStatusButtonUp(X, Y, 1);
+end;
+
 function PatchUpdateAdvisorCityStatusEx(CivIndex, Bottom: Integer; var Cities, Top1: Integer): Integer; stdcall;
 var
   Page, ScrollPos, LineHeight: Integer;
   i, j: Integer;
-  Index: Integer;
   X1, X2, Y1, Y2, DX: Integer;
   MSWindow: ^TMSWindow;
   Text: string;
@@ -2953,116 +3026,141 @@ var
   R: TRect;
   Canvas: TCanvas;
   Building, Cost: Integer;
+  City: PCity;
+  CityIndex: Integer;
+  SortCriteria, SortSign: Integer;
 begin
-  Result := 0;
-  if not Ex.SettingsFlagSet(5) then
-    Exit;
+  Result := 0;                            // Return 1 if processed
+  ZeroMemory(@AdvisorWindowEx, SizeOf(AdvisorWindowEx));
   MSWindow := @Civ2.AdvisorWindow.MSWindow;
+  SortCriteria := Abs(UIASettings.AdvisorSorts[1]);
+  SortSign := Sign(UIASettings.AdvisorSorts[1]);
   Y1 := Top1;
-  Top1 := Top1 + 16;
-  //
+  Top1 := Top1 + 12;
+  // DIMENSIONS
   LineHeight := $18;
   Civ2.AdvisorWindow.LineHeight := LineHeight;
   Civ2.AdvisorWindow.ListTop := Top1 + 6;
   Civ2.AdvisorWindow.ListHeight := Bottom - Top1;
   Page := Civ2.Clamp((Bottom - Top1) div LineHeight, 1, $63);
   Civ2.AdvisorWindow.ScrollPageSize := Page;
-  Cities := 0;
-  for i := 0 to Civ2.GameParameters.TotalCities - 1 do
-    if (Civ2.Cities[i].ID <> 0) and (Civ2.Cities[i].Owner = CivIndex) then
-      Inc(Cities);
+  Cities := Ex.CitiesListBuildSorted(CivIndex, UIASettings.AdvisorSorts[1]);
   Civ2.AdvisorWindow.Unknown_458 := Civ2.Clamp((Cities + Page - 1) div Page, 1, $63);
   ScrollPos := Civ2.Clamp(Civ2.AdvisorWindow.ScrollPosition, 0, Civ2.Clamp(Cities - 1, 0, $3E7));
   Civ2.AdvisorWindow.ScrollPosition := ScrollPos;
-  //
+  // HEADER
   if Cities > 0 then
   begin
-    X1 := MSWindow.ClientTopLeft.X + 130;
+    X1 := MSWindow.ClientTopLeft.X + 150;
     Civ2.SetCurrFont($0063EAB8);          // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
     Civ2.SetFontColorWithShadow($21, $12, -1, -1);
     Text := Format('Cities: %d', [Cities]);
-    Civ2.DrawString(PChar(Text), X1, Y1);
-  end;
-  //
-  Index := 0;
-  Y1 := Top1;
-  SendMessageToLoader(Page, ScrollPos);
-  {Canvas := Ex.CanvasGrab(MSWindow.GraphicsInfo.DrawPort.DrawInfo.DeviceContext);
-  R := Rect(0, Top1, Civ2.AdvisorWindow.Width, Bottom);
-  Canvas.FrameRect(R);
-  Ex.CanvasRelease();}
-  for i := 0 to Civ2.GameParameters.TotalCities - 1 do
-  begin
-    if (Civ2.Cities[i].ID <> 0) and (Civ2.Cities[i].Owner = CivIndex) then
+    Civ2.DrawString(PChar(Text), 373, Y1 - 3);
+    // SORT ARROWS
+    Canvas := Ex.CanvasGrab(MSWindow.GraphicsInfo.DrawPort.DrawInfo.DeviceContext);
+    Canvas.Brush.Color := TColor($CCCCCC);
+    X1 := 0;
+    for i := 1 to 5 do
     begin
-      if (Index >= ScrollPos) and (Page + ScrollPos > Index) then
-      begin
-        X1 := MSWindow.ClientTopLeft.X + (((Index + 1) and 1) shl 6) + 2;
-        Civ2.DrawCitySprite(@MSWindow.GraphicsInfo.DrawPort, i, 0, X1, Y1, 0);
-
-        Civ2.SetCurrFont($0063EAB8);      // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
-        Civ2.SetFontColorWithShadow($25, $12, 1, 1);
-
-        Y2 := Y1 + 9;
-        X1 := MSWindow.ClientTopLeft.X + 130;
-        Civ2.DrawString(Civ2.Cities[i].Name, X1, Y2);
-
-        X1 := X1 + 131;
-        X2 := X1;
-        for j := 0 to 2 do
-        begin
-          DX := 0;
-          case j of
-            0:
-              begin
-                Text := IntToStr(Civ2.Cities[i].TotalFood);
-                DX := -1;
-              end;
-            1:
-              begin
-                Text := IntToStr(Civ2.Cities[i].TotalShield);
-                DX := 1;
-              end;
-            2:
-              begin
-                Text := IntToStr(Civ2.Cities[i].Trade);
-                DX := -1;
-              end;
-          end;
-          Civ2.DrawStringRight(PChar(Text), X2, Y2, DX);
-          Civ2.CopySprite(@PSprites($644F00)^[2 * j + 1], @R, @MSWindow.GraphicsInfo.DrawPort, X2, Y2 + 2);
-          X2 := X2 + 42;
-        end;
-        //
-        X1 := X1 + 104;
-        X2 := X1;
-        if Civ2.Cities[i].Building < 0 then
-        begin
-          Building := -Civ2.Cities[i].Building;
-          Text := string(Civ2.GetStringInList(Civ2.Improvements[Building].StringIndex)) + ' ';
-          if Building > 39 then
-          begin
-            Civ2.SetFontColorWithShadow($5E, $A, -1, -1);
-          end;
-          Cost := Civ2.Improvements[Building].Cost;
-        end
-        else
-        begin
-          Civ2.SetFontColorWithShadow($7A, $A, -1, -1);
-          Building := Civ2.Cities[i].Building;
-          Text := string(Civ2.GetStringInList(Civ2.UnitTypes[Building].StringIndex)) + ' ';
-          Cost := Civ2.UnitTypes[Building].Cost;
-        end;
-        X2 := Civ2.DrawString(PChar(Text), X2, Y2) + 4;
-        Text := Format('(%d/%d)', [Civ2.Cities[i].BuildProgress, Cost * PByte($0064BCCC)^]); //V_Cosmic_stru_64BCC8.RowsInShieldBox
-        Civ2.SetFontColorWithShadow($21, $12, -1, -1);
-        Civ2.DrawString(PChar(Text), X2, Y2);
-
-        Y1 := Y1 + LineHeight;
+      case i of
+        1: X1 := 60;
+        2: X1 := 138;
+        3: X1 := 270 - 16;
+        4: X1 := 312 - 14;
+        5: X1 := 354 - 16;
       end;
-      Inc(Index);
+      AdvisorWindowEx.Rects[i] := Rect(X1, Y1, X1 + 12, Y1 + 12);
+      Canvas.FrameRect(AdvisorWindowEx.Rects[i]);
+    end;
+    Canvas.Pen.Color := TColor($FFFFFF);
+    Canvas.Brush.Color := TColor($FFFFFF);
+    if SortCriteria <> 0 then
+    begin
+      R := AdvisorWindowEx.Rects[SortCriteria];
+      if SortSign < 0 then
+        Canvas.Polygon([Point(R.Left + 2, R.Top + 4), Point(R.Left + 9, R.Top + 4), Point(R.Left + 6, R.Top + 7), Point(R.Left + 5, R.Top + 7)])
+      else
+        Canvas.Polygon([Point(R.Left + 2, R.Top + 7), Point(R.Left + 9, R.Top + 7), Point(R.Left + 6, R.Top + 4), Point(R.Left + 5, R.Top + 4)]);
+    end;
+    Ex.CanvasRelease();
+  end;
+  // LIST
+  Y1 := Top1;
+  for i := 0 to Ex.CitiesList.Count - 1 do
+  begin
+    City := Ex.CitiesList[i];
+    if (i >= ScrollPos) and (Page + ScrollPos > i) then
+    begin
+      X1 := MSWindow.ClientTopLeft.X + (((i + 1) and 1) shl 6) + 2;
+      CityIndex := (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
+      Civ2.DrawCitySprite(@MSWindow.GraphicsInfo.DrawPort, CityIndex, 0, X1, Y1, 0);
+
+      Civ2.SetCurrFont($0063EAB8);        // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
+      Civ2.SetFontColorWithShadow($25, $12, 1, 1);
+
+      Y2 := Y1 + 9;
+      X1 := MSWindow.ClientTopLeft.X + 130;
+      Civ2.DrawString(City.Name, X1, Y2);
+
+      X1 := X1 + 131;
+      X2 := X1;
+      for j := 0 to 2 do
+      begin
+        DX := 0;
+        case j of
+          0:
+            begin
+              Text := IntToStr(City.TotalFood);
+              DX := -1;
+            end;
+          1:
+            begin
+              Text := IntToStr(City.TotalShield);
+              DX := 1;
+            end;
+          2:
+            begin
+              Text := IntToStr(City.Trade);
+              DX := -1;
+            end;
+        end;
+        Civ2.DrawStringRight(PChar(Text), X2, Y2, DX);
+        Civ2.CopySprite(@PSprites($644F00)^[2 * j + 1], @R, @MSWindow.GraphicsInfo.DrawPort, X2, Y2 + 2);
+        X2 := X2 + 42;
+      end;
+      //
+      X1 := X1 + 104;
+      X2 := X1;
+      if City.Building < 0 then
+      begin
+        Building := -City.Building;
+        Text := string(Civ2.GetStringInList(Civ2.Improvements[Building].StringIndex)) + ' ';
+        if Building > 39 then
+        begin
+          Civ2.SetFontColorWithShadow($5E, $A, -1, -1);
+        end;
+        Cost := Civ2.Improvements[Building].Cost;
+      end
+      else
+      begin
+        Civ2.SetFontColorWithShadow($7A, $A, -1, -1);
+        Building := City.Building;
+        Text := string(Civ2.GetStringInList(Civ2.UnitTypes[Building].StringIndex)) + ' ';
+        Cost := Civ2.UnitTypes[Building].Cost;
+      end;
+      X2 := Civ2.DrawString(PChar(Text), X2, Y2) + 4;
+      Text := Format('(%d/%d)', [City.BuildProgress, Cost * PByte($0064BCCC)^]); //V_Cosmic_stru_64BCC8.RowsInShieldBox
+      Civ2.SetFontColorWithShadow($21, $12, -1, -1);
+      Civ2.DrawString(PChar(Text), X2, Y2);
+
+      Y1 := Y1 + LineHeight;
     end;
   end;
+  if Civ2.AdvisorWindow.ControlsInitialized = 0 then
+  begin
+    MSWindow.GraphicsInfo.WindowInfo.WindowProcs.ProcRButtonUp := @PatchWndProcAdvisorCityStatusRButtonUp;
+  end;
+
   Result := 1;
 end;
 
@@ -3082,7 +3180,7 @@ asm
     ret
 
 @@LABEL_PROCESSED:
-//  if ( !V_AdvisorWindow_stru_63EB10.ScrollBarCreated )
+//  if ( !V_AdvisorWindow_stru_63EB10.ControlsInitialized )
     push  $0042D514
     ret
 end;
@@ -3182,6 +3280,8 @@ begin
   // (0) Suppress specific simple popup message
   //WriteMemory(HProcess, $0051D5D5, [OP_JMP], @PatchPopupSimpleMessage);
   WriteMemory(HProcess, $005A6C12, [OP_JMP], @PatchLoadPopupDialogAfter);
+  WriteMemory(HProcess, $005A5F40, [OP_JMP], @PatchCreateDialogAndWaitBefore);
+
   // (1) Reset Engineer's order after passing its work to coworker
   WriteMemory(HProcess, $004C4528, [OP_JMP], @PatchResetEngineersOrder);
   // (2) Don't break unit movement
@@ -3239,11 +3339,13 @@ begin
   // Fix mk.dll (229.gif, 250.gif) and pv.dll (105.gif)
   WriteMemory(HProcess, $005DB2D4, [OP_JMP], @PatchFindAndLoadResource);
 
+  // Advisor City Status Extended
+  WriteMemory(HProcess, $0042D099, [OP_JMP], @PatchUpdateAdvisorCityStatus);
+  WriteMemory(HProcess, $0042D5EB, [], @PatchWndProcAdvisorCityStatusLButtonUp, True);
+
   // Tests
   // HookImportedFunctions(HProcess);
   //WriteMemory(HProcess, $005DBC7B, [$18]); // MSWindowClass cbWndExtra
-  // Advisor City Status Extended
-  WriteMemory(HProcess, $0042D099, [OP_JMP], @PatchUpdateAdvisorCityStatus);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

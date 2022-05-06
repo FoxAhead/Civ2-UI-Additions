@@ -95,6 +95,8 @@ type
     procedure SetFontColorWithShadow(A1, A2, A3, A4: Integer);
     function Clamp(A1, AMin, AMax: Integer): Integer;
     procedure SetCurrFont(A1: Integer);
+    procedure ShowCityWindow(CityWindow: PCityWindow; CityIndex: Integer);
+    procedure UpdateAdvisorCityStatus();
   published
   end;
 
@@ -637,6 +639,20 @@ asm
     mov   eax, $0040233D
     call  eax
     add   esp, $4
+end;
+
+procedure TCiv2.ShowCityWindow(CityWindow: PCityWindow; CityIndex: Integer);
+asm
+    push  CityIndex
+    mov   ecx, CityWindow
+    mov   eax, $00402E78
+    call  eax
+end;
+
+procedure TCiv2.UpdateAdvisorCityStatus();
+asm
+    mov   eax, $004029F5
+    call  eax
 end;
 
 end.

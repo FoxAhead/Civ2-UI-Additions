@@ -68,6 +68,8 @@ type
 
   PUnit = ^TUnit;
 
+  PCity = ^TCity;
+
   TWindowProcs = packed record            // Size = 0x68
     ProcMouseMove: Pointer;
     ProcLButtonDown: Pointer;             // + 0x04
@@ -724,7 +726,7 @@ type
     Width: Integer;
     Unknown_490: Integer;
     ScrollBarWidth: Integer;
-    ScrollBarCreated: Integer;
+    ControlsInitialized: Integer;
     Unknown_49C: Integer;
     Popup: Integer;
   end;

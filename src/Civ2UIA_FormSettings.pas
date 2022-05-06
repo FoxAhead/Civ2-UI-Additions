@@ -37,7 +37,6 @@ type
     CheckBox4: TCheckBox;
     CheckBox5: TCheckBox;
     GroupBoxColor: TGroupBox;
-    CheckBox6: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure ScrollBar1Change(Sender: TObject);
     procedure PropagatePaletteChanges();

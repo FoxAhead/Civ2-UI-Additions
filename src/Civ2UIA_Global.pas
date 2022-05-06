@@ -26,6 +26,7 @@ var
   MCITextSizeX: Integer;
   //
   CityWindowEx: TCityWindowEx;
+  AdvisorWindowEx: TAdvisorWindowEx;
   DrawTestData: TDrawTestData;
   MapMessagesList: TList;
   UIASettings: TUIASettings;

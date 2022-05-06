@@ -15,6 +15,7 @@ type
   private
     FCanvas: TCanvas;
     FSavedDC: HDC;
+    FCitiesSortCriteria: Integer;
   protected
 
   public
@@ -22,10 +23,12 @@ type
     UnitsList: TList;
     UnitsListCursor: Integer;
     SuppressPopupList: TStringList;
+    CitiesList: TList;
     constructor Create;
     destructor Destroy; override;
     function UnitsListBuildSorted(CityIndex: Integer): Integer;
     function UnitsListGetNextUnitIndex(CursorIncrement: Integer): Integer;
+    function CitiesListBuildSorted(CivIndex: Integer; SortCriteria: Integer): Integer;
     procedure LoadSettingsFile();
     procedure SaveSettingsFile();
     procedure LoadDefaultSettings();
@@ -46,6 +49,7 @@ var
 implementation
 
 uses
+  Math,
   SysUtils,
   Civ2Proc,
   Civ2UIA_Proc,
@@ -57,6 +61,7 @@ type
     ResNum: Integer;
     WrongSize: Cardinal;
   end;
+
 const
   FilenameCIV2UIADAT = 'CIV2UIA.DAT';
   FilenameCIV2UIASPTXT = 'Civ2UIASuppressPopup.txt';
@@ -102,12 +107,32 @@ begin
     Result := Units[2]^.ID - Units[1]^.ID
 end;
 
+function CompareCities(Item1, Item2: Pointer): Integer;
+var
+  Cities: array[1..2] of PCity;
+  SortCriteria: Integer;
+begin
+  Result := 0;
+  Cities[1] := PCity(Item1);
+  Cities[2] := PCity(Item2);
+  SortCriteria := Abs(Ex.FCitiesSortCriteria);
+  case SortCriteria of
+    1: Result := Cities[1].Size - Cities[2].Size;
+    2: Result := StrComp(Cities[1].Name, Cities[2].Name);
+    3: Result := Cities[1].TotalFood - Cities[2].TotalFood;
+    4: Result := Cities[1].TotalShield - Cities[2].TotalShield;
+    5: Result := Cities[1].Trade - Cities[2].Trade;
+  end;
+  Result := Result * Sign(Ex.FCitiesSortCriteria);
+end;
+
 { TEx }
 
 constructor TEx.Create;
 begin
   inherited;
   UnitsList := TList.Create();
+  CitiesList := TList.Create();
   ShowWindowStack := TStack.Create();
   SuppressPopupList := TStringList.Create();
   SuppressPopupList.Sorted := True;
@@ -119,6 +144,7 @@ destructor TEx.Destroy;
 begin
   ShowWindowStack.Free();
   UnitsList.Free();
+  CitiesList.Free();
   SuppressPopupList.Free();
   inherited;
 end;
@@ -153,6 +179,23 @@ begin
     Addr := UnitsList[UnitsListCursor];
     Result := (Integer(Addr) - Integer(Civ2.Units)) div SizeOf(TUnit);
   end;
+end;
+
+function TEx.CitiesListBuildSorted(CivIndex: Integer; SortCriteria: Integer): Integer;
+var
+  i: Integer;
+begin
+  FCitiesSortCriteria := SortCriteria;
+  CitiesList.Clear();
+  for i := 0 to Civ2.GameParameters.TotalCities - 1 do
+  begin
+    if (Civ2.Cities[i].ID <> 0) and (Civ2.Cities[i].Owner = CivIndex) then
+    begin
+      CitiesList.Add(@Civ2.Cities[i]);
+    end;
+  end;
+  CitiesList.Sort(@CompareCities);
+  Result := CitiesList.Count;
 end;
 
 procedure TEx.LoadSettingsFile;
