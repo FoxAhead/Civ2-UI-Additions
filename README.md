@@ -31,70 +31,70 @@ This is useful for making a decision about the beginning of the revolution accor
 7. Correct CD audio tracks looping and displaying play progress.  
 ![Screenshot](Screenshots/CDAudioTrackProgress.png?raw=true "Screenshot")
 
-7. Game icon fix (visible in Alt+Tab popup).
+8. Game icon fix (visible in Alt+Tab popup).
 
-8. Resetting city name prompts, when restarting a new game without closing program.
+9. Resetting city name prompts, when restarting a new game without closing program.
 
-9. Show buildings even with zero maintenance cost in Trade Advisor.  
+10. Show buildings even with zero maintenance cost in Trade Advisor.  
 ![Screenshot](Screenshots/TradeAdvisorZeroCost.png?raw=true "Screenshot")
 
-10. Scrollbar for supported units in the city window. And a number of total supported units.  
+11. Scrollbar for supported units in the city window. And a number of total supported units.  
 ![Screenshot](Screenshots/CityWindowSupport.png?raw=true "Screenshot")
 
-11. 64-bit patch included. Exactly the same version as here:  
+12. 64-bit patch included. Exactly the same version as here:  
 https://github.com/FoxAhead/Civilization-II-64-bit-Editbox-Patcher  
 This means correct work of all input fields.
 
-12. No-CD patch included (note that this disables intro/wonders movies and High Council movies)
+13. No-CD patch included (note that this disables intro/wonders movies and High Council movies)
 
-13. Enable multiplayer for Windows 8, 10 (should also work on older OS).
+14. Enable multiplayer for Windows 8, 10 (should also work on older OS).
 
-14. Option for enabling Simultaneous moves in multiplayer. This is the same as writing 'Simultaneous=1' string to the CIV.INI file. With this option enabled, the multiplayer feature 'Humans Move Units at the Same Time' should be available when setting up a new multiplayer game.
+15. Option for enabling Simultaneous moves in multiplayer. This is the same as writing 'Simultaneous=1' string to the CIV.INI file. With this option enabled, the multiplayer feature 'Humans Move Units at the Same Time' should be available when setting up a new multiplayer game.
 
-15. Sort supported units list.  
+16. Sort supported units list.  
 ![Screenshot](Screenshots/SortSupportedUnitsList.png?raw=true "Screenshot")  
 Sorting order is: role 5 (Settlers, Engineers) is first, then attacking units ordered by domain (ground, air sea), descending by defense, descending by attack and then the rest by ID.
 
-16. Reset Engineer's order after passing its work to coworker. If there is already a worker in the tile, then when adding a new one, he takes the work counter for himself, and the order of the previous one is additionally reset. Thus, there should be only one worker with an order in a cell. This simplifies rush terraforming, as it eliminates the need to wake up the unit each time. Refer to point 3 for more information.
+17. Reset Engineer's order after passing its work to coworker. If there is already a worker in the tile, then when adding a new one, he takes the work counter for himself, and the order of the previous one is additionally reset. Thus, there should be only one worker with an order in a cell. This simplifies rush terraforming, as it eliminates the need to wake up the unit each time. Refer to point 3 for more information.
 
-17. Don't break unit movement on ZOC (zone of control). If unit has 'Go To' order, it doesn't stop when entering ZoC. Of course, the ZOC rule still applies. Originally, this behavior was applied only for role 7 units (Caravan, Freight). Be careful with this option, the unit will only stop when it breaks the ZOC rule or runs out of movement points. That is, for example, a unit directed at an enemy city will continuously try to enter it, attacking the defenders. Or attack an enemy unit suddenly emerging from the fog of war.
+18. Don't break unit movement on ZOC (zone of control). If unit has 'Go To' order, it doesn't stop when entering ZOC. Of course, the ZOC rule still applies. Originally, this behavior was applied only for role 7 units (Caravan, Freight). Be careful with this option, the unit will only stop when it breaks the ZOC rule or runs out of movement points. That is, for example, a unit directed at an enemy city will continuously try to enter it, attacking the defenders. Or attack an enemy unit suddenly emerging from the fog of war.
 
-18. Reset units Wait flag after activating. Originally, units ordered with 'Wait' command recieves special Wait flag; when switching to the next unit, it is searched for as the closest one without a Wait flag; if nothing is found, then all these flags are cleared and searched again. With this option, all Wait flags are immediately cleared when a unit is manually activated, which should build a more convenient sequence for switching to nearby units.
+19. Reset units Wait flag after activating. Originally, units ordered with 'Wait' command receives special Wait flag; when switching to the next unit, it is searched for as the closest one without a Wait flag; if nothing is found, then all these flags are cleared and searched again. With this option, all Wait flags are immediately cleared when a unit is manually activated, which should build a more convenient sequence for switching to nearby units.
 
-19. Reset MoveIteration before start moving to prevent wrong warning. This fixes the incorrect 'Long Unit Move' warning that was caused by a non-resetting movement counter.
+20. Reset MoveIteration before start moving to prevent wrong warning. This fixes the incorrect 'Long Unit Move' warning that was caused by a non-resetting movement counter.
 
-20. Set focus to City window when opened from Advisor and back to Advisor when closed. Originally, the focus stayed on the Advisor window, so none of the City hotkeys worked, and pressing Esc closed the Advisor instead of the City window.
+21. Set focus to City window when opened from Advisor and back to Advisor when closed. Originally, the focus stayed on the Advisor window, so none of the City hotkeys worked, and pressing Esc closed the Advisor instead of the City window.
 
-21. Celebrating city in yellow color instead of white in Attitude Advisor (F4). So it's more noticeable now.  
+22. Celebrating city in yellow color instead of white in Attitude Advisor (F4). So it's more noticeable now.  
 ![Screenshot](Screenshots/AttitudeAdvisorCelebratingYellow.png?raw=true "Screenshot")
 
-22. Indicating attitude in the city window. Texts below citizen sprites are colored as in Attitude Advisor. This helps to immediately see the effect of the used specialists.  
+23. Indicating attitude in the city window. Texts below citizen sprites are colored as in Attitude Advisor. This helps to immediately see the effect of the used specialists.  
 ![Screenshot](Screenshots/CityWindowColorAttitude.png?raw=true "Screenshot")
 
-23. Radio buttons hotkeys. Can speed up the selection of options using the keyboard.  
+24. Radio buttons hotkeys. Can speed up the selection of options using the keyboard.  
 ![Screenshot](Screenshots/RadioButtonsHotkeys.png?raw=true "Screenshot")
 
-24. City quickinfo tooltips. Hover mouse over the city and hold Ctrl key.  
+25. City quickinfo tooltips. Hover mouse over the city and hold Ctrl key.  
 ![Screenshot](Screenshots/CityQuickinfoTooltip.png?raw=true "Screenshot")
 
-25. Made most advisors and lists vertically resizable.  
+26. Made most advisors and lists vertically resizable.  
 ![Screenshot](Screenshots/ResizableLists.png?raw=true "Screenshot")
 
-26. Advisors caption area increased to make it easier to move windows around.
+27. Advisors caption area increased to make it easier to move windows around.
 
-27. Better scrolling in Units List Popup: no flickering, adjusting scrollbar PageSize, keys navigation.
+28. Better scrolling in Units List Popup: no flickering, adjusting scrollbar PageSize, keys navigation.
 
-28. Added Cancel button to city Change Production dialog - Esc is now Cancel.
+29. Added Cancel button to city Change Production dialog - Esc is now Cancel.
 
-29. Added shields cost in the city Change Production list.  
+30. Added shields cost in the city Change Production list.  
 ![Screenshot](Screenshots/CityChangeProductionShieldsAndCancel.png?raw=true "Screenshot")
 
-30. Sorting in City Status advisor. ities can be sorted by size, name, food, production or trade. Added total cities number.  
+31. Sorting in City Status advisor. ities can be sorted by size, name, food, production or trade. Added total cities number.  
 ![Screenshot](Screenshots/CityStatusAdvisorSortingAndTotal.png?raw=true "Screenshot")
 
-31. Mass change specialists in City window. Hover mouse over specialist, hold Shift key and scroll mouse wheel - this changes all specialists at once. Shift-clicking on specialist change others to the same one.
+32. Mass change specialists in City window. Hover mouse over specialist, hold Shift key and scroll mouse wheel - this changes all specialists at once. Shift-clicking on specialist change others to the same one.
 
-32. Suppress simple GAME.TXT popups. The list of popup names could be set in the UIA Setttings (`Menu` - `UI Additions` - `Settings...` - `List...`). These popups will be shown in the map overlay instead, eliminating the annoying need to click 'OK' button.  
+33. Suppress simple GAME.TXT popups. The list of popup names could be set in the UIA Setttings (`Menu` - `UI Additions` - `Settings...` - `List...`). These popups will be shown in the map overlay instead, eliminating the annoying need to click 'OK' button.  
 ![Screenshot](Screenshots/SuppressSimplePopups.png?raw=true "Screenshot")
 
 34. Include fix for `mk.dll` (`229.gif`, `250.gif`) and `pv.dll` (`105.gif`). As here:  
