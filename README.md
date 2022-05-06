@@ -51,6 +51,20 @@ This means correct work of all input fields.
 
 14. Option for enabling Simultaneous moves in multiplayer. This is the same as writing 'Simultaneous=1' string to the CIV.INI file. With this option enabled, the multiplayer feature 'Humans Move Units at the Same Time' should be available when setting up a new multiplayer game.
 
+15. Sort supported units list.  
+![Screenshot](Screenshots/SortSupportedUnitsList.png?raw=true "Screenshot")  
+Sotring order is: role 5 (Settlers, Engineers) is first, then attacking units ordered by domain (ground, air sea), descending by defense, descending by attack and then the rest by ID.
+
+16. Reset Engineer's order after passing its work to coworker. If there is already a worker in the tile, then when adding a new one, he takes the work counter for himself, and the order of the previous one is additionally reset. Thus, there should be only one worker with an order in a cell. This simplifies rush terraforming, as it eliminates the need to wake up the unit each time. Refer to point 3 for more information.
+
+17. Don't break unit movement on ZOC (zone of control). If unit has 'Go To' order, it doesn't stop when entering ZoC. Of course, the ZOC rule still applies. Originally, this behavior was applied only for role 7 units (Caravan, Freight). Be careful with this option, the unit will only stop when it breaks the ZOC rule or runs out of movement points. That is, for example, a unit directed at an enemy city will continuously try to enter it, attacking the defenders. Or attack an enemy unit suddenly emerging from the fog of war.
+
+18. Reset units Wait flag after activating. Originally, units ordered with 'Wait' command recieves special Wait flag; when switching to the next unit, it is searched for as the closest one without a Wait flag; if nothing is found, then all these flags are cleared and searched again. With this option, all Wait flags are immediately cleared when a unit is manually activated, which should build a more convenient sequence for switching to nearby units.
+
+19. Reset MoveIteration before start moving to prevent wrong warning. This fixes the incorrect 'Long Unit Move' warning that was caused by a non-resetting movement counter.
+
+20. Set focus to city window when opened from Advisor and back to Advisor when closed. Originally, the focus stayed on the adviser window, so none of the city hotkeys worked, and pressing Esc closed the advisor instead of the city window.
+
 Some experimental features that could change some original game rules or limitations without a guarantee of stability:
  - Change total units limit from default 2048. Don't use numbers greater than 32767. Saves with number of units greater than default should be loaded only with this patch.
 
