@@ -89,12 +89,12 @@ Sorting order is: role 5 (Settlers, Engineers) is first, then attacking units or
 30. Added shields cost in the city Change Production list.  
 ![Screenshot](Screenshots/CityChangeProductionShieldsAndCancel.png?raw=true "Screenshot")
 
-31. Sorting in City Status advisor. ities can be sorted by size, name, food, production or trade. Added total cities number.  
+31. Sorting in City Status advisor. Cities can be sorted by size, name, food, production or trade. Added total cities number.  
 ![Screenshot](Screenshots/CityStatusAdvisorSortingAndTotal.png?raw=true "Screenshot")
 
 32. Mass change specialists in City window. Hover mouse over specialist, hold Shift key and scroll mouse wheel - this changes all specialists at once. Shift-clicking on specialist change others to the same one.
 
-33. Suppress simple GAME.TXT popups. The list of popup names could be set in the UIA Setttings (`Menu` - `UI Additions` - `Settings...` - `List...`). These popups will be shown in the map overlay instead, eliminating the annoying need to click 'OK' button.  
+33. Suppress simple GAME.TXT popups. The list of popup names could be set in the UIA Settings (`Menu` - `UI Additions` - `Settings...` - `List...`). These popups will be shown in the map overlay instead, eliminating the annoying need to click 'OK' button.  
 ![Screenshot](Screenshots/SuppressSimplePopups.png?raw=true "Screenshot")
 
 34. Include fix for `mk.dll` (`229.gif`, `250.gif`) and `pv.dll` (`105.gif`). As here:  
