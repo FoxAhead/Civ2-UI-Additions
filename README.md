@@ -63,7 +63,49 @@ Sotring order is: role 5 (Settlers, Engineers) is first, then attacking units or
 
 19. Reset MoveIteration before start moving to prevent wrong warning. This fixes the incorrect 'Long Unit Move' warning that was caused by a non-resetting movement counter.
 
-20. Set focus to city window when opened from Advisor and back to Advisor when closed. Originally, the focus stayed on the adviser window, so none of the city hotkeys worked, and pressing Esc closed the advisor instead of the city window.
+20. Set focus to City window when opened from Advisor and back to Advisor when closed. Originally, the focus stayed on the Advisor window, so none of the City hotkeys worked, and pressing Esc closed the Advisor instead of the City window.
+
+21. Celebrating city in yellow color instead of white in Attitude Advisor (F4). So it's more noticeable now.  
+![Screenshot](Screenshots/AttitudeAdvisorCelebratingYellow.png?raw=true "Screenshot")
+
+22. Indicating attitude in the city window. Texts below citizen sprites are colored as in Attitude Advisor. This helps to immediately see the effect of the used specialists.  
+![Screenshot](Screenshots/CityWindowColorAttitude.png?raw=true "Screenshot")
+
+23. Radio buttons hotkeys. Can speed up the selection of options using the keyboard.  
+![Screenshot](Screenshots/RadioButtonsHotkeys.png?raw=true "Screenshot")
+
+24. City quickinfo tooltips. Hover mouse over the city and hold Ctrl key.  
+![Screenshot](Screenshots/CityQuickinfoTooltip.png?raw=true "Screenshot")
+
+25. Made most advisors and lists vertically resizable.  
+![Screenshot](Screenshots/ResizableLists.png?raw=true "Screenshot")
+
+26. Advisors caption area increased to make it easier to move windows around.
+
+27. Better scrolling in Units List Popup: no flickering, adjusting scrollbar PageSize, keys navigation.
+
+28. Added Cancel button to city Change Production dialog - Esc is now Cancel.
+
+29. Added shields cost in the city Change Production list.  
+![Screenshot](Screenshots/CityChangeProductionShieldsAndCancel.png?raw=true "Screenshot")
+
+30. Sorting in City Status advisor. ities can be sorted by size, name, food, production or trade. Added total cities number.  
+![Screenshot](Screenshots/CityStatusAdvisorSortingAndTotal.png?raw=true "Screenshot")
+
+31. Mass change specialists in City window. Hover mouse over specialist, hold Shift key and scroll mouse wheel - this changes all specialists at once. Shift-clicking on specialist change others to the same one.
+
+32. Suppress simple GAME.TXT popups. The list of popup names could be set in the UIA Setttings (`Menu` - `UI Additions` - `Settings...` - `List...`). These popups will be shown in the map overlay instead, eliminating the annoying need to click 'OK' button.  
+![Screenshot](Screenshots/SuppressSimplePopups.png?raw=true "Screenshot")
+
+34. Include fix for `mk.dll` (`229.gif`, `250.gif`) and `pv.dll` (`105.gif`). As here:  
+https://forums.civfanatics.com/resources/corrected-dlls-for-mge.24259/
+    > restoring original Louis XIV and Joan of Arc leader portraits that were accidentally overwritten with Alexander and Hippolyta, and the furthest Throne Room wall that was overwritten with the second level.
+
+    This fix is applied automatically based on GIF size comparisons. If `mk.dll` and `pv.dll` are modded, the fix will not be applied.
+
+35. Color correction. If the game seems too dull or too bright for you, then this can be corrected without editing the GIF palettes. This and some other options can be set in `Menu` - `UI Additions` - `Settings...`.  
+![Screenshot](Screenshots/UIASettings.png?raw=true "Screenshot")
+
 
 Some experimental features that could change some original game rules or limitations without a guarantee of stability:
  - Change total units limit from default 2048. Don't use numbers greater than 32767. Saves with number of units greater than default should be loaded only with this patch.
