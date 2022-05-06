@@ -83,7 +83,7 @@ const
 var
   ResNumsDoFixCache: array[105..250] of Shortint; // 1 - Yes, 0 - Undefined, -1 - No
 
-function CompareCityUnits(Item1, Item2: Pointer): Integer;
+function CompareUnits(Item1, Item2: Pointer): Integer;
 var
   Units: array[1..2] of PUnit;
   i: Integer;
@@ -162,7 +162,7 @@ begin
       //SendMessageToLoader(1, Integer(@Civ2.Units[i]));
     end;
   end;
-  UnitsList.Sort(@CompareCityUnits);
+  UnitsList.Sort(@CompareUnits);
   UnitsListCursor := 0;
   Result := UnitsList.Count;
 end;
