@@ -58,7 +58,7 @@ object Form1: TForm1
     Width = 75
     Height = 13
     Anchors = [akLeft, akBottom]
-    Caption = '2017 FoxAhead'
+    Caption = '2022 FoxAhead'
     Enabled = False
   end
   object LabelGitHub: TLabel

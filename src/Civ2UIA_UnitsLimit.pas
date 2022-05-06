@@ -2420,7 +2420,9 @@ var
   Diff: Integer;
 begin
   GetMem(NewUnitsAreaAddress, UIAOPtions^.iUnitsLimit * SizeOf(TUnit));
+  ZeroMemory(NewUnitsAreaAddress, UIAOPtions^.iUnitsLimit * SizeOf(TUnit));
   Diff := Integer(NewUnitsAreaAddress) - AUnits;
+  ANewUnitsAreaAddress := NewUnitsAreaAddress;
   for i := Low(GUnitLimitPatchAddr) to High(GUnitLimitPatchAddr) do
   begin
     ReadProcessMemory(HProcess, Pointer(GUnitLimitPatchAddr[i]), @UnitsArrayOffset, 4, BytesRead);
