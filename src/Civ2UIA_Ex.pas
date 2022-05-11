@@ -8,7 +8,8 @@ uses
   Graphics,
   PsAPI,
   Windows,
-  Civ2Types;
+  Civ2Types,
+  Civ2UIA_QuickInfo;
 
 type
   TEx = class
@@ -24,6 +25,7 @@ type
     UnitsListCursor: Integer;
     SuppressPopupList: TStringList;
     CitiesList: TList;
+    QuickInfo: TQuickInfo;
     constructor Create;
     destructor Destroy; override;
     function UnitsListBuildSorted(CityIndex: Integer): Integer;
@@ -137,6 +139,7 @@ begin
   SuppressPopupList := TStringList.Create();
   SuppressPopupList.Sorted := True;
   SuppressPopupList.Duplicates := dupIgnore;
+  QuickInfo := TQuickInfo.Create();
   LoadSettingsFile();
 end;
 
@@ -146,6 +149,7 @@ begin
   UnitsList.Free();
   CitiesList.Free();
   SuppressPopupList.Free();
+  QuickInfo.Free();
   inherited;
 end;
 
@@ -159,7 +163,6 @@ begin
     if (Civ2.Units[i].ID > 0) and (Civ2.Units[i].HomeCity = CityIndex) then
     begin
       UnitsList.Add(@Civ2.Units[i]);
-      //SendMessageToLoader(1, Integer(@Civ2.Units[i]));
     end;
   end;
   UnitsList.Sort(@CompareUnits);
@@ -194,7 +197,8 @@ begin
       CitiesList.Add(@Civ2.Cities[i]);
     end;
   end;
-  CitiesList.Sort(@CompareCities);
+  if FCitiesSortCriteria <> 0 then
+    CitiesList.Sort(@CompareCities);
   Result := CitiesList.Count;
 end;
 
@@ -318,7 +322,7 @@ var
 begin
   DC := FCanvas.Handle;
   FCanvas.Handle := 0;
-  FCanvas.Free;
+  FCanvas.Free();
   FCanvas := nil;
   RestoreDC(DC, FSavedDC);
 end;

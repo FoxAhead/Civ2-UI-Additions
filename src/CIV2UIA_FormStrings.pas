@@ -1,4 +1,4 @@
-unit CIV2UIA_FormStrings;
+unit Civ2UIA_FormStrings;
 
 interface
 

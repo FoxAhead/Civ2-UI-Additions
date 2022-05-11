@@ -66,7 +66,7 @@ uses
   Civ2UIA_Proc,
   Civ2Types,
   Civ2Proc,
-  CIV2UIA_FormStrings,
+  Civ2UIA_FormStrings,
   Civ2UIA_Ex;
 
 {$R *.dfm}
@@ -99,7 +99,7 @@ var
   HWindow: HWND;
   GraphicsInfo: PGraphicsInfo;
 begin
-  GraphicsInfo := @Civ2.MapGraphicsInfo^.GraphicsInfo;
+  GraphicsInfo := @Civ2.MapWindow.MSWindow.GraphicsInfo;
   Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.Palette);
   Civ2.UpdateDIBColorTableFromPalette(@GraphicsInfo.DrawPort, GraphicsInfo.WindowInfo.Palette);
   // Also recreate main window brush for background

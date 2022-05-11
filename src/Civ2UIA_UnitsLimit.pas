@@ -2408,6 +2408,7 @@ uses
   Civ2Types,
   Civ2UIA_Options,
   Civ2UIA_Proc,
+  SysUtils,
   Windows;
 
 procedure PatchUnitsLimit(HProcess: Cardinal);
@@ -2434,6 +2435,7 @@ begin
   WriteMemory(HProcess, $005B3E95, [$9C, $7C]);
   WriteMemory(HProcess, $005B3EC0, [$F8, $7C]);
   WriteMemory(HProcess, $005B25A6, [$02, $7D]);
+  WriteMemory(HProcess, $005B50E3, WordRec(UIAOPtions^.iUnitsLimit).Bytes);  
 end;
 
 end.

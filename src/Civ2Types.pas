@@ -46,7 +46,9 @@ type
 
   PGraphicsInfo = ^TGraphicsInfo;
 
-  PGraphicsInfoMap = ^TGraphicsInfoMap;
+  PMapWindow = ^TMapWindow;
+
+  PMapWindows = ^TMapWindows;
 
   PWindowStructure = ^TWindowStructure;
 
@@ -491,31 +493,6 @@ type
     UpdateProc: Pointer;                  // + 0x110
   end;
 
-  TGraphicsInfoMap = packed record        // Size = 0x3F0
-    GraphicsInfo: TGraphicsInfo;          //
-    Unknown_114: Integer;                 // + 0x114
-    _CaptionHeight: Integer;              // + 0x118
-    Unknown_11C: Integer;                 // + 0x11C
-    _ResizeBorderWidth: Integer;          // + 0x120
-    ClientTopLeft: TPoint;                // + 0x124
-    ClientSize: TSize;
-    Unknown6: array[$134..$2DF] of Byte;
-    MapCenter: TSmallPoint;               // + 0x2E0
-    MapZoom: Smallint;                    // + 0x2E4
-    Unknown7: Smallint;                   // + 0x2E6
-    MapRect: TRect;                       // + 0x2E8
-    MapHalf: TSize;                       // + 0x2F8
-    Unknown8: array[$300..$307] of Byte;
-    MapCellSize: TSize;                   // + 0x308
-    MapCellSize2: TSize;                  // + 0x310  1/2
-    MapCellSize4: TSize;                  // + 0x318  1/4
-    Unknown10: array[1..32] of Integer;
-    DrawInfo2: PDrawInfo;
-    Unknown11: array[1..19] of Integer;
-  end;
-
-  TMapGraphicsInfos = array[0..7] of TGraphicsInfoMap;
-
   // T_GraphicsInfoEx Size = 0xA28 (sub_4D5B21)
 
   TDrawInfo = packed record               //  Size = $28
@@ -593,7 +570,29 @@ type
     Unknown1b: array[1..105] of Integer;
   end;
 
-  TCityWindow = packed record             // 6A91B8 (~TGraphicsInfo) Size = $16E0
+  TMapWindow = packed record              // Size = 0x3F0
+    MSWindow: TMSWindow;
+    Unknown_2D8: Word;                    // + 0x2D8
+    Unknown_2DA: Word;                    // + 0x2DA
+    Unknown_2DC: Word;                    // + 0x2DC
+    Unknown_2DE: Word;                    // + 0x2DE
+    MapCenter: TSmallPoint;               // + 0x2E0
+    MapZoom: Smallint;                    // + 0x2E4
+    Unknown7: Smallint;                   // + 0x2E6
+    MapRect: TRect;                       // + 0x2E8
+    MapHalf: TSize;                       // + 0x2F8
+    Unknown8: array[$300..$307] of Byte;
+    MapCellSize: TSize;                   // + 0x308
+    MapCellSize2: TSize;                  // + 0x310  1/2
+    MapCellSize4: TSize;                  // + 0x318  1/4
+    Unknown10: array[1..32] of Integer;
+    DrawInfo2: PDrawInfo;
+    Unknown11: array[1..19] of Integer;
+  end;
+
+  TMapWindows = array[0..7] of TMapWindow; // 66C7A8
+
+  TCityWindow = packed record             // 6A91B8  Size = $16E0
     MSWindow: TMSWindow;
     CitySpritesInfo: TCitySpritesInfo;    // + 2D8 = 6A9490
     CityIndex: Integer;                   // + 159C

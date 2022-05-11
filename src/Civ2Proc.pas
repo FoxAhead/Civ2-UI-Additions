@@ -27,8 +27,8 @@ type
     LoadedTxtSectionName: PChar;
     MainMenu: ^HMENU;
     MainWindowInfo: PWindowInfo;
-    MapGraphicsInfo: PGraphicsInfoMap;
-    MapGraphicsInfos: ^TMapGraphicsInfos;
+    MapWindow: PMapWindow;
+    MapWindows: PMapWindows;
     PrevWindowInfo: PWindowInfo;
     ScreenRectSize: PSize;
     ScienceAdvisorClientRect: PRect;
@@ -131,8 +131,8 @@ begin
   LoadedTxtSectionName := Pointer($006CECB0);
   MainMenu := Pointer($006A64F8);
   MainWindowInfo := Pointer($006553D8);
-  MapGraphicsInfo := Pointer($0066C7A8);
-  MapGraphicsInfos := Pointer($0066C7A8);
+  MapWindow := Pointer($0066C7A8);
+  MapWindows := Pointer($0066C7A8);
   PrevWindowInfo := Pointer($00637EA4);
   ScreenRectSize := Pointer($006AB198);
   ScienceAdvisorClientRect := Pointer($0063EC34);
@@ -158,8 +158,8 @@ begin
     raise Exception.Create('Wrong size of TCityWindow');
   if SizeOf(TGraphicsInfo) <> $114 then
     raise Exception.Create('Wrong size of TGraphicsInfo');
-  if SizeOf(TGraphicsInfoMap) <> $3F0 then
-    raise Exception.Create('Wrong size of TGraphicsInfoMap');
+  if SizeOf(TMapWindow) <> $3F0 then
+    raise Exception.Create('Wrong size of TMapWindow');
   if SizeOf(TCity) <> $58 then
     raise Exception.Create('Wrong size of TCity');
   if SizeOf(TCiv) <> $594 then
@@ -313,7 +313,7 @@ asm
     push  1
     mov   ecx, Self.HumanCivIndex
     push  [ecx]
-    mov   ecx, Self.MapGraphicsInfo
+    mov   ecx, Self.MapWindow
     mov   eax, $00401F32
     call  eax
 end;
@@ -389,7 +389,7 @@ asm
     push  ScreenX
     push  MapY
     push  MapX
-    mov   ecx, Self.MapGraphicsInfo
+    mov   ecx, Self.MapWindow
     mov   eax, $00402B2B
     call  eax
     mov   @Result, eax
@@ -411,7 +411,7 @@ asm
     push  MapX
     push  WindowY
     push  WindowX
-    mov   ecx, Self.MapGraphicsInfo
+    mov   ecx, Self.MapWindow
     mov   eax, $0047A6B0
     call  eax
 end;
@@ -428,7 +428,7 @@ procedure TCiv2.CenterView(X, Y: Integer);
 asm
     push  Y
     push  X
-    mov   ecx, Self.MapGraphicsInfo
+    mov   ecx, Self.MapWindow
     mov   eax, $00403404
     call  eax
 end;
