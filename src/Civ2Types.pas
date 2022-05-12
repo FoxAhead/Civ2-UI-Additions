@@ -3,6 +3,7 @@ unit Civ2Types;
 interface
 
 uses
+  SysUtils,
   Windows;
 
 type
@@ -62,11 +63,15 @@ type
 
   PAdvisorWindow = ^TAdvisorWindow;
 
+  PCosmic = ^TCosmic;
+
   PGameParameters = ^TGameParameters;
 
   PSprite = ^TSprite;
 
   PSprites = ^TSprites;
+
+  PMSWindow = ^TMSWindow;
 
   PUnit = ^TUnit;
 
@@ -499,13 +504,13 @@ type
     Unknown0: Integer;
     DeviceContext: HDC;                   // + 0x04
     Unknown1: HGDIOBJ;
-    Unknown2: HGDIOBJ;
-    Unknown3: HGDIOBJ;
-    Unknown4: Integer;
+    HBmp: HBITMAP;
+    ReplacedObject: HGDIOBJ;
+    IsTopDownDIB: Integer;
     Width: Integer;
     Height: Integer;
-    Unknown7: Integer;
-    Unknown8: Integer;
+    BmWidth4: Integer;
+    PBmp: PByteArray;
   end;
 
   TDialogItem = packed record
@@ -752,6 +757,31 @@ type
     Unknown_31C: Integer;
     ScrollBarHeight: Integer;
     Unknown_324: array[1..107] of Integer;
+  end;
+
+  TCosmic = packed record                 // Size = 0x16
+    RoadMovementMultiplier: Byte;
+    Cosmic2: Byte;
+    Cosmic3: Byte;
+    Cosmic4: Byte;
+    RowsInShieldBox: Byte;
+    Cosmic6: Byte;
+    Cosmic7: Byte;
+    Cosmic8: Byte;
+    Cosmic9: Byte;
+    Cosmic10: Byte;
+    Cosmic11: Byte;
+    Cosmic12: Byte;
+    BaseTransformTime: Byte;
+    Cosmic14: Byte;
+    Cosmic15: Byte;
+    Cosmic16: Byte;
+    Cosmic17: Byte;
+    Cosmic18: Byte;
+    ShieldPenalty: Byte;
+    Cosmic20: Byte;
+    Cosmic21: Byte;
+    Cosmic22: Byte;
   end;
 
   TGameParameters = packed record

@@ -6,7 +6,9 @@ uses
   Classes,
   Types,
   Windows,
-  Civ2Types;
+  Civ2Types,
+  Civ2UIA_SortedUnitsList,
+  Civ2UIA_SortedCitiesList;
 
 type
   TWindowType = (wtUnknown, wtCityStatus, //F1
@@ -41,8 +43,7 @@ type
     ListStart: Integer;
     Counter: Integer;
     Columns: Integer;
-    UnitsList: TList;
-    UnitsListCounter: Integer;
+    SortedUnitsList: TSortedUnitsList;
   end;
 
   TCityWindowEx = record
@@ -51,6 +52,7 @@ type
 
   TAdvisorWindowEx = record
     Rects: array[1..16] of TRect;
+    SortedCitiesList: TSortedCitiesList;
   end;
 
   TDrawTestData = record
@@ -67,7 +69,7 @@ type
     AdvisorHeights: array[1..12] of Word;
     DialogLines: array[1..16] of Byte;
     Flags: array[0..31] of Byte;          // 256 flags
-    AdvisorSorts: array[1..12] of ShortInt;   // 0 - no sort, 1 - sort by first column ascending, -1 - sort by first column descending, etc...
+    AdvisorSorts: array[1..12] of ShortInt; // 0 - no sort, 1 - sort by first column ascending, -1 - sort by first column descending, etc...
   end;
 
   PCallerChain = ^TCallerChain;

@@ -17,6 +17,7 @@ type
     CityGlobals: PCityGlobals;
     CityWindow: PCityWindow;
     Civs: ^TCivs;
+    Cosmic: PCosmic;
     CurrCivIndex: PInteger;
     CurrPopupInfo: PPDialogWindow;
     GameParameters: PGameParameters;
@@ -97,6 +98,8 @@ type
     procedure SetCurrFont(A1: Integer);
     procedure ShowCityWindow(CityWindow: PCityWindow; CityIndex: Integer);
     procedure UpdateAdvisorCityStatus();
+    function TileBg(Dst, Tile: PDrawPort; A3, A4, A5, A6, A7, A8: Integer): Integer;
+    procedure CopyToPort(Src, Dst: PDrawPort; A3, A4, A5, A6, A7, A8: Integer);
   published
   end;
 
@@ -121,6 +124,7 @@ begin
   CityWindow := Pointer($006A91B8);
   CityGlobals := Pointer($006A6528);
   Civs := Pointer($0064C6A0);
+  Cosmic := Pointer($0064BCC8);
   CurrCivIndex := Pointer($0063EF6C);
   CurrPopupInfo := Pointer($006CEC84);
   GameParameters := Pointer($00655AE8);
@@ -653,6 +657,37 @@ procedure TCiv2.UpdateAdvisorCityStatus();
 asm
     mov   eax, $004029F5
     call  eax
+end;
+
+function TCiv2.TileBg(Dst, Tile: PDrawPort; A3, A4, A5, A6, A7, A8: Integer): Integer;
+asm
+    push  A8
+    push  A7
+    push  A6
+    push  A5
+    push  A4
+    push  A3
+    push  Tile
+    push  Dst
+    mov   eax, $00402C9D
+    call  eax
+    add   esp, $20
+    mov   @Result, eax
+end;
+
+procedure TCiv2.CopyToPort(Src, Dst: PDrawPort; A3, A4, A5, A6, A7, A8: Integer);
+asm
+    push  A8
+    push  A7
+    push  A6
+    push  A5
+    push  A4
+    push  A3
+    push  Dst
+    push  Src
+    mov   eax, $00402081
+    call  eax
+    add   esp, $20
 end;
 
 end.
