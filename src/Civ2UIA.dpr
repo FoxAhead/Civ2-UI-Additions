@@ -256,7 +256,6 @@ begin
   begin
     Canvas := TCanvasEx.Create(DrawPort);
     // City Quickinfo
-    Ex.QuickInfo.Update();
     Ex.QuickInfo.Draw(DrawPort);
     //    BitBlt(Canvas.Handle, 0, 0, SrcDI.Width, SrcDI.Height, VSrcDC, 0, 0, SRCCOPY);
     {    if QuickInfoCityIndex >= 0 then
@@ -1682,15 +1681,15 @@ asm
 end;
 
 // Return number of turns
-function PatchCityChangeListUnitCostEx(Cost, Done, ShieldsInRow, Total, Support: Integer): Integer; stdcall;
+function PatchCityChangeListBuildingCostEx(Cost, Done: Integer): Integer; stdcall;
 var
   P: PChar;
   Text: string;
   RealCost, LeftToDo, Production: Integer;
 begin
-  RealCost := Cost * ShieldsInRow;
+  RealCost := Cost * Civ2.CityGlobals.ShieldsInRow;
   LeftToDo := RealCost - 1 - Done;
-  Production := Min(Max(1, Total - Support), 1000);
+  Production := Min(Max(1, Civ2.CityGlobals.Total - Civ2.CityGlobals.Support), 1000);
   P := StrEnd(Civ2.ChText) - 1;
   if P^ = '(' then
     P^ := #00;
@@ -1700,15 +1699,35 @@ begin
   Result := Min(Max(1, LeftToDo div Production + 1), 999);
 end;
 
-procedure PatchCityChangeListUnitCost; register;
+procedure PatchCityChangeListBuildingCost; register;
 asm
-    push  [$006A6568] // Support
-    push  [$006A65CC] // Total
-    push  [$006A657C] // ShieldsInRow
     push  [ebp + $0C] // Done
     push  [ebp + $08] // Cost
-    call  PatchCityChangeListUnitCostEx
+    call  PatchCityChangeListBuildingCostEx
     push  $00509B07
+    ret
+end;
+
+procedure PatchCityChangeListImprovementMaintenanceEx(j: Integer); stdcall;
+var
+  Upkeep: Integer;
+  Text: string;
+begin
+  Upkeep := Civ2.Improvements[j].Upkeep;
+  if Upkeep >= 0 then
+  begin
+    Text := string(Civ2.ChText);
+    Text := Text + ', ' + IntToStr(Upkeep) + '#648860:1#';
+    StrPCopy(Civ2.ChText, Text);
+  end;
+  StrCat(Civ2.ChText, ')');
+end;
+
+procedure PatchCityChangeListImprovementMaintenance(); register;
+asm
+    push  [ebp - $958] // int j
+    call  PatchCityChangeListImprovementMaintenanceEx
+    push  $0050AD85
     ret
 end;
 
@@ -1859,24 +1878,7 @@ begin
     MapMessagesList.Pack();
   end;
   //
-  CityIndex := -1;
-  ZeroMemory(@Ex.QuickInfo.MapPoint, SizeOf(Ex.QuickInfo.MapPoint));
-  if GetAsyncKeyState(VK_CONTROL) <> 0 then
-  begin
-    GetCursorPos(MousePoint);
-    WindowHandle := WindowFromPoint(MousePoint);
-    if WindowHandle = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure.HWindow then
-    begin
-      ScreenToClient(WindowHandle, MousePoint);
-      Civ2.ScreenToMap(Ex.QuickInfo.MapPoint.X, Ex.QuickInfo.MapPoint.Y, MousePoint.X, MousePoint.Y);
-      CityIndex := Civ2.GetCityIndexAtXY(Ex.QuickInfo.MapPoint.X, Ex.QuickInfo.MapPoint.Y);
-      if Civ2.Cities[CityIndex].Owner <> Civ2.HumanCivIndex^ then
-      begin
-        CityIndex := -1;
-      end;
-    end;
-  end;
-  Ex.QuickInfo.CityIndex := CityIndex;
+  Ex.QuickInfo.Update();
 end;
 
 {var
@@ -2719,6 +2721,55 @@ begin
   end;
 end;
 
+//
+// Calculate TextExtentX without sprites placeholders
+//
+function PatchDlgAddListboxItemGetTextExtentXEx(FontInfo: PFontInfo; Text: PChar): Integer; stdcall;
+var
+  i, j: Integer;
+  WaitClosing: Boolean;
+  Sprites: Integer;
+  Text1: array[0..1024] of char;
+begin
+  Text1[0] := #00;
+  WaitClosing := False;
+  Sprites := 0;
+  i := 0;
+  j := 0;
+  while Text[i] <> #00 do
+  begin
+    if (Text[i] <> '#') then
+    begin
+      if not WaitClosing then
+      begin
+        Text1[j] := Text[i];
+        Inc(j);
+      end
+    end
+    else if WaitClosing and (Text[i - 1] in ['0'..'9']) then
+    begin
+      WaitClosing := False;
+      Inc(Sprites);
+    end
+    else if (Text[i + 1] in ['0'..'9']) then
+    begin
+      WaitClosing := True;
+    end;
+    Inc(i);
+  end;
+  Text1[j] := #00;
+  //StrCopy(Text, Text1); // For debugging
+  Result := Civ2.GetTextExtentX(FontInfo, Text1);
+end;
+
+procedure PatchDlgAddListboxItemGetTextExtentX(); register;
+asm
+    push  ecx
+    call  PatchDlgAddListboxItemGetTextExtentXEx
+    push  $0059EFD3
+    ret
+end;
+
 // Return 1 if processed
 function PatchDlgKeyDownListEx(KeyCode: Integer): Integer; stdcall;
 var
@@ -2833,25 +2884,41 @@ end;
 //
 // Enhanced City Status advisor
 //
-procedure WndProcAdvisorCityStatusButtonUp(X, Y, Button: Integer); stdcall;
+
+function AdvisorCityStatusGetListIndex(X, Y: Integer): Integer; stdcall;
 var
+  Y1: Integer;
   i: Integer;
   ListIndex: Integer;
-  Y1: Integer;
-  City: PCity;
-  CityIndex: Integer;
-  SortCriteria, SortSign: Integer;
 begin
   Y1 := Y - Civ2.AdvisorWindow.ListTop;
   i := Floor(Y1 / Civ2.AdvisorWindow.LineHeight);
   ListIndex := Civ2.AdvisorWindow.ScrollPosition + i;
-  if (i >= 0) and (ListIndex >= 0) and (ListIndex < AdvisorWindowEx.SortedCitiesList.Count) and (i < Civ2.AdvisorWindow.ScrollPageSize) and (Button = 0) then
-  begin
-    City := AdvisorWindowEx.SortedCitiesList[ListIndex];
-    CityIndex := (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
-    Civ2.ShowCityWindow(Civ2.CityWindow, CityIndex);
-  end
+  if (i >= 0) and (ListIndex >= 0) and (ListIndex < AdvisorWindowEx.SortedCitiesList.Count) and (i < Civ2.AdvisorWindow.ScrollPageSize) then
+    Result := ListIndex
   else if i = -1 then
+    Result := -1
+  else
+    Result := -2;
+end;
+
+procedure WndProcAdvisorCityStatusButtonUp(X, Y, Button: Integer); stdcall;
+var
+  i: Integer;
+  ListIndex: Integer;
+  SortCriteria, SortSign: Integer;
+begin
+  ListIndex := AdvisorCityStatusGetListIndex(X, Y);
+  if (ListIndex >= 0) and (Button = 0) then
+  begin
+    Civ2.ShowCityWindow(Civ2.CityWindow, AdvisorWindowEx.SortedCitiesList.GetIndexIndex(ListIndex));
+    if X > 370 then
+    begin
+      Civ2.Citywin_CityButtonChange(0);
+      Civ2.CityWindowExit();
+    end;
+  end
+  else if ListIndex = -1 then
   begin
     SortCriteria := Abs(UIASettings.AdvisorSorts[1]);
     SortSign := Sign(UIASettings.AdvisorSorts[1]);
@@ -2889,6 +2956,40 @@ begin
   WndProcAdvisorCityStatusButtonUp(X, Y, 1);
 end;
 
+procedure PatchWndProcAdvisorCityStatusMouseMove(X, Y: Integer); cdecl;
+var
+  MSWindow: PMSWindow;
+  ListIndex: Integer;
+  Row: Integer;
+  Part: Integer;
+  Canvas: TCanvasEx;
+  R: TRect;
+  Y1: Integer;
+begin
+  if X > 370 then
+    Part := 2
+  else
+    Part := 1;
+  ListIndex := AdvisorCityStatusGetListIndex(X, Y);
+  if (AdvisorWindowEx.MouseOver.Y <> ListIndex) and (Part = 2) or (AdvisorWindowEx.MouseOver.X <> Part) then
+  begin
+    MSWindow := @Civ2.AdvisorWindow.MSWindow;
+    AdvisorWindowEx.MouseOver := Point(Part, ListIndex);
+    //Civ2.UpdateCopyValidateAdvisor(1);
+    Civ2.CopyToScreenAndValidate(@MSWindow.GraphicsInfo);
+    if (ListIndex >= 0) and (Part = 2) then
+    begin
+      Row := ListIndex - Civ2.AdvisorWindow.ScrollPosition;
+      Y1 := Civ2.AdvisorWindow.ListTop + Row * Civ2.AdvisorWindow.LineHeight;
+      Canvas := TCanvasEx.Create(MSWindow.GraphicsInfo.WindowInfo.WindowStructure.DeviceContext);
+      Canvas.Brush.Color := TColor($C0C0C0); // Canvas.ColorFromIndex(34);
+      R := Rect(AdvisorWindowEx.Rects[6].Left - 10, Y1, MSWindow.ClientSize.cx - 19, Y1 + Civ2.AdvisorWindow.LineHeight);
+      Canvas.FrameRect(R);
+      Canvas.Free();
+    end;
+  end;
+end;
+
 function PatchUpdateAdvisorCityStatusEx(CivIndex, Bottom: Integer; var Cities, Top1: Integer): Integer; stdcall;
 var
   Page, ScrollPos, LineHeight: Integer;
@@ -2904,9 +3005,10 @@ var
   City: PCity;
   CityIndex: Integer;
   SortCriteria, SortSign: Integer;
+  Improvements: array[0..1] of Integer;
 begin
   Result := 0;                            // Return 1 if processed
-  ZeroMemory(@AdvisorWindowEx, SizeOf(AdvisorWindowEx));
+  ZeroMemory(@AdvisorWindowEx.Rects, SizeOf(AdvisorWindowEx.Rects));
   MSWindow := @Civ2.AdvisorWindow.MSWindow;
   DrawPort := @MSWindow.GraphicsInfo.DrawPort;
   SortCriteria := Abs(UIASettings.AdvisorSorts[1]);
@@ -2932,7 +3034,7 @@ begin
   begin
     X1 := MSWindow.ClientTopLeft.X + 150;
     Civ2.SetCurrFont($0063EAB8);          // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
-    Civ2.SetFontColorWithShadow($21, $12, -1, -1);
+    Civ2.SetFontColorWithShadow($25, $12, -1, -1);
     Text := Format('Cities: %d', [Cities]);
     //Civ2.DrawString(PChar(Text), 373, Y1 - 3);
     Civ2.DrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 20, Y1 - 3, 0);
@@ -2973,7 +3075,7 @@ begin
     if (i >= ScrollPos) and (Page + ScrollPos > i) then
     begin
       X1 := MSWindow.ClientTopLeft.X + (((i + 1) and 1) shl 6) + 2;
-      CityIndex := (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
+      CityIndex := AdvisorWindowEx.SortedCitiesList.GetIndexIndex(i); // (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
       Civ2.DrawCitySprite(DrawPort, CityIndex, 0, X1, Y1, 0);
 
       Civ2.SetCurrFont($0063EAB8);        // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
@@ -2982,6 +3084,20 @@ begin
       Y2 := Y1 + 9;
       X1 := MSWindow.ClientTopLeft.X + 130;
       Civ2.DrawString(City.Name, X1, Y2);
+
+      Improvements[0] := 1;               // Palace
+      Improvements[1] := 32;              // Airport
+      Civ2.SetSpriteZoom(-4);
+      X2 := 270 - 42;
+      for j := High(Improvements) downto Low(Improvements) do
+      begin
+        if Civ2.CityHasImprovement(CityIndex, Improvements[j]) then
+        begin
+          Civ2.CopySprite(@PSprites($645160)^[Improvements[j]], @R, DrawPort, X2, Y2 + 4);
+          X2 := X2 - 19;
+        end;
+      end;
+      Civ2.ResetSpriteZoom;
 
       X1 := X1 + 131;
       X2 := X1;
@@ -3044,12 +3160,29 @@ begin
       //Civ2.DrawString(PChar(Text), X2, Y2);
       Civ2.DrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 20, Y2, 0);
 
+      {if AdvisorWindowEx.MouseOver.Y = i then
+      begin
+        Canvas := TCanvasEx.Create(DrawPort);
+        Canvas.Brush.Color := Canvas.ColorFromIndex(34);
+        if AdvisorWindowEx.MouseOver.X = 1 then
+          R := Rect(AdvisorWindowEx.Rects[2].Left - 3, Y2 - 3, AdvisorWindowEx.Rects[6].Left - 10, Y2 + LineHeight - 3)
+        else
+        begin
+          R := Rect(AdvisorWindowEx.Rects[6].Left - 10, Y2 - 3, MSWindow.ClientSize.cx - 19, Y2 + LineHeight - 3);
+          Canvas.FrameRect(R);
+        end;
+        Canvas.Free();
+      end;}
+      AdvisorWindowEx.MouseOver.Y := -2;
+
       Y1 := Y1 + LineHeight;
+
     end;
   end;
   if Civ2.AdvisorWindow.ControlsInitialized = 0 then
   begin
     MSWindow.GraphicsInfo.WindowInfo.WindowProcs.ProcRButtonUp := @PatchWndProcAdvisorCityStatusRButtonUp;
+    MSWindow.GraphicsInfo.WindowInfo.WindowProcs.ProcMouseMove := @PatchWndProcAdvisorCityStatusMouseMove;
   end;
   Result := 1;
 end;
@@ -3072,6 +3205,22 @@ asm
 @@LABEL_PROCESSED:
 //  if ( !V_AdvisorWindow_stru_63EB10.ControlsInitialized )
     push  $0042D514
+    ret
+end;
+
+procedure PatchCalcMapRectTopEx(MapWindow: PMapWindow); stdcall;
+begin
+  if MapWindow.MapRect.Top + 2 * MapWindow.MapHalf.cy > PWord($006D1162)^ + 2 then
+  begin
+    MapWindow.MapRect.Top := PWord($006D1162)^ + 2 - 2 * MapWindow.MapHalf.cy;
+  end;
+end;
+
+procedure PatchCalcMapRectTop(); register;
+asm
+    push  [ebp - $28] // P_MapWindow this
+    call  PatchCalcMapRectTopEx
+    push  $0047A334
     ret
 end;
 
@@ -3161,11 +3310,16 @@ begin
   // Change color in City Window for We Love The King Day
   WriteMemory(HProcess, $00502109, [OP_JMP], @PatchDrawCityWindowTopWLTKD);
 
-  // Show Unit shields cost in City Change list and fix Turns calculation for high production numbers
-  WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListUnitCost);
+  // Show Cost shields and Maintenance coins in City Change list and fix Turns calculation for high production numbers
+  WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListBuildingCost);
+  WriteMemory(HProcess, $0050AD80, [OP_JMP], @PatchCityChangeListImprovementMaintenance);
 
   // Add Cancel button to City Change list
   WriteMemory(HProcess, $0050AA86, [OP_CALL], @PatchLoadCityChangeDialog);
+
+  // Draw sprites in listbox item text
+  WriteMemory(HProcess, $00403625, [OP_JMP], @PatchDlgDrawListboxItemText);
+  WriteMemory(HProcess, $0059EFCE, [OP_JMP], @PatchDlgAddListboxItemGetTextExtentX); // Calculate TextExtentX without sprites placeholders
 
   // (0) Suppress specific simple popup message
   //WriteMemory(HProcess, $0051D5D5, [OP_JMP], @PatchPopupSimpleMessage);
@@ -3215,9 +3369,6 @@ begin
   WriteMemory(HProcess, $005A1EDC, [OP_JMP], @PatchCreateDialogMainWindow);
   WriteMemory(HProcess, $005A203D, [], @PatchUpdateDialogWindow, True);
 
-  // Draw sprites in listbox item text
-  WriteMemory(HProcess, $00403625, [OP_JMP], @PatchDlgDrawListboxItemText);
-
   // ListOfUnits Dialog Popup v2
   WriteMemory(HProcess, $005B6BFE, [OP_NOP, OP_JMP]); // Ignore limit of 9 Units
   WriteMemory(HProcess, $005A0200, [OP_JMP], @PatchCreateDialogDimensionList);
@@ -3232,6 +3383,9 @@ begin
   // Advisor City Status Extended
   WriteMemory(HProcess, $0042D099, [OP_JMP], @PatchUpdateAdvisorCityStatus);
   WriteMemory(HProcess, $0042D5EB, [], @PatchWndProcAdvisorCityStatusLButtonUp, True);
+
+  // Extend vertical map overscroll
+  WriteMemory(HProcess, $0047A2F2, [OP_JMP], @PatchCalcMapRectTop);
 
   // Tests
   // HookImportedFunctions(HProcess);

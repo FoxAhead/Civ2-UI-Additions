@@ -22,7 +22,8 @@ type
     FontShadowColor: TColor;
     PenTopLeft: TPoint;
     LineHeight: Integer;
-    constructor Create(DrawPort: PDrawPort); reintroduce;
+    constructor Create(DC: HDC); reintroduce; overload;
+    constructor Create(DrawPort: PDrawPort); reintroduce; overload;
     destructor Destroy; override;
     function ColorFromIndex(Index: Integer): TColor;
     function CopySprite(Sprite: PSprite; DX: Integer = 0; DY: Integer = 0): TCanvasEx;
@@ -49,12 +50,17 @@ uses
 
 { TCanvasEx }
 
-constructor TCanvasEx.Create(DrawPort: PDrawPort);
+constructor TCanvasEx.Create(DC: HDC);
 begin
   inherited Create;
+  FSavedDC := SaveDC(DC);
+  Self.Handle := DC;
+end;
+
+constructor TCanvasEx.Create(DrawPort: PDrawPort);
+begin
+  Create(DrawPort.DrawInfo.DeviceContext);
   FDrawPort := DrawPort;
-  FSavedDC := SaveDC(DrawPort.DrawInfo.DeviceContext);
-  Self.Handle := DrawPort.DrawInfo.DeviceContext;
 end;
 
 destructor TCanvasEx.Destroy;
@@ -79,8 +85,11 @@ function TCanvasEx.CopySprite(Sprite: PSprite; DX, DY: Integer): TCanvasEx;
 var
   R: TRect;
 begin
-  Civ2.CopySprite(Sprite, @R, FDrawPort, PenPos.X + DX, PenPos.Y + DY);
-  PenDX(RectWidth(R) + DX);
+  if FDrawPort <> nil then
+  begin
+    Civ2.CopySprite(Sprite, @R, FDrawPort, PenPos.X + DX, PenPos.Y + DY);
+    PenDX(RectWidth(R) + DX);
+  end;
   Result := Self;
 end;
 
@@ -184,7 +193,5 @@ begin
   if Value.Y > FMaxPen.Y then
     FMaxPen.Y := Value.Y;
 end;
-
-
 
 end.

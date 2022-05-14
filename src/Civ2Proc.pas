@@ -97,9 +97,15 @@ type
     function Clamp(A1, AMin, AMax: Integer): Integer;
     procedure SetCurrFont(A1: Integer);
     procedure ShowCityWindow(CityWindow: PCityWindow; CityIndex: Integer);
+    procedure Citywin_CityButtonChange(A1: Integer);
+    procedure CityWindowClose();
+    procedure CityWindowExit();
     procedure UpdateAdvisorCityStatus();
     function TileBg(Dst, Tile: PDrawPort; A3, A4, A5, A6, A7, A8: Integer): Integer;
     procedure CopyToPort(Src, Dst: PDrawPort; A3, A4, A5, A6, A7, A8: Integer);
+    procedure UpdateCopyValidateAdvisor(A1: Integer);
+    procedure CopyToScreenAndValidate(GraphicsInfo: PGraphicsInfo);
+    function CityHasImprovement(CityIndex, Improve: Integer): LongBool;
   published
   end;
 
@@ -653,6 +659,26 @@ asm
     call  eax
 end;
 
+procedure TCiv2.Citywin_CityButtonChange(A1: Integer);
+asm
+    push  A1
+    mov   eax, $004021D5
+    call  eax
+    add   esp, $4
+end;
+
+procedure TCiv2.CityWindowClose;
+asm
+    mov   eax, $00401BAE
+    call  eax
+end;
+
+procedure TCiv2.CityWindowExit;
+asm
+    mov   eax, $004034E5
+    call  eax
+end;
+
 procedure TCiv2.UpdateAdvisorCityStatus();
 asm
     mov   eax, $004029F5
@@ -688,6 +714,31 @@ asm
     mov   eax, $00402081
     call  eax
     add   esp, $20
+end;
+
+procedure TCiv2.UpdateCopyValidateAdvisor(A1: Integer);
+asm
+    push  A1
+    mov   eax, $00402A9A
+    call  eax
+    add   esp, $4
+end;
+
+procedure TCiv2.CopyToScreenAndValidate(GraphicsInfo: PGraphicsInfo);
+asm
+    mov   ecx, GraphicsInfo
+    mov   eax, $004014A1
+    call  eax
+end;
+
+function TCiv2.CityHasImprovement(CityIndex, Improve: Integer): LongBool;
+asm
+    push  Improve
+    push  CityIndex    
+    mov   eax, $00402C48
+    call  eax
+    add   esp, $8
+    mov   @Result, eax
 end;
 
 end.

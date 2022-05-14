@@ -53,6 +53,7 @@ type
   TAdvisorWindowEx = record
     Rects: array[1..16] of TRect;
     SortedCitiesList: TSortedCitiesList;
+    MouseOver: TPoint;
   end;
 
   TDrawTestData = record

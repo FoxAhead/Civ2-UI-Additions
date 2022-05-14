@@ -22,6 +22,7 @@ type
     Cursor: Integer;
     constructor Create(BaseAddress: Pointer; SizeOfElement, CursorLimit: Integer); virtual;
     destructor Destroy; override;
+    function GetIndexIndex(Index: Integer): Integer;
     function GetNextIndex(CursorIncrement: Integer): Integer;
     procedure Pack();
     property Count: Integer read GetCount;
@@ -63,13 +64,18 @@ begin
   FList[Index] := Value;
 end;
 
+function TSortedAbstractList.GetIndexIndex(Index: Integer): Integer;
+begin
+  Result := (Integer(FList[Index]) - Integer(FBaseAddress)) div FSizeOfElement;
+end;
+
 function TSortedAbstractList.GetNextIndex(CursorIncrement: Integer): Integer;
 begin
   Cursor := Cursor + CursorIncrement;
   if Cursor >= FList.Count then
     Result := FCursorLimit
   else
-    Result := (Integer(FList[Cursor]) - Integer(FBaseAddress)) div FSizeOfElement;
+    Result := GetIndexIndex(Cursor);
 end;
 
 procedure TSortedAbstractList.Pack;

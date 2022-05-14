@@ -562,7 +562,7 @@ type
     pMem: Pointer;
   end;
 
-  TSprites = array[0..5] of TSprite;
+  TSprites = array[0..255] of TSprite;
 
   TMSWindow = packed record               // Size = 0x2D8
     GraphicsInfo: TGraphicsInfo;
@@ -663,7 +663,7 @@ type
     field_98: Integer;
     field_9C: Integer;
     field_A0: Integer;
-    field_A4: Integer;
+    Total: Integer;
     field_A8: Integer;
     field_AC: Integer;
     field_B0: Integer;
@@ -806,7 +806,7 @@ type
     byte_655B04: Byte;
     SomeCivIndex: Byte;                   // Active Unit Civ index?
     byte_655B06: Byte;
-    byte_655B07: Byte;
+    RevealMap: Byte;
     DifficultyLevel: Byte;
     BarbarianActivity: Byte;
     TribesLeftInPlay: Byte;
@@ -832,7 +832,7 @@ type
     StringIndex: Cardinal;
     Cost: Byte;
     Upkeep: Byte;
-    Unknown2: Byte;
+    Preq: ShortInt;
     Unknown3: Byte;
   end;
 
@@ -912,8 +912,9 @@ type
     X: Smallint;                          //
     Y: Smallint;                          // + 0x02
     Attributes: Cardinal;                 // + 0x04
-    // 0000 0000 0000 0001 - Disorder
-    // 0000 0000 0000 0010 - We Love the King Day
+    // 0000 0000 0000 0000 0000 0000 0000 0001 - 0x00000001 Disorder
+    // 0000 0000 0000 0000 0000 0000 0000 0010 - 0x00000002 We Love the King Day
+    // 0000 0000 0100 0000 0000 0000 0000 0000 - 0x00400000 Investigated by spy
     Owner: Byte;                          // + 0x08
     Size: Byte;                           // + 0x09
     Founder: Byte;                        // + 0x0A
