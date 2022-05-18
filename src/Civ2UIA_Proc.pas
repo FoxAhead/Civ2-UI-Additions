@@ -17,12 +17,14 @@ function RectHeight(const R: TRect): Integer;
 procedure OffsetPoint(var Point: TPoint; DX, DY: Integer);
 function CopyFont(SourceFont: HFONT): HFONT;
 //function ColorFromIndex(DC: HDC; Index: Integer): TColor;
+function GetLabelString(StringIndex: Integer): string;
 
 implementation
 
 uses
   Math,
   Messages,
+  Civ2Proc,
   Civ2UIA_Types;
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
@@ -129,5 +131,10 @@ begin
   GetDIBColorTable(DC, Index, 1, RGBQuad);
   Result := TColor(FastSwap(RGBQuad) shr 8);
 end;}
+
+function GetLabelString(StringIndex: Integer): string;
+begin
+  Result := string(Civ2.GetStringInList(PIntegerArray(Pointer($00628420)^)[StringIndex]));
+end;
 
 end.

@@ -20,16 +20,19 @@ type
   public
     FontShadows: Cardinal;
     FontShadowColor: TColor;
-    PenTopLeft: TPoint;
+    PenOrigin: TPoint;
     LineHeight: Integer;
     constructor Create(DC: HDC); reintroduce; overload;
     constructor Create(DrawPort: PDrawPort); reintroduce; overload;
     destructor Destroy; override;
     function ColorFromIndex(Index: Integer): TColor;
+    function SetTextColors(MainColorIndex, ShadowColorIndex: Integer): TCanvasEx;
+    function SetSpriteZoom(Zoom: Integer): TCanvasEx;
     function CopySprite(Sprite: PSprite; DX: Integer = 0; DY: Integer = 0): TCanvasEx;
     function TextOutWithShadows(const Text: string; DX: Integer = 0; DY: Integer = 0; Align: Cardinal = DT_LEFT): TCanvasEx;
     function PenReset(): TCanvasEx;
     function PenX(X: Integer): TCanvasEx;
+    function PenY(Y: Integer): TCanvasEx;
     function PenDX(DX: Integer): TCanvasEx;
     function PenDY(DY: Integer): TCanvasEx;
     function PenDXDY(DX, DY: Integer): TCanvasEx;
@@ -81,6 +84,28 @@ begin
   Result := TColor(FastSwap(RGBQuad) shr 8);
 end;
 
+function TCanvasEx.SetTextColors(MainColorIndex, ShadowColorIndex: Integer): TCanvasEx;
+begin
+  Font.Color:=ColorFromIndex(MainColorIndex);
+  FontShadowColor:=ColorFromIndex(ShadowColorIndex);
+  Result:= Self;
+end;
+
+function TCanvasEx.SetSpriteZoom(Zoom: Integer): TCanvasEx;
+var
+  Numerator, Denominator: Integer;
+  A1, A2: Integer;
+begin
+  Civ2.GetSpriteZoom(Numerator, Denominator);
+  A1 := Numerator shl 16 div Denominator;
+  A2 := (Zoom + 8) shl 13;
+  if A1 <> A2 then
+  begin
+    Civ2.SetSpriteZoom(Zoom);
+  end;
+  Result := Self;
+end;
+
 function TCanvasEx.CopySprite(Sprite: PSprite; DX, DY: Integer): TCanvasEx;
 var
   R: TRect;
@@ -99,13 +124,18 @@ var
   P: TPoint;
   SX, SY: Integer;
   FontShadows1: Cardinal;
-  Offset: Integer;
+  OffsetX, OffsetY: Integer;
 begin
-  Offset := 0;
-  if Align = DT_CENTER then
-    Offset := -TextWidth(Text) div 2
-  else if Align = DT_RIGHT then
-    Offset := -TextWidth(Text);
+  OffsetX := 0;
+  OffsetY := 0;
+  if (Align and DT_CENTER) <> 0 then
+    OffsetX := -TextWidth(Text) div 2
+  else if (Align and DT_RIGHT) <> 0 then
+    OffsetX := -TextWidth(Text);
+  if (Align and DT_VCENTER) <> 0 then
+    OffsetY := -TextHeight(Text) div 2
+  else if (Align and DT_BOTTOM) <> 0 then
+    OffsetY := -TextHeight(Text);
   FontMainColor := Font.Color;
   if FontShadows <> SHADOW_NONE then
   begin
@@ -119,7 +149,7 @@ begin
         if (SX = 0) and (SY = 0) then
           Continue;
         if (FontShadows1 and 1) = 1 then
-          TextOut(P.X + SX + DX + Offset, P.Y + SY + DY, Text);
+          TextOut(P.X + SX + DX + OffsetX, P.Y + SY + DY + OffsetY, Text);
         FontShadows1 := FontShadows1 shr 1;
         if FontShadows1 = 0 then
           Break;
@@ -127,14 +157,14 @@ begin
     end;
   end;
   Font.Color := FontMainColor;
-  TextOut(P.X + DX + Offset, P.Y + DY, Text);
+  TextOut(P.X + DX + OffsetX, P.Y + DY + OffsetY, Text);
   MaxPen := PenPos;
   Result := Self;
 end;
 
 function TCanvasEx.PenReset: TCanvasEx;
 begin
-  MoveTo(PenTopLeft.X, PenTopLeft.Y);
+  MoveTo(PenOrigin.X, PenOrigin.Y);
   MaxPen := PenPos;
   Result := Self;
 end;
@@ -142,6 +172,13 @@ end;
 function TCanvasEx.PenX(X: Integer): TCanvasEx;
 begin
   MoveTo(X, PenPos.Y);
+  MaxPen := PenPos;
+  Result := Self;
+end;
+
+function TCanvasEx.PenY(Y: Integer): TCanvasEx;
+begin
+  MoveTo(PenPos.X, Y);
   MaxPen := PenPos;
   Result := Self;
 end;
@@ -169,7 +206,7 @@ end;
 
 function TCanvasEx.PenBR: TCanvasEx;
 begin
-  MoveTo(PenTopLeft.X, PenPos.Y + LineHeight);
+  MoveTo(PenOrigin.X, PenPos.Y + LineHeight);
   MaxPen := PenPos;
   Result := Self;
 end;

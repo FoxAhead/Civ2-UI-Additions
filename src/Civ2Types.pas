@@ -635,7 +635,7 @@ type
     field_8: array[1..28] of char;
     field_24: Integer;
     HappyCitizens: Integer;
-    field_2C: Integer;
+    Tax: Integer;
     field_30: Integer;
     field_34: Integer;
     RowsInFoodBox: Integer;
@@ -650,7 +650,7 @@ type
     field_5C: Integer;
     field_60: Integer;
     field_64: array[1..4] of char;
-    field_68: array[1..3] of Integer;
+    TradeRevenue: array[0..2] of Integer;
     field_74: Integer;
     field_78: Integer;
     BuildingType: Integer;
@@ -679,7 +679,7 @@ type
     field_CC: char;
     field_CD: array[1..3] of char;
     field_D0: Integer;
-    field_D4: Integer;
+    Lux: Integer;
     field_D8: Integer;
     FreeCitizens: Integer;
     SettlersEat: Integer;
@@ -786,7 +786,10 @@ type
 
   TGameParameters = packed record
     word_655AE8: Word;
-    dword_655AEA: Integer;
+    GraphicAndGameOptions: Integer;
+    // 0x0100 - Tutorial help.
+    // 0x1000 - Show enemy moves.
+    // 0x4000 - Always wait at end of turn.
     word_655AEE: Word;
     MapFlags: Word;
     word_655AF2: Word;
@@ -872,13 +875,14 @@ type
     X: Word;                              // X
     Y: Word;                              // Y
     Attributes: Word;
-    // 0010 0000 0000 0000 - 0x2000 Veteran
+    // 0000 0000 0000 0010 - 0x0002 ?Flag checked in UnitCanMove
+    // 0010 0000 0000 0000 - 0x2000 Veteran    
     // 0100 0000 0000 0000 - 0x4000 Unit issued with the 'wait' order
     UnitType: Byte;                       // 0x6560F6
     CivIndex: Byte;                       // 0x6560F7
     MovePoints: Byte;                     // 0x6560F8 (Move * Road movement multiplier)
     byte_6560F9: Byte;
-    byte_6560FA: Byte;
+    HPLost: Byte;                         // + 0x0A
     MoveDirection: Byte;                  // 0x6560FB
     byte_6560FC: Byte;
     Counter: Byte;                        // 0x6560FD Settlers work / Caravan commodity / Air turn
@@ -919,7 +923,7 @@ type
     Size: Byte;                           // + 0x09
     Founder: Byte;                        // + 0x0A
     TurnsCaptured: Byte;                  // + 0x0B
-    byte_64F34C: Byte;
+    KnownTo: Byte;
     RevealedSize: array[1..9] of Byte;
     Specialists: Cardinal;
     // 00 - No specialist
@@ -933,15 +937,11 @@ type
     dword_64F370: Integer;
     Improvements: array[1..5] of Byte;
     Building: Shortint;
-    byte_64F37A: Byte;
-    byte_64F37B: Byte;
-    byte_64F37C: array[1..2] of Byte;
-    byte_64F37E: Byte;
-    byte_64F37F: array[1..2] of Byte;
-    byte_64F381: Byte;
-    byte_64F382: array[1..2] of Byte;
-    word_64F384: Smallint;
-    word_64F386: array[1..2] of Smallint;
+    TradeRoutes: Shortint;
+    SuppliedTradeItem: array[0..2] of Shortint;
+    DemandedTradeItem: array[0..2] of Shortint;
+    CommodityTraded: array[0..2] of Shortint;
+    TradePartner: array[0..2] of Smallint;
     Science: Smallint;
     Tax: Smallint;
     Trade: Smallint;

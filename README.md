@@ -74,8 +74,8 @@ Sorting order is: role 5 (Settlers, Engineers) is first, then attacking units or
 24. Radio buttons hotkeys. Can speed up the selection of options using the keyboard.  
 ![Screenshot](Screenshots/RadioButtonsHotkeys.png?raw=true "Screenshot")
 
-25. City quickinfo tooltips. Hover mouse over the city and hold Ctrl key.  
-![Screenshot](Screenshots/CityQuickinfoTooltip.png?raw=true "Screenshot")
+25. Quickinfo tooltips. Hover mouse over the city or units and hold Ctrl key.  
+![Screenshot](Screenshots/QuickinfoTooltip.png?raw=true "Screenshot")
 
 26. Made most advisors and lists vertically resizable.  
 ![Screenshot](Screenshots/ResizableLists.png?raw=true "Screenshot")

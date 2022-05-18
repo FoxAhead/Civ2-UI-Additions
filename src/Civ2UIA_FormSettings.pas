@@ -37,6 +37,7 @@ type
     CheckBox4: TCheckBox;
     CheckBox5: TCheckBox;
     GroupBoxColor: TGroupBox;
+    CheckBox6: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure ScrollBar1Change(Sender: TObject);
     procedure PropagatePaletteChanges();
@@ -44,9 +45,11 @@ type
     procedure ButtonColorPresetClick(Sender: TObject);
     procedure ButtonListClick(Sender: TObject);
     procedure CheckBoxFlagsClick(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
   private
     { Private declarations }
     FChangeEventActive: Boolean;
+    FHintHidePause: Integer;
     procedure SetColor(Exposure, Gamma: Double);
     procedure SetControls();
   public
@@ -75,6 +78,8 @@ procedure TFormSettings.FormCreate(Sender: TObject);
 var
   i: Integer;
 begin
+  FHintHidePause := Application.HintHidePause;
+  Application.HintHidePause := 15000;
   for i := 0 to GroupBoxFlags.ControlCount - 1 do
   begin
     if GroupBoxFlags.Controls[i] is TCheckBox then
@@ -182,6 +187,11 @@ var
 begin
   Tag := TComponent(Sender).Tag;
   Ex.SetSettingsFlag(Tag, TCheckBox(Sender).Checked);
+end;
+
+procedure TFormSettings.FormDestroy(Sender: TObject);
+begin
+  Application.HintHidePause := FHintHidePause;
 end;
 
 end.

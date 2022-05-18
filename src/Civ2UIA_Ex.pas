@@ -189,11 +189,12 @@ begin
   UIASettings.Size := SizeOf(UIASettings);
   UIASettings.ColorExposure := 0.0;
   UIASettings.ColorGamma := 1.0;
-  SetSettingsFlag(0, True);
+  FillChar(UIASettings.Flags, SizeOf(UIASettings.Flags), $FF);
+  {SetSettingsFlag(0, True);
   SetSettingsFlag(1, True);
   SetSettingsFlag(2, True);
   SetSettingsFlag(3, True);
-  SetSettingsFlag(4, True);
+  SetSettingsFlag(4, True);}
 end;
 
 function TEx.SettingsFlagSet(i: Integer): Boolean;

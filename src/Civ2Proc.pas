@@ -17,6 +17,7 @@ type
     CityGlobals: PCityGlobals;
     CityWindow: PCityWindow;
     Civs: ^TCivs;
+    Commodities: PIntegerArray;
     Cosmic: PCosmic;
     CurrCivIndex: PInteger;
     CurrPopupInfo: PPDialogWindow;
@@ -84,6 +85,7 @@ type
     function Crt_OperatorNew(Size: Integer): Pointer;
     function Scroll_Ctr(ControlInfoScroll: PControlInfoScroll): PControlInfoScroll;
     procedure ShowWindowInvalidateRect(ControlInfo: PControlInfo);
+    procedure GetSpriteZoom(var Numerator, Denominator: Integer);
     procedure SetSpriteZoom(AZoom: Integer);
     procedure ResetSpriteZoom();
     procedure DlgDrawTextLine(Dialog: PDialogWindow; Text: PChar; X, Y, A5: Integer);
@@ -105,7 +107,15 @@ type
     procedure CopyToPort(Src, Dst: PDrawPort; A3, A4, A5, A6, A7, A8: Integer);
     procedure UpdateCopyValidateAdvisor(A1: Integer);
     procedure CopyToScreenAndValidate(GraphicsInfo: PGraphicsInfo);
-    function CityHasImprovement(CityIndex, Improve: Integer): LongBool;
+    function CivHasTech(CivIndex, Tech: Integer): LongBool;
+    function CityHasImprovement(CityIndex, Improvement: Integer): LongBool;
+    function UnitCanMove(UnitIndex: Integer): LongBool;
+    procedure ProcessOrdersGoTo(UnitIndex: Integer);
+    function HumanTurn(): Integer;
+    function ProcessUnit(): Integer;
+    function DrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer;
+    function MapSquareIsVisibleTo(X, Y, CivIndex: Integer): LongBool;
+    function CalcCityGlobals(CityIndex: Integer; Calc: LongBool): Integer;
   published
   end;
 
@@ -130,6 +140,7 @@ begin
   CityWindow := Pointer($006A91B8);
   CityGlobals := Pointer($006A6528);
   Civs := Pointer($0064C6A0);
+  Commodities := Pointer($0064B168);
   Cosmic := Pointer($0064BCC8);
   CurrCivIndex := Pointer($0063EF6C);
   CurrPopupInfo := Pointer($006CEC84);
@@ -541,6 +552,15 @@ asm
     call  eax
 end;
 
+procedure TCiv2.GetSpriteZoom(var Numerator, Denominator: Integer);
+asm
+    push  Denominator
+    push  Numerator
+    mov   eax, $005CDA06
+    call  eax
+    add   esp, 8
+end;
+
 procedure TCiv2.SetSpriteZoom(AZoom: Integer);
 asm
     push  AZoom
@@ -731,13 +751,90 @@ asm
     call  eax
 end;
 
-function TCiv2.CityHasImprovement(CityIndex, Improve: Integer): LongBool;
+function TCiv2.CivHasTech(CivIndex, Tech: Integer): LongBool;
 asm
-    push  Improve
-    push  CityIndex    
+    push  Tech
+    push  CivIndex
+    mov   eax, $00402E7D
+    call  eax
+    add   esp, $8
+    mov   @Result, eax
+end;
+
+function TCiv2.CityHasImprovement(CityIndex, Improvement: Integer): LongBool;
+asm
+    push  Improvement
+    push  CityIndex
     mov   eax, $00402C48
     call  eax
     add   esp, $8
+    mov   @Result, eax
+end;
+
+function TCiv2.UnitCanMove(UnitIndex: Integer): LongBool;
+asm
+    push  UnitIndex
+    mov   eax, $0040273E
+    call  eax
+    add   esp, $4
+    mov   @Result, eax
+end;
+
+procedure TCiv2.ProcessOrdersGoTo(UnitIndex: Integer);
+asm
+    push  UnitIndex
+    mov   eax, $00401145
+    call  eax
+    add   esp, $4
+end;
+
+function TCiv2.HumanTurn: Integer;
+asm
+    mov   eax, $00402BA8
+    call  eax
+    mov   @Result, eax
+end;
+
+function TCiv2.ProcessUnit: Integer;
+asm
+    mov   eax, $00402716
+    call  eax
+    mov   @Result, eax
+end;
+
+function TCiv2.DrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer;
+asm
+    push  WithoutFortress
+    push  Zoom
+    push  Top
+    push  Left
+    push  A3
+    push  UnitIndex
+    push  DrawPort
+    mov   eax, $0056BAFF
+    call  eax
+    add   esp, $1C
+    mov   @Result, eax
+end;
+
+function TCiv2.MapSquareIsVisibleTo(X, Y, CivIndex: Integer): LongBool;
+asm
+    push  CivIndex
+    push  Y
+    push  X
+    mov   eax, $00403C24
+    call  eax
+    add   esp, $0C
+    mov   @Result, eax
+end;
+
+function TCiv2.CalcCityGlobals(CityIndex: Integer; Calc: LongBool): Integer;
+asm
+    push  Calc
+    push  CityIndex
+    mov   eax, $00402603
+    call  eax
+    add   esp, $08
     mov   @Result, eax
 end;
 

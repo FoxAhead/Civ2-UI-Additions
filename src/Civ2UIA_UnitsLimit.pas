@@ -2436,6 +2436,7 @@ begin
   WriteMemory(HProcess, $005B3EC0, [$F8, $7C]);
   WriteMemory(HProcess, $005B25A6, [$02, $7D]);
   WriteMemory(HProcess, $005B50E3, WordRec(UIAOPtions^.iUnitsLimit).Bytes);  
+  WriteMemory(HProcess, $005B4547, WordRec(UIAOPtions^.iUnitsLimit).Bytes);  
 end;
 
 end.
