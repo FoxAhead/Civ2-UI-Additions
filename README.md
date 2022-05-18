@@ -59,7 +59,7 @@ Sorting order is: role 5 (Settlers, Engineers) is first, then attacking units or
 
 18. Don't break unit movement on ZOC (zone of control). If unit has 'Go To' order, it doesn't stop when entering ZOC. Of course, the ZOC rule still applies. Originally, this behavior was applied only for role 7 units (Caravan, Freight). Be careful with this option, the unit will only stop when it breaks the ZOC rule or runs out of movement points. That is, for example, a unit directed at an enemy city will continuously try to enter it, attacking the defenders. Or attack an enemy unit suddenly emerging from the fog of war.
 
-19. Reset units Wait flag after activating. Originally, units ordered with 'Wait' command receives special Wait flag; when switching to the next unit, it is searched for as the closest one without a Wait flag; if nothing is found, then all these flags are cleared and searched again. With this option, all Wait flags are immediately cleared when a unit is manually activated, which should build a more convenient sequence for switching to nearby units.
+19. Tweak units rotation algorithm. Originally, units ordered with 'Wait' command receives special Wait flag; when switching to the next unit, it is searched for as the closest one without a Wait flag; if nothing is found, then all these flags are cleared and searched again. With this option, when manually activating an unit it clears the flag for all units of this stack, and vice versa sets it for all the rest. Also store activation position for later switching to nearby units. All this should build alternative convenient sequence for units rotation.
 
 20. Reset MoveIteration before start moving to prevent wrong warning. This fixes the incorrect 'Long Unit Move' warning that was caused by a non-resetting movement counter.
 
@@ -86,10 +86,10 @@ Sorting order is: role 5 (Settlers, Engineers) is first, then attacking units or
 
 29. Added Cancel button to city Change Production dialog - Esc is now Cancel.
 
-30. Added shields cost in the city Change Production list.  
+30. Added shields cost and maintenance in the city Change Production list.  
 ![Screenshot](Screenshots/CityChangeProductionShieldsAndCancel.png?raw=true "Screenshot")
 
-31. Sorting in City Status advisor. Cities can be sorted by size, name, food, production or trade. Added total cities number.  
+31. Enhanced City Status advisor. Added total cities number and more icons. Cities can be sorted by size, name, food, shields, trade or production type. Clicking on production item directly will bring up the change production dialog.  
 ![Screenshot](Screenshots/CityStatusAdvisorSortingAndTotal.png?raw=true "Screenshot")
 
 32. Mass change specialists in City window. Hover mouse over specialist, hold Shift key and scroll mouse wheel - this changes all specialists at once. Shift-clicking on specialist change others to the same one.
@@ -106,6 +106,7 @@ https://forums.civfanatics.com/resources/corrected-dlls-for-mge.24259/
 35. Color correction. If the game seems too dull or too bright for you, then this can be corrected without editing the GIF palettes. This and some other options can be set in `Menu` - `UI Additions` - `Settings...`.  
 ![Screenshot](Screenshots/UIASettings.png?raw=true "Screenshot")
 
+36. Mass move units of the same type with Shift+RightClick. With unit activated hold Shift and Right-Click on the destination square. All units of the same type capable of moving (with move points, not fortified, not on sentry etc.) will be ordered to move.
 
 Some experimental features that could change some original game rules or limitations without a guarantee of stability:
  - Change total units limit from default 2048. Don't use numbers greater than 32767. Saves with number of units greater than default should be loaded only with this patch.
