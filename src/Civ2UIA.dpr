@@ -34,7 +34,12 @@ uses
   Civ2UIA_MapMessage in 'Civ2UIA_MapMessage.pas',
   Civ2UIA_Ex in 'Civ2UIA_Ex.pas',
   Civ2UIA_Hooks in 'Civ2UIA_Hooks.pas',
-  Civ2UIA_FormStrings in 'Civ2UIA_FormStrings.pas' {FormStrings};
+  Civ2UIA_FormStrings in 'Civ2UIA_FormStrings.pas' {FormStrings},
+  Civ2UIA_QuickInfo in 'Civ2UIA_QuickInfo.pas',
+  Civ2UIA_SortedUnitsList in 'Civ2UIA_SortedUnitsList.pas',
+  Civ2UIA_SortedCitiesList in 'Civ2UIA_SortedCitiesList.pas',
+  Civ2UIA_SortedAbstractList in 'Civ2UIA_SortedAbstractList.pas',
+  Civ2UIA_CanvasEx in 'Civ2UIA_CanvasEx.pas';
 
 {$R *.res}
 
@@ -85,62 +90,6 @@ begin
   end;
 end;
 
-function ScaleByZoom(Value, Zoom: Integer): Integer;
-begin
-  Result := Value * (Zoom + 8) div 8;
-end;
-
-function RectWidth(R: PRect): Integer;
-begin
-  Result := R.Right - R.Left;
-end;
-
-function RectHeight(R: PRect): Integer;
-begin
-  Result := R.Bottom - R.Top;
-end;
-
-procedure OffsetPoint(var Point: TPoint; DX, DY: Integer);
-begin
-  Point.X := Point.X + DX;
-  Point.Y := Point.Y + DY;
-end;
-
-procedure TextOutWithShadows(var Canvas: TCanvas; var TextOut: string; Left, Top: Integer; const MainColor, ShadowColor: TColor; Shadows: Cardinal);
-var
-  dX: Integer;
-  dY: Integer;
-begin
-  if Shadows <> SHADOW_NONE then
-  begin
-    Canvas.Font.Color := ShadowColor;
-    for dY := -1 to 1 do
-    begin
-      for dX := -1 to 1 do
-      begin
-        if (dX = 0) and (dY = 0) then
-          Continue;
-        if (Shadows and 1) = 1 then
-          Canvas.TextOut(Left + dX, Top + dY, TextOut);
-        Shadows := Shadows shr 1;
-        if Shadows = 0 then
-          Break;
-      end;
-    end;
-  end;
-  Canvas.Font.Color := MainColor;
-  Canvas.TextOut(Left, Top, TextOut);
-end;
-
-function CopyFont(SourceFont: HFONT): HFONT;
-var
-  LFont: LOGFONT;
-begin
-  ZeroMemory(@LFont, SizeOf(LFont));
-  GetObject(SourceFont, SizeOf(LFont), @LFont);
-  Result := CreateFontIndirect(LFont);
-end;
-
 function ChangeListOfUnitsStart(Delta: Integer): Boolean;
 var
   NewStart: Integer;
@@ -159,19 +108,14 @@ function ChangeMapZoom(Delta: Integer): Boolean;
 var
   NewZoom: Integer;
 begin
-  NewZoom := Civ2.MapGraphicsInfo^.MapZoom + Delta;
+  NewZoom := Civ2.MapWindow.MapZoom + Delta;
   if NewZoom > 8 then
     NewZoom := 8;
   if NewZoom < -7 then
     NewZoom := -7;
-  Result := Civ2.MapGraphicsInfo^.MapZoom <> NewZoom;
+  Result := Civ2.MapWindow.MapZoom <> NewZoom;
   if Result then
-    Civ2.MapGraphicsInfo^.MapZoom := NewZoom;
-end;
-
-function FastSwap(Value: Cardinal): Cardinal; register;
-asm
-    bswap eax
+    Civ2.MapWindow.MapZoom := NewZoom;
 end;
 
 function CDGetTrackLength(ID: MCIDEVICEID; TrackN: Cardinal): Cardinal;
@@ -232,7 +176,7 @@ var
   TextSize: TSize;
 begin
   TextOut := CDPosition_To_String(Position) + ' / ' + CDLength_To_String(MCIPlayLength);
-  DC := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo^.DeviceContext;
+  DC := Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo^.DeviceContext;
   SavedDC := SaveDC(DC);
   Canvas := TCanvas.Create();
   Canvas.Handle := DC;
@@ -243,7 +187,7 @@ begin
   if TextSize.cx > MCITextSizeX then
     MCITextSizeX := TextSize.cx;
   R := Rect(0, 0, MCITextSizeX, TextSize.cy);
-  OffsetRect(R, Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.ClientRectangle.Right - MCITextSizeX, 9);
+  OffsetRect(R, Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.ClientRectangle.Right - MCITextSizeX, 9);
   InflateRect(R, 2, 0);
   Canvas.Brush.Style := bsSolid;
   Canvas.Brush.Color := clWhite;
@@ -260,223 +204,185 @@ begin
   Canvas.Handle := 0;
   Canvas.Free;
   RestoreDC(DC, SavedDC);
-  InvalidateRect(Civ2.MapGraphicsInfo^.GraphicsInfo.WindowInfo.WindowStructure^.HWindow, @R, True);
+  InvalidateRect(Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure^.HWindow, @R, True);
 end;
 
 procedure DrawTestDrawInfoCreate();
 var
-  BufBitmap: HBITMAP;
+  MapDrawPort: PDrawPort;
 begin
-  if Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo <> nil then
+  MapDrawPort := @Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort;
+  if MapDrawPort.DrawInfo <> nil then
   begin
-    if Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo.DeviceContext <> 0 then
+    if MapDrawPort.DrawInfo.DeviceContext <> 0 then
     begin
-      //DrawTestDrawInfo := Civ2.DrawInfoCreate(@(MapGraphicsInfo^.WindowRectangle));
-      //BufBitmap := CreateCompatibleBitmap(DrawTestDrawInfo.DeviceContext, MapGraphicsInfo^.WindowRectangle.Right, MapGraphicsInfo^.WindowRectangle.Bottom);
-      //SelectObject(DrawTestDrawInfo.DeviceContext, BufBitmap);
-      //SendMessageToLoader(Integer(DrawTestDrawInfo.DeviceContext), 2);
-      if DrawTestData.MapDeviceContext <> Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo.DeviceContext then
+      if DrawTestData.MapDeviceContext <> MapDrawPort.DrawInfo.DeviceContext then
       begin
-        DrawTestData.MapDeviceContext := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo.DeviceContext;
-        {if DrawTestData.DeviceContext <> 0 then
-        begin
-          DeleteDC(DrawTestData.DeviceContext);
-          DeleteObject(DrawTestData.BitmapHandle);
-        end;
-        DrawTestData.DeviceContext := CreateCompatibleDC(Civ2.MapGraphicsInfo^.DrawInfo.DeviceContext);
-        DrawTestData.BitmapHandle := CreateCompatibleBitmap(Civ2.MapGraphicsInfo^.DrawInfo.DeviceContext, Civ2.MapGraphicsInfo^.DrawInfo.Width, Civ2.MapGraphicsInfo^.DrawInfo.Height);
-        SelectObject(DrawTestData.DeviceContext, DrawTestData.BitmapHandle);}
-        Civ2.DrawPort_Reset(@(DrawTestData.DrawPort), Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.RectWidth, Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.RectHeight);
-        Civ2.SetDIBColorTableFromPalette(DrawTestData.DrawPort.DrawInfo, Civ2.MapGraphicsInfo.GraphicsInfo.WindowInfo.Palette);
+        DrawTestData.MapDeviceContext := MapDrawPort.DrawInfo.DeviceContext;
+        Civ2.DrawPort_Reset(@DrawTestData.DrawPort, MapDrawPort.RectWidth, MapDrawPort.RectHeight);
+        Civ2.SetDIBColorTableFromPalette(DrawTestData.DrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.Palette);
       end;
     end;
   end;
 end;
 
-var
-  DrawTestCityIndex: Integer = -1;
-  DrawTestMapPoint: TPoint;
+//var
+  //QuickInfoCityIndex: Integer = -1;
+  //QuickInfoMapPoint: TPoint;
 
 procedure DrawMapOverlay(DrawPort: PDrawPort);
 var
-  DestDC: HDC;
-  SrcDC: HDC;
-  Canvas: TCanvas;
-  SavedDC: Integer;
+  Canvas: TCanvasEx;
+  City: PCity;
+  QuickInfoStrings: TStringList;
+  UnitTypesCount: array[0..61] of Integer;
+  i: Integer;
+  UnitType: Integer;
+  TextOut: string;
+  X1, Y1: Integer;
   R, R2: TRect;
   P: TPoint;
-  TextOut: string;
   TextSize: TSize;
-  X1, Y1, X2, Y2: Integer;
   DX, DY: Integer;
   FontHeight: Integer;
   TextExtent: TSize;
-  i: Integer;
   TextColor: TColor;
   MapMessage: TMapMessage;
   ScreenPoint: TPoint;
-  MapX, MapY: Integer;
-  CityIndex: Integer;
   Width, Height: Integer;
-  UnitTypesCount: array[0..61] of Integer;
-  QuickInfoStrings: TStringList;
-  UnitType: Integer;
   StringIndex: Integer;
-  City: TCity;
 begin
   if DrawPort.DrawInfo.DeviceContext <> 0 then
   begin
-    SavedDC := SaveDC(DrawPort.DrawInfo.DeviceContext);
-    Canvas := TCanvas.Create();
-
-    Canvas.Handle := DrawPort.DrawInfo.DeviceContext;
-    //
-    X1 := 100 - DrawTestData.Counter mod 20;
-    Y1 := 100 - DrawTestData.Counter mod 20;
-    X2 := 500 + DrawTestData.Counter mod 30;
-    Y2 := 500 + DrawTestData.Counter mod 30;
-    //R := Rect(X1, Y1, X2, Y2);
+    Canvas := TCanvasEx.Create(DrawPort);
     // City Quickinfo
-    if DrawTestCityIndex >= 0 then
-    begin
-      City := Civ2.Cities[DrawTestCityIndex];
-      if Ex.UnitsListBuildSorted(DrawTestCityIndex) > 0 then
-      begin
-        ZeroMemory(@UnitTypesCount, SizeOf(UnitTypesCount));
-        for i := 0 to Ex.UnitsList.Count - 1 do
+    Ex.QuickInfo.Draw(DrawPort);
+    //    BitBlt(Canvas.Handle, 0, 0, SrcDI.Width, SrcDI.Height, VSrcDC, 0, 0, SRCCOPY);
+    {    if QuickInfoCityIndex >= 0 then
         begin
-          UnitType := PUnit(Ex.UnitsList[i])^.UnitType;
-          Inc(UnitTypesCount[UnitType]);
-          if UnitTypesCount[UnitType] > 1 then
+          City := @Civ2.Cities[QuickInfoCityIndex];
+          QuickInfoStrings := TStringList.Create();
+          if Ex.UnitsListBuildSorted(QuickInfoCityIndex) > 0 then
           begin
-            Ex.UnitsList[i] := nil;
+            ZeroMemory(@UnitTypesCount, SizeOf(UnitTypesCount));
+            for i := 0 to Ex.UnitsList.Count - 1 do
+            begin
+              UnitType := PUnit(Ex.UnitsList[i])^.UnitType;
+              Inc(UnitTypesCount[UnitType]);
+              if UnitTypesCount[UnitType] > 1 then
+              begin
+                Ex.UnitsList[i] := nil;
+              end;
+            end;
+            Ex.UnitsList.Pack();
+            QuickInfoStrings.Append('Units Supported');
+            for i := 0 to Ex.UnitsList.Count - 1 do
+            begin
+              UnitType := PUnit(Ex.UnitsList[i])^.UnitType;
+              TextOut := ' ' + IntToStr(UnitTypesCount[UnitType]) + ' x ' + string(Civ2.GetStringInList(Civ2.UnitTypes[UnitType].StringIndex));
+              QuickInfoStrings.Append(TextOut);
+            end;
           end;
-        end;
-        Ex.UnitsList.Pack();
-        QuickInfoStrings := TStringList.Create();
-        QuickInfoStrings.Append('Units Supported');
-        for i := 0 to Ex.UnitsList.Count - 1 do
-        begin
-          UnitType := PUnit(Ex.UnitsList[i])^.UnitType;
-          TextOut := ' ' + IntToStr(UnitTypesCount[UnitType]) + ' x ' + string(Civ2.GetStringInList(Civ2.UnitTypes[UnitType].StringIndex));
+          QuickInfoStrings.Append('Building');
+          if City.Building < 0 then
+            StringIndex := Civ2.Improvements[-City.Building].StringIndex
+          else
+            StringIndex := Civ2.UnitTypes[City.Building].StringIndex;
+          TextOut := ' ' + string(Civ2.GetStringInList(StringIndex));
           QuickInfoStrings.Append(TextOut);
-        end;
-        QuickInfoStrings.Append('Building');
-        if Civ2.Cities[DrawTestCityIndex].Building < 0 then
-          StringIndex := Civ2.Improvements[-Civ2.Cities[DrawTestCityIndex].Building].StringIndex
-        else
-          StringIndex := Civ2.UnitTypes[Civ2.Cities[DrawTestCityIndex].Building].StringIndex;
-        TextOut := ' ' + string(Civ2.GetStringInList(StringIndex));
-        QuickInfoStrings.Append(TextOut);
-        Canvas.Font.Handle := CopyFont(Civ2.TimesFontInfo^.Handle^^);
-        //        Canvas.Font.Name := 'Times New Roman';
-        Canvas.Font.Size := 11;
+          Canvas.Font.Handle := CopyFont(Civ2.TimesFontInfo^.Handle^^);
+          Canvas.Font.Size := 11;
 
-        // Calculate max text size and rectangle bounds
-        Width := 0;
-        Height := 7 + 18;
-        FontHeight := 0;
-        for i := 0 to QuickInfoStrings.Count - 1 do
-        begin
-          if QuickInfoStrings.Strings[i][1] <> ' ' then
-            Canvas.Font.Style := [fsBold]
-          else
-            Canvas.Font.Style := [];
-          TextExtent := Canvas.TextExtent(QuickInfoStrings.Strings[i]);
-          Width := Max(Width, TextExtent.cx + 10);
-          FontHeight := Max(FontHeight, TextExtent.cy);
-          Height := Height + FontHeight;
-        end;
+          // Calculate max text size and rectangle bounds
+          Width := 0;
+          Height := 7 + 18;
+          FontHeight := 0;
+          for i := 0 to QuickInfoStrings.Count - 1 do
+          begin
+            if QuickInfoStrings.Strings[i][1] <> ' ' then
+              Canvas.Font.Style := [fsBold]
+            else
+              Canvas.Font.Style := [];
+            TextExtent := Canvas.TextExtent(QuickInfoStrings.Strings[i]);
+            Width := Max(Width, TextExtent.cx + 10);
+            FontHeight := Max(FontHeight, TextExtent.cy);
+            Height := Height + FontHeight;
+          end;
 
-        Canvas.Brush.Style := bsSolid;
-        Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, DrawTestMapPoint.X + 2, DrawTestMapPoint.Y);
-        R := Bounds(ScreenPoint.X, ScreenPoint.Y - Height, Width, Height);
-        // Move Rect into viewport
-        DX := DrawPort.ClientRectangle.Right - R.Right;
-        DY := DrawPort.ClientRectangle.Top - R.Top;
-        if DX > 0 then
-          DX := 0;
-        if DY < 0 then
-          DY := 0;
-        OffsetRect(R, DX, DY);
+          Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, QuickInfoMapPoint.X + 2, QuickInfoMapPoint.Y);
+          R := Bounds(ScreenPoint.X, ScreenPoint.Y - Height, Width, Height + 24);
+          // Move Rect into viewport
+          DX := DrawPort.ClientRectangle.Right - R.Right;
+          DY := DrawPort.ClientRectangle.Top - R.Top;
+          if DX > 0 then
+            DX := 0;
+          if DY < 0 then
+            DY := 0;
+          OffsetRect(R, DX, DY);
 
-        // Draw Rectangle
-        Canvas.Brush.Color := TColor($909090);
-        Canvas.Pen.Color := TColor($F0F0F0);
-        //Canvas.RoundRect(R.Left, R.Top, R.Right, R.Bottom, 8, 8);
-        Canvas.Rectangle(R);
-        {OffsetRect(R, -1, -1);
-        Canvas.Brush.Color := clWhite;
-        Canvas.FillRect(R);
-        OffsetRect(R, 2, 2);
-        Canvas.Brush.Color := clBlack;
-        Canvas.FillRect(R);
-        OffsetRect(R, -1, -1);
-        Canvas.Brush.Color := TColor($E1FFFF);
-        Canvas.FillRect(R);}
-        Canvas.Brush.Style := bsClear;
-        {TextOut := IntToStr(DrawTestCityIndex);
-        TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 2, clBlack, clWhite, SHADOW_NONE);
-        TextOut := Format('%.2d , %.2d', [DrawTestMapPoint.X, DrawTestMapPoint.Y]);
-        TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 22, clBlack, clWhite, SHADOW_NONE);
-        TextOut := Format('%.2d , %.2d', [ScreenPoint.X, ScreenPoint.Y]);
-        TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 42, clBlack, clWhite, SHADOW_NONE);}
-        // Draw Rectangle Contents
-        Canvas.Font.Style := [fsBold];
-        P := Point(R.Left + 3, R.Top + 3);
-        //
-        TextOut := IntToStr(City.TotalFood);
-        TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
-        OffsetPoint(P, Canvas.TextExtent(TextOut).cx + 1, 0);
-        Civ2.CopySprite(@PSprites($644F00)^[1], @R2, DrawPort, P.X, P.Y + 2);
-        OffsetPoint(P, R2.Right - R2.Left + 4, 0);
-        //
-        TextOut := IntToStr(City.TotalShield);
-        TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
-        OffsetPoint(P, Canvas.TextExtent(TextOut).cx - 1, 0);
-        Civ2.CopySprite(@PSprites($644F00)^[3], @R2, DrawPort, P.X, P.Y + 2);
-        OffsetPoint(P, R2.Right - R2.Left + 2, 0);
-        //
-        TextOut := IntToStr(City.Trade);
-        TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
-        OffsetPoint(P, Canvas.TextExtent(TextOut).cx + 1, 0);
-        Civ2.CopySprite(@PSprites($644F00)^[5], @R2, DrawPort, P.X, P.Y + 2);
-        OffsetPoint(P, R2.Right - R2.Left + 4, 0);
-        //
-        P.X := R.Left + 3;
-        OffsetPoint(P, 0, 18);
-        for i := 0 to QuickInfoStrings.Count - 1 do
-        begin
-          if QuickInfoStrings.Strings[i][1] <> ' ' then
-            Canvas.Font.Style := [fsBold]
-          else
-            Canvas.Font.Style := [];
-          TextOut := QuickInfoStrings.Strings[i];
-          //TextOutWithShadows(Canvas, TextOut, R.Left + 3, R.Top + 3, clBlack, clWhite, SHADOW_NONE);
+          // Draw Rectangle
+          Canvas.Brush.Color := TColor($909090);
+          Canvas.Pen.Color := TColor($F0F0F0);
+          Canvas.Rectangle(R);
+          Canvas.Brush.Style := bsClear;
+          // Draw Rectangle Contents
+          Canvas.Font.Style := [fsBold];
+          P := Point(R.Left + 3, R.Top + 3);
+          //
+          TextOut := IntToStr(City.TotalFood);
           TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
-          OffsetPoint(P, 0, FontHeight);
-        end;
+          P.X := Canvas.PenPos.X + 1;
+          Civ2.CopySprite(@PSprites($644F00)^[1], @R2, DrawPort, P.X, P.Y + 2);
+          OffsetPoint(P, R2.Right - R2.Left + 4, 0);
+          //
+          TextOut := IntToStr(City.TotalShield);
+          TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
+          P.X := Canvas.PenPos.X - 1;
+          Civ2.CopySprite(@PSprites($644F00)^[3], @R2, DrawPort, P.X, P.Y + 2);
+          OffsetPoint(P, R2.Right - R2.Left + 2, 0);
+          //
+          TextOut := IntToStr(City.Trade);
+          TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
+          P.X := Canvas.PenPos.X + 1;
+          Civ2.CopySprite(@PSprites($644F00)^[5], @R2, DrawPort, P.X, P.Y + 2);
+          OffsetPoint(P, R2.Right - R2.Left + 4, 0);
+          //
+          P.X := R.Left + 3;
+          OffsetPoint(P, 0, 18);
+          for i := 0 to QuickInfoStrings.Count - 1 do
+          begin
+            if QuickInfoStrings.Strings[i][1] <> ' ' then
+              Canvas.Font.Style := [fsBold]
+            else
+              Canvas.Font.Style := [];
+            if (i > 0) and (TextOut = 'Building') then
+            begin
+              Civ2.SetSpriteZoom(-4);
+              R2 := Rect(0, 0, 0, 0);
+              if City.Building > 0 then
+              begin
+                Civ2.CopySprite(@PSprites($641848)^[City.Building], @R2, DrawPort, P.X, P.Y + 2);
+              end
+              else
+              begin
+                Civ2.CopySprite(@PSprites($645160)^[-City.Building], @R2, DrawPort, P.X, P.Y + 2);
+              end;
+              Civ2.ResetSpriteZoom;
+              OffsetPoint(P, RectWidth(@R2), (RectHeight(@R2) - FontHeight + 4) div 2);
+            end;
+            TextOut := QuickInfoStrings.Strings[i];
+            TextOutWithShadows(Canvas, TextOut, P.X, P.Y, TColor($FFFFFF), TColor($101010), SHADOW_BR);
+            OffsetPoint(P, 0, FontHeight);
+          end;
 
-        QuickInfoStrings.Free();
-      end;
-    end;
+          QuickInfoStrings.Free();
+        end;}
 
     Canvas.Brush.Style := bsClear;
     Canvas.Font.Style := [];
     Canvas.Font.Size := 10;
     Canvas.Font.Name := 'Arial';
-    //Canvas.Brush.Color := DrawTestColor;
-    //Canvas.Pen.Color := DrawTestColor;
 
-    TextOut := Format('This is Test String %.2d', [DrawTestData.Counter]);
-    TextSize := Canvas.TextExtent(TextOut);
-
-    R := Rect(0, Y1, TextSize.cx + 20, 20 + Y1);
-
-    // OffsetRect(R, 50, 50);
-    //DrawTestColor := DrawTestColor xor $00FFFFFF;
-    //Canvas.Rectangle(R);
-    //TextOutWithShadows(Canvas, TextOut, R.Left + 2, R.Top + 0, clWhite, clBlack, SHADOW_ALL);
     // Message Queue
     for i := 0 to MapMessagesList.Count - 1 do
     begin
@@ -486,17 +392,11 @@ begin
       X1 := Min(255, 512 div 50 * (MapMessage.Timer + 10));
       TextColor := TColor(X1 * $10101);
       TextSize := Canvas.TextExtent(MapMessage.TextOut);
-      Y1 := Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.ClientRectangle.Right - TextSize.cx - 20;
-      TextOutWithShadows(Canvas, MapMessage.TextOut, Y1, 100 + i * 20, TextColor, clBlack, SHADOW_ALL);
+      Y1 := Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.ClientRectangle.Right - TextSize.cx - 20;
+      TextOutWithShadows(TCanvas(Canvas), MapMessage.TextOut, Y1, 100 + i * 20, TextColor, clBlack, SHADOW_ALL);
     end;
 
-    //
-    Canvas.Handle := 0;
-    Canvas.Free;
-    RestoreDC(DrawPort.DrawInfo.DeviceContext, SavedDC);
-    //end;
-    //InvalidateRect(MapGraphicsInfo^.WindowInfo.WindowStructure^.HWindow, @R, True);
-    //BitBlt(DestDC, 0, 0, 500, 500, SrcDC, 0, 0, SRCCOPY);
+    Canvas.Free();
   end;
 end;
 
@@ -520,11 +420,11 @@ end;
 
 procedure ShowSettingsDialog;
 var
-  FormProgress: TFormSettings;
+  FormSettings: TFormSettings;
 begin
-  FormProgress := TFormSettings.Create(nil);
-  FormProgress.ShowModal();
-  FormProgress.Free();
+  FormSettings := TFormSettings.Create(nil);
+  FormSettings.ShowModal();
+  FormSettings.Free();
   Ex.SaveSettingsFile();
 end;
 
@@ -923,14 +823,14 @@ begin
   MButtonIsDown := (LOWORD(WParam) and MK_MBUTTON) <> 0;
   WindowType := GuessWindowType(HWindow);
   {IsMapWindow := False;
-  if Civ2.MapGraphicsInfo^.GraphicsInfo.WindowInfo.WindowStructure <> nil then
-    IsMapWindow := (HWindow = Civ2.MapGraphicsInfo^.GraphicsInfo.WindowInfo.WindowStructure^.HWindow);}
+  if Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure <> nil then
+    IsMapWindow := (HWindow = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure^.HWindow);}
   IsMapWindow := (WindowType = wtMap);
   case Msg of
     WM_MBUTTONDOWN:
       if (LOWORD(WParam) and MK_CONTROL) <> 0 then
       begin
-        if ChangeMapZoom(-Civ2.MapGraphicsInfo^.MapZoom) then
+        if ChangeMapZoom(-Civ2.MapWindow.MapZoom) then
         begin
           Civ2.RedrawMap();
           Result := False;
@@ -952,21 +852,21 @@ begin
           MouseDrag.Active := True;
           MouseDrag.StartScreen.X := Screen.X;
           MouseDrag.StartScreen.Y := Screen.Y;
-          MouseDrag.StartMapMean.X := Civ2.MapGraphicsInfo^.MapRect.Left + Civ2.MapGraphicsInfo^.MapHalf.cx;
-          MouseDrag.StartMapMean.Y := Civ2.MapGraphicsInfo^.MapRect.Top + Civ2.MapGraphicsInfo^.MapHalf.cy;
+          MouseDrag.StartMapMean.X := Civ2.MapWindow.MapRect.Left + Civ2.MapWindow.MapHalf.cx;
+          MouseDrag.StartMapMean.Y := Civ2.MapWindow.MapRect.Top + Civ2.MapWindow.MapHalf.cy;
         end;
         Result := False;
       end;
     WM_MOUSEMOVE:
       begin
-        MouseDrag.Active := MouseDrag.Active and PtInRect(Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.WindowRectangle, Screen) and IsMapWindow and MButtonIsDown;
+        MouseDrag.Active := MouseDrag.Active and PtInRect(Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.WindowRectangle, Screen) and IsMapWindow and MButtonIsDown;
         if MouseDrag.Active then
         begin
           Inc(MouseDrag.Moved);
           Delta.X := Screen.X - MouseDrag.StartScreen.X;
           Delta.Y := Screen.Y - MouseDrag.StartScreen.Y;
-          MapDelta.X := (Delta.X * 2 + Civ2.MapGraphicsInfo^.MapCellSize2.cx) div Civ2.MapGraphicsInfo^.MapCellSize.cx;
-          MapDelta.Y := (Delta.Y * 2 + Civ2.MapGraphicsInfo^.MapCellSize2.cy) div (Civ2.MapGraphicsInfo^.MapCellSize.cy - 1);
+          MapDelta.X := (Delta.X * 2 + Civ2.MapWindow.MapCellSize2.cx) div Civ2.MapWindow.MapCellSize.cx;
+          MapDelta.Y := (Delta.Y * 2 + Civ2.MapWindow.MapCellSize2.cy) div (Civ2.MapWindow.MapCellSize.cy - 1);
           if not Odd(MapDelta.X + MapDelta.Y) then
           begin
             if (LOWORD(WParam) and MK_SHIFT) <> 0 then
@@ -978,7 +878,7 @@ begin
             Yc := MouseDrag.StartMapMean.Y - MapDelta.Y;
             if Odd(Xc + Yc) then
             begin
-              if Odd(Civ2.MapGraphicsInfo^.MapHalf.cx) then
+              if Odd(Civ2.MapWindow.MapHalf.cx) then
               begin
                 if Odd(Yc) then
                   Dec(Xc)
@@ -993,7 +893,7 @@ begin
                   Dec(Xc);
               end;
             end;
-            if not Odd(Xc + Yc) and ((Civ2.MapGraphicsInfo^.MapCenter.X <> Xc) or (Civ2.MapGraphicsInfo^.MapCenter.Y <> Yc)) then
+            if not Odd(Xc + Yc) and ((Civ2.MapWindow.MapCenter.X <> Xc) or (Civ2.MapWindow.MapCenter.Y <> Yc)) then
             begin
               Inc(MouseDrag.Moved, 5);
               PInteger($0062BCB0)^ := 1;  // Don't flush messages
@@ -1015,7 +915,7 @@ begin
               begin
                 if not Civ2.ScreenToMap(Xc, Yc, MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y) then
                 begin
-                  if ((Civ2.MapGraphicsInfo^.MapCenter.X <> Xc) or (Civ2.MapGraphicsInfo^.MapCenter.Y <> Yc)) then
+                  if ((Civ2.MapWindow.MapCenter.X <> Xc) or (Civ2.MapWindow.MapCenter.Y <> Yc)) then
                   begin
                     PInteger($0062BCB0)^ := 1; // Don't flush messages
                     Civ2.CenterView(Xc, Yc);
@@ -1071,6 +971,8 @@ begin
       Result := PatchMButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
     WM_LBUTTONUP:
       Result := PatchLButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
+    //    WM_RBUTTONUP:
+    //      Result := PatchRButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
   else
     Result := True;                       // Message not handled
   end;
@@ -1245,10 +1147,10 @@ asm
     ret
 end;
 
-function PatchDrawUnit(thisWayToWindowInfo: Pointer; UnitIndex, A3, Left, Top, Zoom, A7: Integer): Integer; cdecl;
+function PatchDrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer; cdecl;
 var
   DC: HDC;
-  Canvas: TCanvas;
+  Canvas: TCanvasEx;
   SavedDC: Integer;
   UnitType: Byte;
   TextOut: string;
@@ -1256,30 +1158,15 @@ var
   TextSize: TSize;
 begin
   Result := 0;
-  // TODO: Move to TCiv2
-  asm
-    push  A7
-    push  Zoom
-    push  Top
-    push  Left
-    push  A3
-    push  UnitIndex
-    push  thisWayToWindowInfo
-    mov   eax, $0056BAFF   // Call Q_DrawUnit_sub_56BAFF
-    call  eax
-    add   esp, $1C
-    mov   Result, eax
-  end;
+  Civ2.DrawUnit(DrawPort, UnitIndex, A3, Left, Top, Zoom, WithoutFortress);
   if (UnitIndex < 0) or (UnitIndex > High(Civ2.Units^)) then
     Exit;
   UnitType := Civ2.Units^[UnitIndex].UnitType;
   if ((Civ2.UnitTypes^[UnitType].Role = 5) or (Civ2.UnitTypes^[UnitType].Domain = 1)) and (Civ2.Units^[UnitIndex].CivIndex = Civ2.HumanCivIndex^) and (Civ2.Units^[UnitIndex].Counter > 0) then
   begin
+    //TextOut := IntToStr(Civ2.Units^[UnitIndex].Counter) + Format(' 0x%.4x', [UnitIndex]);
     TextOut := IntToStr(Civ2.Units^[UnitIndex].Counter);
-    DC := PCardinal(PCardinal(Cardinal(thisWayToWindowInfo) + $40)^ + $4)^;
-    SavedDC := SaveDC(DC);
-    Canvas := TCanvas.Create();
-    Canvas.Handle := DC;
+    Canvas := TCanvasEx.Create(DrawPort);
     Canvas.Brush.Style := bsClear;
     Canvas.Font.Style := [];
     Canvas.Font.Size := ScaleByZoom(8, Zoom);
@@ -1287,21 +1174,12 @@ begin
       Canvas.Font.Name := 'Arial'
     else
       Canvas.Font.Name := 'Small Fonts';
-    TextSize := Canvas.TextExtent(TextOut);
-    R := Rect(0, 0, TextSize.cx, TextSize.cy);
-    OffsetRect(R, Left, Top);
-    OffsetRect(R, ScaleByZoom(32, Zoom) - TextSize.cx div 2, ScaleByZoom(32, Zoom) - TextSize.cy div 2);
-    TextOutWithShadows(Canvas, TextOut, R.Left, R.Top, clYellow, clBlack, SHADOW_ALL);
-    //
-    //TextOut := IntToStr(UnitIndex) + '-' + IntToStr(Civ2.Units^[UnitIndex].ID);
-    //TextOutWithShadows(Canvas, TextOut, Left, Top, clAqua, clBlack, SHADOW_ALL);
-    //
-    //TextOut := IntToStr(Civ2.Units^[UnitIndex].MovePoints);
-    //TextOutWithShadows(Canvas, TextOut, Left, Top, clRed, clBlack, SHADOW_ALL);
-    //
-    Canvas.Handle := 0;
+    Canvas.FontShadows := SHADOW_ALL;
+    Canvas.Font.Color := Canvas.ColorFromIndex(114); // Yellow
+    Canvas.FontShadowColor := Canvas.ColorFromIndex(10); // Black
+    Canvas.MoveTo(Left + ScaleByZoom(32, Zoom), Top + ScaleByZoom(32, Zoom));
+    Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER);
     Canvas.Free;
-    RestoreDC(DC, SavedDC);
   end;
 end;
 
@@ -1593,55 +1471,17 @@ begin
   Result := ThisResult;
 end;
 
-{function CompareCityUnits(Item1: Pointer; Item2: Pointer): Integer;
-var
-  Units: array[1..2] of PUnit;
-  i: Integer;
-  Weights: array[1..2] of Integer;
-  UnitType: TUnitType;
-begin
-  Units[1] := PUnit(Item1);
-  Units[2] := PUnit(Item2);
-  for i := 1 to 2 do
-  begin
-    UnitType := Civ2.UnitTypes[Units[i]^.UnitType];
-    if UnitType.Role = 5 then
-      Weights[i] := $00F00000
-    else if UnitType.Att > 0 then
-      Weights[i] := UnitType.Def * $100 + ($F - UnitType.Domain) * $10000 + UnitType.Att
-    else
-      Weights[i] := 0;
-    //SendMessageToLoader(Units[i]^.UnitType, UnitType.Domain);
-  end;
-  Result := Weights[2] - Weights[1];
-  if Result = 0 then
-    Result := Units[2]^.ID - Units[1]^.ID
-end;}
-
-{function PatchDrawCityWindowSupportGetIFromUnitsList(): Integer; stdcall;
-var
-  Addr: Pointer;
-begin
-  // Get i from UnitsList
-  if CityWindowEx.Support.UnitsListCounter >= CityWindowEx.Support.UnitsList.Count then
-    Result := Civ2.GameParameters^.TotalUnits
-  else
-  begin
-    Addr := CityWindowEx.Support.UnitsList[CityWindowEx.Support.UnitsListCounter];
-    Result := (Integer(Addr) - Integer(Civ2.Units)) div SizeOf(TUnit);
-  end;
-  //SendMessageToLoader(1, Result);
-end;}
-
 function PatchDrawCityWindowSupportEx1(CityWindow: PCityWindow; SupportedUnits, Rows, Columns: Integer; var DeltaX: Integer): Integer; stdcall;
 begin
   CityWindowEx.Support.Counter := 0;
   if SupportedUnits > Rows * Columns then
   begin
-    DeltaX := DeltaX - CityWindow^.WindowSize;
+    DeltaX := DeltaX - CityWindow.WindowSize;
   end;
-  Ex.UnitsListBuildSorted(CityWindow^.CityIndex);
-  Result := Ex.UnitsListGetNextUnitIndex(0);
+  if CityWindowEx.Support.SortedUnitsList <> nil then
+    CityWindowEx.Support.SortedUnitsList.Free();
+  CityWindowEx.Support.SortedUnitsList := TSortedUnitsList.Create(CityWindow.CityIndex);
+  Result := CityWindowEx.Support.SortedUnitsList.GetNextIndex(0);
 end;
 
 procedure PatchDrawCityWindowSupport1; register;
@@ -1666,7 +1506,7 @@ end;
 function PatchDrawCityWindowSupportEx1a(): Integer; stdcall;
 begin
   // Get next i from UnitsList
-  Result := Ex.UnitsListGetNextUnitIndex(1);
+  Result := CityWindowEx.Support.SortedUnitsList.GetNextIndex(1);
 end;
 
 procedure PatchDrawCityWindowSupport1a(); register;
@@ -1818,15 +1658,16 @@ asm
     ret
 end;
 
-function PatchCityChangeListUnitCostEx(Cost, Done, ShieldsInRow, Total, Support: Integer): Integer; stdcall;
+// Return number of turns
+function PatchCityChangeListBuildingCostEx(Cost, Done: Integer): Integer; stdcall;
 var
   P: PChar;
   Text: string;
   RealCost, LeftToDo, Production: Integer;
 begin
-  RealCost := Cost * ShieldsInRow;
+  RealCost := Cost * Civ2.CityGlobals.ShieldsInRow;
   LeftToDo := RealCost - 1 - Done;
-  Production := Min(Max(1, Total - Support), 1000);
+  Production := Min(Max(1, Civ2.CityGlobals.Total - Civ2.CityGlobals.Support), 1000);
   P := StrEnd(Civ2.ChText) - 1;
   if P^ = '(' then
     P^ := #00;
@@ -1836,15 +1677,51 @@ begin
   Result := Min(Max(1, LeftToDo div Production + 1), 999);
 end;
 
-procedure PatchCityChangeListUnitCost; register;
+procedure PatchCityChangeListBuildingCost; register;
 asm
-    push  [$006A6568] // Support
-    push  [$006A65CC] // Total
-    push  [$006A657C] // ShieldsInRow
     push  [ebp + $0C] // Done
     push  [ebp + $08] // Cost
-    call  PatchCityChangeListUnitCostEx
+    call  PatchCityChangeListBuildingCostEx
     push  $00509B07
+    ret
+end;
+
+procedure PatchCityChangeListImprovementMaintenanceEx(j: Integer); stdcall;
+var
+  Upkeep: Integer;
+  Text: string;
+begin
+  Upkeep := Civ2.Improvements[j].Upkeep;
+  if Upkeep >= 0 then
+  begin
+    Text := string(Civ2.ChText);
+    Text := Text + ', ' + IntToStr(Upkeep) + '#648860:1#';
+    StrPCopy(Civ2.ChText, Text);
+  end;
+  StrCat(Civ2.ChText, ')');
+end;
+
+procedure PatchCityChangeListImprovementMaintenance(); register;
+asm
+    push  [ebp - $958] // int j
+    call  PatchCityChangeListImprovementMaintenanceEx
+    push  $0050AD85
+    ret
+end;
+
+procedure PatchShowDialogForeignMinisterGoldEx(Gold: Integer); stdcall;
+var
+  Text: string;
+begin
+  Text := string(Civ2.ChText);
+  Text := Text + IntToStr(Gold) + '#648860:1#';
+  StrPCopy(Civ2.ChText, Text);
+end;
+
+procedure PatchShowDialogForeignMinisterGold(); register;
+asm
+    call  PatchShowDialogForeignMinisterGoldEx
+    push  $00430D79
     ret
 end;
 
@@ -1857,26 +1734,84 @@ asm
     call  eax
 end;
 
-procedure PatchOnActivateUnitEx; stdcall;
+procedure PatchOnActivateUnitEx(UnitIndex: Integer); stdcall;
 var
   i: Integer;
+  Unit1, Unit2: PUnit;
 begin
   if not Ex.SettingsFlagSet(3) then
     Exit;
+  Unit1 := @Civ2.Units[UnitIndex];
   for i := 0 to Civ2.GameParameters^.TotalUnits - 1 do
   begin
-    if Civ2.Units[i].ID > 0 then
-      if Civ2.Units[i].CivIndex = Civ2.GameParameters.SomeCivIndex then
-        Civ2.Units[i].Attributes := Civ2.Units[i].Attributes and $BFFF;
+    Unit2 := @Civ2.Units[i];
+    if (Unit2.ID > 0) and (Unit2.CivIndex = Civ2.GameParameters.SomeCivIndex) then
+    begin
+      if (Unit2.X = Unit1.X) and (Unit2.Y = Unit1.Y) then
+        Unit2.Attributes := Unit2.Attributes and not $4000
+      else
+        Unit2.Attributes := Unit2.Attributes or $4000;
+    end;
   end;
 end;
 
-procedure PatchOnActivateUnit; register;
+procedure PatchOnActivateUnit(); register;
 asm
+    push  [ebp - 4] // int vUnitIndex
     call  PatchOnActivateUnitEx
     mov   eax, $004016EF
     call  eax
     push  $0058D5D4
+    ret
+end;
+
+//
+// Set search origin to the saved coordinates instead of active unit coordinates
+//
+var
+  GetNextActiveUnitOrigin: TSmallPoint;
+
+function PatchGetNextActiveUnit1Ex(UnitIndex: Integer; var X, Y: Integer): Integer; stdcall;
+begin
+  // Return int GameParameters.ActiveUnitIndex
+  Result := Civ2.GameParameters.ActiveUnitIndex;
+  if not Ex.SettingsFlagSet(3) then
+    Exit;
+end;
+
+procedure PatchGetNextActiveUnit1(); register;
+asm
+    lea   eax, [ebp - $18] // int Y
+    push  eax
+    lea   eax, [ebp - $14] // int X
+    push  eax
+    push  [ebp + $08]      // int UnitIndex
+    call  PatchGetNextActiveUnit1Ex
+    push  $005B65A7
+    ret
+end;
+
+//
+// Save search origin as where next active unit was found
+//
+// Return int vNextUnit
+function PatchGetNextActiveUnit2Ex(NextIndex: Integer): Integer; stdcall;
+begin
+  Result := NextIndex;
+  if not Ex.SettingsFlagSet(3) then
+    Exit;
+  if NextIndex >= 0 then
+  begin
+    GetNextActiveUnitOrigin.x := Civ2.Units[NextIndex].X;
+    GetNextActiveUnitOrigin.y := Civ2.Units[NextIndex].Y;
+  end;
+end;
+
+procedure PatchGetNextActiveUnit2(); register;
+asm
+    push  [ebp - $1C] // int vNextUnit
+    call  PatchGetNextActiveUnit2Ex
+    push  $005B6782
     ret
 end;
 
@@ -1966,6 +1901,7 @@ var
   KeyState: SHORT;
   MousePoint: TPoint;
   WindowHandle: HWND;
+  CityIndex: Integer;
 begin
   Inc(DrawTestData.Counter);
   //
@@ -1986,23 +1922,7 @@ begin
     MapMessagesList.Pack();
   end;
   //
-  DrawTestCityIndex := -1;
-  ZeroMemory(@DrawTestMapPoint, SizeOf(DrawTestMapPoint));
-  if GetAsyncKeyState(VK_CONTROL) <> 0 then
-  begin
-    GetCursorPos(MousePoint);
-    WindowHandle := WindowFromPoint(MousePoint);
-    if WindowHandle = Civ2.MapGraphicsInfo.GraphicsInfo.WindowInfo.WindowStructure.HWindow then
-    begin
-      ScreenToClient(WindowHandle, MousePoint);
-      Civ2.ScreenToMap(DrawTestMapPoint.X, DrawTestMapPoint.Y, MousePoint.X, MousePoint.Y);
-      DrawTestCityIndex := Civ2.GetCityIndexAtXY(DrawTestMapPoint.X, DrawTestMapPoint.Y);
-      if Civ2.Cities[DrawTestCityIndex].Owner <> Civ2.HumanCivIndex^ then
-      begin
-        DrawTestCityIndex := -1;
-      end;
-    end;
-  end;
+  Ex.QuickInfo.Update();
 end;
 
 {var
@@ -2040,7 +1960,7 @@ begin
     begin
       if (DestWS.Palette <> 0) and (PInteger($00638B48)^ = 1) then // V_PaletteBasedDevice_dword_638B48
         RealizePalette(DestWS.DeviceContext);
-      if (Civ2.MapGraphicsInfo^.GraphicsInfo.DrawPort.DrawInfo <> nil) and (SrcDI = Civ2.MapGraphicsInfo.GraphicsInfo.DrawPort.DrawInfo) then
+      if (Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo <> nil) and (SrcDI = Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo) then
       begin
         DrawTestDrawInfoCreate();
         VSrcDC := DrawTestData.DrawPort.DrawInfo^.DeviceContext;
@@ -2692,8 +2612,8 @@ begin
       begin
         if i in [PageStart..PageFinish] then
         begin
-          SpriteW := ScaleByZoom(RectWidth(@ListItem.Sprite.Rectangle1), Dialog.Zoom);
-          SpriteH := ScaleByZoom(RectHeight(@ListItem.Sprite.Rectangle1), Dialog.Zoom);
+          SpriteW := ScaleByZoom(RectWidth(ListItem.Sprite.Rectangle1), Dialog.Zoom);
+          SpriteH := ScaleByZoom(RectHeight(ListItem.Sprite.Rectangle1), Dialog.Zoom);
           if Assigned(Dialog.Proc3SpriteDraw) then
             Dialog.Proc3SpriteDraw(ListItem.Sprite, Dialog.GraphicsInfo, ListItem.UnitIndex, ListItem.Unknown_04, ListItemX, ListItemY);
           if ((Dialog.Flags and $20000) <> 0) and (Dialog.SelectedListItem = ListItem) then
@@ -2806,6 +2726,7 @@ var
   Sprite: PSprite;
 begin
   RightPart := nil;
+  Bar := nil;
   if AText <> nil then
   begin
     Bar := StrScan(AText, '|');
@@ -2815,7 +2736,31 @@ begin
     RightPart := Bar + 1;
     Bar^ := #00;
   end;
-  Civ2.sub_401BC7(AECX, AText, ALeft + AECX.ListboxSpriteAreaWidth[AECX.ScrollOrientation], ATop, ASelected, ADisabled);
+  //  Civ2.sub_401BC7(AECX, AText, ALeft + AECX.ListboxSpriteAreaWidth[AECX.ScrollOrientation], ATop, ASelected, ADisabled);
+  SLT := TStringList.Create();
+  SLS := TStringList.Create();
+  SLT.Text := StringReplace(string(AText), '#', #13#10, [rfReplaceAll]);
+  X := ALeft + AECX.ListboxSpriteAreaWidth[AECX.ScrollOrientation];
+  for i := 0 to SLT.Count - 1 do
+  begin
+    if Odd(i) then
+    begin
+      SLS.Clear();
+      SLS.Text := StringReplace(SLT[i], ':', #13#10, [rfReplaceAll]);
+      Sprite := PSprite(StrToInt('$' + SLS[0]) + StrToInt(SLS[1]) * SizeOf(TSprite));
+      DY := (AECX.FontInfo3.Height + 1 - Sprite.Rectangle2.Bottom) div 2;
+      Civ2.CopySprite(Sprite, @R, @AECX.GraphicsInfo^.DrawPort, X, ATop + DY);
+      X := X + Sprite.Rectangle2.Right;
+    end
+    else
+    begin
+      Civ2.sub_401BC7(AECX, PChar(SLT[i]), X, ATop, ASelected, ADisabled);
+      X := X + Civ2.GetTextExtentX(AECX.FontInfo3, PChar(SLT[i]));
+    end;
+  end;
+  SLS.Free();
+  SLT.Free();
+  //
   if RightPart <> nil then
   begin
     Bar^ := '|';
@@ -2843,6 +2788,55 @@ begin
     SLS.Free();
     SLT.Free();
   end;
+end;
+
+//
+// Calculate TextExtentX without sprites placeholders
+//
+function PatchDlgAddListboxItemGetTextExtentXEx(FontInfo: PFontInfo; Text: PChar): Integer; stdcall;
+var
+  i, j: Integer;
+  WaitClosing: Boolean;
+  Sprites: Integer;
+  Text1: array[0..1024] of char;
+begin
+  Text1[0] := #00;
+  WaitClosing := False;
+  Sprites := 0;
+  i := 0;
+  j := 0;
+  while Text[i] <> #00 do
+  begin
+    if (Text[i] <> '#') then
+    begin
+      if not WaitClosing then
+      begin
+        Text1[j] := Text[i];
+        Inc(j);
+      end
+    end
+    else if WaitClosing and (Text[i - 1] in ['0'..'9']) then
+    begin
+      WaitClosing := False;
+      Inc(Sprites);
+    end
+    else if (Text[i + 1] in ['0'..'9']) then
+    begin
+      WaitClosing := True;
+    end;
+    Inc(i);
+  end;
+  Text1[j] := #00;
+  //StrCopy(Text, Text1); // For debugging
+  Result := Civ2.GetTextExtentX(FontInfo, Text1);
+end;
+
+procedure PatchDlgAddListboxItemGetTextExtentX(); register;
+asm
+    push  ecx
+    call  PatchDlgAddListboxItemGetTextExtentXEx
+    push  $0059EFD3
+    ret
 end;
 
 // Return 1 if processed
@@ -2959,25 +2953,41 @@ end;
 //
 // Enhanced City Status advisor
 //
-procedure WndProcAdvisorCityStatusButtonUp(X, Y, Button: Integer); stdcall;
+
+function AdvisorCityStatusGetListIndex(X, Y: Integer): Integer; stdcall;
 var
+  Y1: Integer;
   i: Integer;
   ListIndex: Integer;
-  Y1: Integer;
-  City: PCity;
-  CityIndex: Integer;
-  SortCriteria, SortSign: Integer;
 begin
   Y1 := Y - Civ2.AdvisorWindow.ListTop;
   i := Floor(Y1 / Civ2.AdvisorWindow.LineHeight);
   ListIndex := Civ2.AdvisorWindow.ScrollPosition + i;
-  if (i >= 0) and (ListIndex >= 0) and (ListIndex < Ex.CitiesList.Count) and (i < Civ2.AdvisorWindow.ScrollPageSize) and (Button = 0) then
-  begin
-    City := Ex.CitiesList[ListIndex];
-    CityIndex := (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
-    Civ2.ShowCityWindow(Civ2.CityWindow, CityIndex);
-  end
+  if (i >= 0) and (ListIndex >= 0) and (ListIndex < AdvisorWindowEx.SortedCitiesList.Count) and (i < Civ2.AdvisorWindow.ScrollPageSize) then
+    Result := ListIndex
   else if i = -1 then
+    Result := -1
+  else
+    Result := -2;
+end;
+
+procedure WndProcAdvisorCityStatusButtonUp(X, Y, Button: Integer); stdcall;
+var
+  i: Integer;
+  ListIndex: Integer;
+  SortCriteria, SortSign: Integer;
+begin
+  ListIndex := AdvisorCityStatusGetListIndex(X, Y);
+  if (ListIndex >= 0) and (Button = 0) then
+  begin
+    Civ2.ShowCityWindow(Civ2.CityWindow, AdvisorWindowEx.SortedCitiesList.GetIndexIndex(ListIndex));
+    if X > 370 then
+    begin
+      Civ2.Citywin_CityButtonChange(0);
+      Civ2.CityWindowExit();
+    end;
+  end
+  else if ListIndex = -1 then
   begin
     SortCriteria := Abs(UIASettings.AdvisorSorts[1]);
     SortSign := Sign(UIASettings.AdvisorSorts[1]);
@@ -3015,26 +3025,66 @@ begin
   WndProcAdvisorCityStatusButtonUp(X, Y, 1);
 end;
 
+procedure PatchWndProcAdvisorCityStatusMouseMove(X, Y: Integer); cdecl;
+var
+  MSWindow: PMSWindow;
+  ListIndex: Integer;
+  Row: Integer;
+  Part: Integer;
+  Canvas: TCanvasEx;
+  R: TRect;
+  Y1: Integer;
+begin
+  if X > 370 then
+    Part := 2
+  else
+    Part := 1;
+  ListIndex := AdvisorCityStatusGetListIndex(X, Y);
+  if (AdvisorWindowEx.MouseOver.Y <> ListIndex) and (Part = 2) or (AdvisorWindowEx.MouseOver.X <> Part) then
+  begin
+    MSWindow := @Civ2.AdvisorWindow.MSWindow;
+    AdvisorWindowEx.MouseOver := Point(Part, ListIndex);
+    //Civ2.UpdateCopyValidateAdvisor(1);
+    Civ2.CopyToScreenAndValidate(@MSWindow.GraphicsInfo);
+    if (ListIndex >= 0) and (Part = 2) then
+    begin
+      Row := ListIndex - Civ2.AdvisorWindow.ScrollPosition;
+      Y1 := Civ2.AdvisorWindow.ListTop + Row * Civ2.AdvisorWindow.LineHeight;
+      Canvas := TCanvasEx.Create(MSWindow.GraphicsInfo.WindowInfo.WindowStructure.DeviceContext);
+      Canvas.Brush.Color := TColor($C0C0C0); // Canvas.ColorFromIndex(34);
+      R := Rect(AdvisorWindowEx.Rects[6].Left - 10, Y1, MSWindow.ClientSize.cx - 11, Y1 + Civ2.AdvisorWindow.LineHeight);
+      Canvas.FrameRect(R);
+      Canvas.Free();
+    end;
+  end;
+end;
+
 function PatchUpdateAdvisorCityStatusEx(CivIndex, Bottom: Integer; var Cities, Top1: Integer): Integer; stdcall;
 var
   Page, ScrollPos, LineHeight: Integer;
   i, j: Integer;
   X1, X2, Y1, Y2, DX: Integer;
-  MSWindow: ^TMSWindow;
+  MSWindow: PMSWindow;
+  DrawPort: PDrawPort;
   Text: string;
   Sprite: PSprite;
   R: TRect;
-  Canvas: TCanvas;
+  Canvas: TCanvasEx;
   Building, Cost: Integer;
   City: PCity;
   CityIndex: Integer;
   SortCriteria, SortSign: Integer;
+  Improvements: array[0..1] of Integer;
 begin
   Result := 0;                            // Return 1 if processed
-  ZeroMemory(@AdvisorWindowEx, SizeOf(AdvisorWindowEx));
+  ZeroMemory(@AdvisorWindowEx.Rects, SizeOf(AdvisorWindowEx.Rects));
   MSWindow := @Civ2.AdvisorWindow.MSWindow;
+  DrawPort := @MSWindow.GraphicsInfo.DrawPort;
   SortCriteria := Abs(UIASettings.AdvisorSorts[1]);
   SortSign := Sign(UIASettings.AdvisorSorts[1]);
+  if AdvisorWindowEx.SortedCitiesList <> nil then
+    AdvisorWindowEx.SortedCitiesList.Free();
+  AdvisorWindowEx.SortedCitiesList := TSortedCitiesList.Create(CivIndex, UIASettings.AdvisorSorts[1]);
   Y1 := Top1;
   Top1 := Top1 + 12;
   // DIMENSIONS
@@ -3044,7 +3094,7 @@ begin
   Civ2.AdvisorWindow.ListHeight := Bottom - Top1;
   Page := Civ2.Clamp((Bottom - Top1) div LineHeight, 1, $63);
   Civ2.AdvisorWindow.ScrollPageSize := Page;
-  Cities := Ex.CitiesListBuildSorted(CivIndex, UIASettings.AdvisorSorts[1]);
+  Cities := AdvisorWindowEx.SortedCitiesList.Count;
   Civ2.AdvisorWindow.Unknown_458 := Civ2.Clamp((Cities + Page - 1) div Page, 1, $63);
   ScrollPos := Civ2.Clamp(Civ2.AdvisorWindow.ScrollPosition, 0, Civ2.Clamp(Cities - 1, 0, $3E7));
   Civ2.AdvisorWindow.ScrollPosition := ScrollPos;
@@ -3053,14 +3103,15 @@ begin
   begin
     X1 := MSWindow.ClientTopLeft.X + 150;
     Civ2.SetCurrFont($0063EAB8);          // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
-    Civ2.SetFontColorWithShadow($21, $12, -1, -1);
+    Civ2.SetFontColorWithShadow($25, $12, -1, -1);
     Text := Format('Cities: %d', [Cities]);
-    Civ2.DrawString(PChar(Text), 373, Y1 - 3);
+    //Civ2.DrawString(PChar(Text), 373, Y1 - 3);
+    Civ2.DrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 12, Y1 - 3, 0);
     // SORT ARROWS
-    Canvas := Ex.CanvasGrab(MSWindow.GraphicsInfo.DrawPort.DrawInfo.DeviceContext);
-    Canvas.Brush.Color := TColor($CCCCCC);
+    Canvas := TCanvasEx.Create(DrawPort);
+    Canvas.Brush.Color := Canvas.ColorFromIndex(34);
     X1 := 0;
-    for i := 1 to 5 do
+    for i := 1 to 6 do
     begin
       case i of
         1: X1 := 60;
@@ -3068,12 +3119,13 @@ begin
         3: X1 := 270 - 16;
         4: X1 := 312 - 14;
         5: X1 := 354 - 16;
+        6: X1 := 381;
       end;
       AdvisorWindowEx.Rects[i] := Rect(X1, Y1, X1 + 12, Y1 + 12);
       Canvas.FrameRect(AdvisorWindowEx.Rects[i]);
     end;
-    Canvas.Pen.Color := TColor($FFFFFF);
-    Canvas.Brush.Color := TColor($FFFFFF);
+    Canvas.Pen.Color := Canvas.ColorFromIndex(41);
+    Canvas.Brush.Color := Canvas.ColorFromIndex(41);
     if SortCriteria <> 0 then
     begin
       R := AdvisorWindowEx.Rects[SortCriteria];
@@ -3082,18 +3134,18 @@ begin
       else
         Canvas.Polygon([Point(R.Left + 2, R.Top + 7), Point(R.Left + 9, R.Top + 7), Point(R.Left + 6, R.Top + 4), Point(R.Left + 5, R.Top + 4)]);
     end;
-    Ex.CanvasRelease();
+    Canvas.Free();
   end;
   // LIST
   Y1 := Top1;
-  for i := 0 to Ex.CitiesList.Count - 1 do
+  for i := 0 to AdvisorWindowEx.SortedCitiesList.Count - 1 do
   begin
-    City := Ex.CitiesList[i];
+    City := AdvisorWindowEx.SortedCitiesList[i];
     if (i >= ScrollPos) and (Page + ScrollPos > i) then
     begin
       X1 := MSWindow.ClientTopLeft.X + (((i + 1) and 1) shl 6) + 2;
-      CityIndex := (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
-      Civ2.DrawCitySprite(@MSWindow.GraphicsInfo.DrawPort, CityIndex, 0, X1, Y1, 0);
+      CityIndex := AdvisorWindowEx.SortedCitiesList.GetIndexIndex(i); // (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
+      Civ2.DrawCitySprite(DrawPort, CityIndex, 0, X1, Y1, 0);
 
       Civ2.SetCurrFont($0063EAB8);        // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
       Civ2.SetFontColorWithShadow($25, $12, 1, 1);
@@ -3101,6 +3153,20 @@ begin
       Y2 := Y1 + 9;
       X1 := MSWindow.ClientTopLeft.X + 130;
       Civ2.DrawString(City.Name, X1, Y2);
+
+      Improvements[0] := 1;               // Palace
+      Improvements[1] := 32;              // Airport
+      Civ2.SetSpriteZoom(-4);
+      X2 := 270 - 42;
+      for j := High(Improvements) downto Low(Improvements) do
+      begin
+        if Civ2.CityHasImprovement(CityIndex, Improvements[j]) then
+        begin
+          Civ2.CopySprite(@PSprites($645160)^[Improvements[j]], @R, DrawPort, X2, Y2 + 4);
+          X2 := X2 - 19;
+        end;
+      end;
+      Civ2.ResetSpriteZoom;
 
       X1 := X1 + 131;
       X2 := X1;
@@ -3125,7 +3191,7 @@ begin
             end;
         end;
         Civ2.DrawStringRight(PChar(Text), X2, Y2, DX);
-        Civ2.CopySprite(@PSprites($644F00)^[2 * j + 1], @R, @MSWindow.GraphicsInfo.DrawPort, X2, Y2 + 2);
+        Civ2.CopySprite(@PSprites($644F00)^[2 * j + 1], @R, DrawPort, X2, Y2 + 2);
         X2 := X2 + 42;
       end;
       //
@@ -3140,6 +3206,10 @@ begin
           Civ2.SetFontColorWithShadow($5E, $A, -1, -1);
         end;
         Cost := Civ2.Improvements[Building].Cost;
+        Civ2.SetSpriteZoom(-2);
+        Civ2.CopySprite(@PSprites($645160)^[-City.Building], @R, DrawPort, X2, Y2 + 2);
+        Civ2.ResetSpriteZoom();
+        X2 := X2 + RectWidth(R) + 1;
       end
       else
       begin
@@ -3147,20 +3217,42 @@ begin
         Building := City.Building;
         Text := string(Civ2.GetStringInList(Civ2.UnitTypes[Building].StringIndex)) + ' ';
         Cost := Civ2.UnitTypes[Building].Cost;
+        Civ2.SetSpriteZoom(-2);
+        Civ2.CopySprite(@PSprites($641848)^[City.Building], @R, DrawPort, X2 - 10, Y2 - 8);
+        Civ2.ResetSpriteZoom();
+        X2 := X2 + 28;
       end;
+      // Build progress
       X2 := Civ2.DrawString(PChar(Text), X2, Y2) + 4;
-      Text := Format('(%d/%d)', [City.BuildProgress, Cost * PByte($0064BCCC)^]); //V_Cosmic_stru_64BCC8.RowsInShieldBox
+      Text := Format('(%d/%d)', [City.BuildProgress, Cost * Civ2.Cosmic.RowsInShieldBox]);
       Civ2.SetFontColorWithShadow($21, $12, -1, -1);
-      Civ2.DrawString(PChar(Text), X2, Y2);
+      //Civ2.DrawString(PChar(Text), X2, Y2);
+      Civ2.DrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 12, Y2, 0);
+
+      {if AdvisorWindowEx.MouseOver.Y = i then
+      begin
+        Canvas := TCanvasEx.Create(DrawPort);
+        Canvas.Brush.Color := Canvas.ColorFromIndex(34);
+        if AdvisorWindowEx.MouseOver.X = 1 then
+          R := Rect(AdvisorWindowEx.Rects[2].Left - 3, Y2 - 3, AdvisorWindowEx.Rects[6].Left - 10, Y2 + LineHeight - 3)
+        else
+        begin
+          R := Rect(AdvisorWindowEx.Rects[6].Left - 10, Y2 - 3, MSWindow.ClientSize.cx - 19, Y2 + LineHeight - 3);
+          Canvas.FrameRect(R);
+        end;
+        Canvas.Free();
+      end;}
+      AdvisorWindowEx.MouseOver.Y := -2;
 
       Y1 := Y1 + LineHeight;
+
     end;
   end;
   if Civ2.AdvisorWindow.ControlsInitialized = 0 then
   begin
     MSWindow.GraphicsInfo.WindowInfo.WindowProcs.ProcRButtonUp := @PatchWndProcAdvisorCityStatusRButtonUp;
+    MSWindow.GraphicsInfo.WindowInfo.WindowProcs.ProcMouseMove := @PatchWndProcAdvisorCityStatusMouseMove;
   end;
-
   Result := 1;
 end;
 
@@ -3183,6 +3275,114 @@ asm
 //  if ( !V_AdvisorWindow_stru_63EB10.ControlsInitialized )
     push  $0042D514
     ret
+end;
+
+procedure PatchCalcMapRectTopEx(MapWindow: PMapWindow); stdcall;
+begin
+  if MapWindow.MapRect.Top + 2 * MapWindow.MapHalf.cy > PWord($006D1162)^ + 2 then
+  begin
+    MapWindow.MapRect.Top := PWord($006D1162)^ + 2 - 2 * MapWindow.MapHalf.cy;
+  end;
+end;
+
+procedure PatchCalcMapRectTop(); register;
+asm
+    push  [ebp - $28] // P_MapWindow this
+    call  PatchCalcMapRectTopEx
+    push  $0047A334
+    ret
+end;
+
+//
+//  Mass move all active units of the same type
+//
+function MassMove(GotoX, GotoY: Integer): Integer;
+var
+  MapX, MapY: Integer;
+  UnitIndex: Integer;
+  Unit1, Unit2: PUnit;
+  i: Integer;
+  UnitsList: TList;
+begin
+  Result := 0;
+  UnitIndex := Civ2.GameParameters.ActiveUnitIndex;
+  if (UnitIndex >= 0) and (UnitIndex < Civ2.GameParameters.TotalUnits) then
+  begin
+    UnitsList := TList.Create();
+    Unit1 := @Civ2.Units[UnitIndex];
+    MapX := Unit1.X;
+    MapY := Unit1.Y;
+    for i := 0 to Civ2.GameParameters.TotalUnits - 1 do
+    begin
+      Unit2 := @Civ2.Units[i];
+      if (Unit2.X = MapX) and (Unit2.Y = MapY) and (Unit2.UnitType = Unit1.UnitType) and (Civ2.UnitCanMove(i)) then
+      begin
+        Unit2.GotoX := GotoX;
+        Unit2.GotoY := GotoY;
+        Unit2.Orders := $0B;
+        Unit2.MoveIteration := 0;
+        repeat
+          Civ2.GameParameters.ActiveUnitIndex := i;
+          Civ2.ProcessUnit();
+        until (
+          (not Civ2.UnitCanMove(i))
+          or ((Unit2.X = GotoX) and (Unit2.Y = GotoY))
+          or (Unit2.Orders <> $0B)
+          );
+        //UnitsList.Add(Unit2);
+        //Civ2.ProcessOrdersGoTo(i);
+        //SendMessageToLoader(1, i);
+        //Civ2.ProcessUnit();
+        //Civ2.HumanTurn();
+        //SendMessageToLoader(2, i);
+        Result := 1;
+      end;
+    end;
+    {for i := 0 to UnitsList.Count - 1 do
+    begin
+      UnitIndex := (Integer(UnitsList[i]) - Integer(Civ2.Units)) div SizeOf(TUnit);
+      Civ2.ProcessOrdersGoTo(UnitIndex);
+    end;}
+    if Result = 1 then
+    begin
+      PInteger($0062BCB0)^ := 0;
+      PInteger($006AD8D4)^ := 0;
+    end;
+    UnitsList.Free();
+  end;
+end;
+
+function PatchMapWindowClickMassMoveEx(MapX, MapY: Integer; RMButton: LongBool): Integer; stdcall
+begin
+  Result := 0;
+  if (Ex.SettingsFlagSet(5)) and (RMButton) and ((GetAsyncKeyState(VK_SHIFT) and $8000) <> 0) then
+  begin
+    Result := MassMove(MapX, MapY);
+  end;
+end;
+
+procedure PatchMapWindowClickMassMove(); register;
+asm
+    push  [ebp + $10] // int RMButton
+    push  [ebp - $0C] // DWORD vMapY
+    push  [ebp - $20] // DWORD vMapX
+    call  PatchMapWindowClickMassMoveEx
+    cmp   eax, 1
+    je    @@LABEL_PROCESSED
+    push  $00411239
+    ret
+
+@@LABEL_PROCESSED:
+    push  $004116BC
+    ret
+end;
+
+function PatchMoveDebug(): Integer; stdcall;
+begin
+  if Ex.SettingsFlagSet(6) then
+    Result := 1
+  else
+    Result := PInteger($0062D04C)^;
 end;
 
 {$O+}
@@ -3271,11 +3471,19 @@ begin
   // Change color in City Window for We Love The King Day
   WriteMemory(HProcess, $00502109, [OP_JMP], @PatchDrawCityWindowTopWLTKD);
 
-  // Show Unit shields cost in City Change list and fix Turns calculation for high production numbers
-  WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListUnitCost);
+  // Show Cost shields and Maintenance coins in City Change list and fix Turns calculation for high production numbers
+  WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListBuildingCost);
+  WriteMemory(HProcess, $0050AD80, [OP_JMP], @PatchCityChangeListImprovementMaintenance);
+
+  // Show Gold coin in Foreign Minister dialog
+  WriteMemory(HProcess, $00430D71, [OP_JMP], @PatchShowDialogForeignMinisterGold);
 
   // Add Cancel button to City Change list
   WriteMemory(HProcess, $0050AA86, [OP_CALL], @PatchLoadCityChangeDialog);
+
+  // Draw sprites in listbox item text
+  WriteMemory(HProcess, $00403625, [OP_JMP], @PatchDlgDrawListboxItemText);
+  WriteMemory(HProcess, $0059EFCE, [OP_JMP], @PatchDlgAddListboxItemGetTextExtentX); // Calculate TextExtentX without sprites placeholders
 
   // (0) Suppress specific simple popup message
   //WriteMemory(HProcess, $0051D5D5, [OP_JMP], @PatchPopupSimpleMessage);
@@ -3288,6 +3496,8 @@ begin
   WriteMemory(HProcess, $00402112, [OP_JMP], @PatchBreakUnitMoving);
   // (3) Reset Units wait flag after activating
   WriteMemory(HProcess, $0058D5CF, [OP_JMP], @PatchOnActivateUnit);
+  WriteMemory(HProcess, $005B65A0, [OP_JMP], @PatchGetNextActiveUnit1);
+  WriteMemory(HProcess, $005B677D, [OP_JMP], @PatchGetNextActiveUnit2);
   // (4) Radios hotkeys
   WriteMemory(HProcess, $00531163, [OP_JMP], @PatchCreateWindowRadioGroupAfter);
 
@@ -3325,9 +3535,6 @@ begin
   WriteMemory(HProcess, $005A1EDC, [OP_JMP], @PatchCreateDialogMainWindow);
   WriteMemory(HProcess, $005A203D, [], @PatchUpdateDialogWindow, True);
 
-  // Draw sprites in listbox item text
-  WriteMemory(HProcess, $00403625, [OP_JMP], @PatchDlgDrawListboxItemText);
-
   // ListOfUnits Dialog Popup v2
   WriteMemory(HProcess, $005B6BFE, [OP_NOP, OP_JMP]); // Ignore limit of 9 Units
   WriteMemory(HProcess, $005A0200, [OP_JMP], @PatchCreateDialogDimensionList);
@@ -3343,9 +3550,18 @@ begin
   WriteMemory(HProcess, $0042D099, [OP_JMP], @PatchUpdateAdvisorCityStatus);
   WriteMemory(HProcess, $0042D5EB, [], @PatchWndProcAdvisorCityStatusLButtonUp, True);
 
+  // Extend vertical map overscroll
+  WriteMemory(HProcess, $0047A2F2, [OP_JMP], @PatchCalcMapRectTop);
+
+  // Mass move
+  WriteMemory(HProcess, $004111F3, [], @PatchMapWindowClickMassMove);
+  WriteMemory(HProcess, $004111FD, [], @PatchMapWindowClickMassMove);
+
   // Tests
   // HookImportedFunctions(HProcess);
   //WriteMemory(HProcess, $005DBC7B, [$18]); // MSWindowClass cbWndExtra
+  //WriteMemory(HProcess, $004ACE98, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]); // MOVEDEBUG
+  //WriteMemory(HProcess, $004ABFF1, [OP_CALL], @PatchMoveDebug);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

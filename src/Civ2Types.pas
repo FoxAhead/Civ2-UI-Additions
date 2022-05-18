@@ -3,6 +3,7 @@ unit Civ2Types;
 interface
 
 uses
+  SysUtils,
   Windows;
 
 type
@@ -46,7 +47,9 @@ type
 
   PGraphicsInfo = ^TGraphicsInfo;
 
-  PGraphicsInfoMap = ^TGraphicsInfoMap;
+  PMapWindow = ^TMapWindow;
+
+  PMapWindows = ^TMapWindows;
 
   PWindowStructure = ^TWindowStructure;
 
@@ -60,11 +63,15 @@ type
 
   PAdvisorWindow = ^TAdvisorWindow;
 
+  PCosmic = ^TCosmic;
+
   PGameParameters = ^TGameParameters;
 
   PSprite = ^TSprite;
 
   PSprites = ^TSprites;
+
+  PMSWindow = ^TMSWindow;
 
   PUnit = ^TUnit;
 
@@ -491,44 +498,19 @@ type
     UpdateProc: Pointer;                  // + 0x110
   end;
 
-  TGraphicsInfoMap = packed record        // Size = 0x3F0
-    GraphicsInfo: TGraphicsInfo;          //
-    Unknown_114: Integer;                 // + 0x114
-    _CaptionHeight: Integer;              // + 0x118
-    Unknown_11C: Integer;                 // + 0x11C
-    _ResizeBorderWidth: Integer;          // + 0x120
-    ClientTopLeft: TPoint;                // + 0x124
-    ClientSize: TSize;
-    Unknown6: array[$134..$2DF] of Byte;
-    MapCenter: TSmallPoint;               // + 0x2E0
-    MapZoom: Smallint;                    // + 0x2E4
-    Unknown7: Smallint;                   // + 0x2E6
-    MapRect: TRect;                       // + 0x2E8
-    MapHalf: TSize;                       // + 0x2F8
-    Unknown8: array[$300..$307] of Byte;
-    MapCellSize: TSize;                   // + 0x308
-    MapCellSize2: TSize;                  // + 0x310  1/2
-    MapCellSize4: TSize;                  // + 0x318  1/4
-    Unknown10: array[1..32] of Integer;
-    DrawInfo2: PDrawInfo;
-    Unknown11: array[1..19] of Integer;
-  end;
-
-  TMapGraphicsInfos = array[0..7] of TGraphicsInfoMap;
-
   // T_GraphicsInfoEx Size = 0xA28 (sub_4D5B21)
 
   TDrawInfo = packed record               //  Size = $28
     Unknown0: Integer;
     DeviceContext: HDC;                   // + 0x04
     Unknown1: HGDIOBJ;
-    Unknown2: HGDIOBJ;
-    Unknown3: HGDIOBJ;
-    Unknown4: Integer;
+    HBmp: HBITMAP;
+    ReplacedObject: HGDIOBJ;
+    IsTopDownDIB: Integer;
     Width: Integer;
     Height: Integer;
-    Unknown7: Integer;
-    Unknown8: Integer;
+    BmWidth4: Integer;
+    PBmp: PByteArray;
   end;
 
   TDialogItem = packed record
@@ -580,7 +562,7 @@ type
     pMem: Pointer;
   end;
 
-  TSprites = array[0..5] of TSprite;
+  TSprites = array[0..255] of TSprite;
 
   TMSWindow = packed record               // Size = 0x2D8
     GraphicsInfo: TGraphicsInfo;
@@ -593,7 +575,29 @@ type
     Unknown1b: array[1..105] of Integer;
   end;
 
-  TCityWindow = packed record             // 6A91B8 (~TGraphicsInfo) Size = $16E0
+  TMapWindow = packed record              // Size = 0x3F0
+    MSWindow: TMSWindow;
+    Unknown_2D8: Word;                    // + 0x2D8
+    Unknown_2DA: Word;                    // + 0x2DA
+    Unknown_2DC: Word;                    // + 0x2DC
+    Unknown_2DE: Word;                    // + 0x2DE
+    MapCenter: TSmallPoint;               // + 0x2E0
+    MapZoom: Smallint;                    // + 0x2E4
+    Unknown7: Smallint;                   // + 0x2E6
+    MapRect: TRect;                       // + 0x2E8
+    MapHalf: TSize;                       // + 0x2F8
+    Unknown8: array[$300..$307] of Byte;
+    MapCellSize: TSize;                   // + 0x308
+    MapCellSize2: TSize;                  // + 0x310  1/2
+    MapCellSize4: TSize;                  // + 0x318  1/4
+    Unknown10: array[1..32] of Integer;
+    DrawInfo2: PDrawInfo;
+    Unknown11: array[1..19] of Integer;
+  end;
+
+  TMapWindows = array[0..7] of TMapWindow; // 66C7A8
+
+  TCityWindow = packed record             // 6A91B8  Size = $16E0
     MSWindow: TMSWindow;
     CitySpritesInfo: TCitySpritesInfo;    // + 2D8 = 6A9490
     CityIndex: Integer;                   // + 159C
@@ -631,7 +635,7 @@ type
     field_8: array[1..28] of char;
     field_24: Integer;
     HappyCitizens: Integer;
-    field_2C: Integer;
+    Tax: Integer;
     field_30: Integer;
     field_34: Integer;
     RowsInFoodBox: Integer;
@@ -646,7 +650,7 @@ type
     field_5C: Integer;
     field_60: Integer;
     field_64: array[1..4] of char;
-    field_68: array[1..3] of Integer;
+    TradeRevenue: array[0..2] of Integer;
     field_74: Integer;
     field_78: Integer;
     BuildingType: Integer;
@@ -659,7 +663,7 @@ type
     field_98: Integer;
     field_9C: Integer;
     field_A0: Integer;
-    field_A4: Integer;
+    Total: Integer;
     field_A8: Integer;
     field_AC: Integer;
     field_B0: Integer;
@@ -675,7 +679,7 @@ type
     field_CC: char;
     field_CD: array[1..3] of char;
     field_D0: Integer;
-    field_D4: Integer;
+    Lux: Integer;
     field_D8: Integer;
     FreeCitizens: Integer;
     SettlersEat: Integer;
@@ -755,9 +759,37 @@ type
     Unknown_324: array[1..107] of Integer;
   end;
 
+  TCosmic = packed record                 // Size = 0x16
+    RoadMovementMultiplier: Byte;
+    Cosmic2: Byte;
+    Cosmic3: Byte;
+    Cosmic4: Byte;
+    RowsInShieldBox: Byte;
+    Cosmic6: Byte;
+    Cosmic7: Byte;
+    Cosmic8: Byte;
+    Cosmic9: Byte;
+    Cosmic10: Byte;
+    Cosmic11: Byte;
+    Cosmic12: Byte;
+    BaseTransformTime: Byte;
+    Cosmic14: Byte;
+    Cosmic15: Byte;
+    Cosmic16: Byte;
+    Cosmic17: Byte;
+    Cosmic18: Byte;
+    ShieldPenalty: Byte;
+    Cosmic20: Byte;
+    Cosmic21: Byte;
+    Cosmic22: Byte;
+  end;
+
   TGameParameters = packed record
     word_655AE8: Word;
-    dword_655AEA: Integer;
+    GraphicAndGameOptions: Integer;
+    // 0x0100 - Tutorial help.
+    // 0x1000 - Show enemy moves.
+    // 0x4000 - Always wait at end of turn.
     word_655AEE: Word;
     MapFlags: Word;
     word_655AF2: Word;
@@ -777,7 +809,7 @@ type
     byte_655B04: Byte;
     SomeCivIndex: Byte;                   // Active Unit Civ index?
     byte_655B06: Byte;
-    byte_655B07: Byte;
+    RevealMap: Byte;
     DifficultyLevel: Byte;
     BarbarianActivity: Byte;
     TribesLeftInPlay: Byte;
@@ -803,7 +835,7 @@ type
     StringIndex: Cardinal;
     Cost: Byte;
     Upkeep: Byte;
-    Unknown2: Byte;
+    Preq: ShortInt;
     Unknown3: Byte;
   end;
 
@@ -843,13 +875,14 @@ type
     X: Word;                              // X
     Y: Word;                              // Y
     Attributes: Word;
-    // 0010 0000 0000 0000 - 0x2000 Veteran
+    // 0000 0000 0000 0010 - 0x0002 ?Flag checked in UnitCanMove
+    // 0010 0000 0000 0000 - 0x2000 Veteran    
     // 0100 0000 0000 0000 - 0x4000 Unit issued with the 'wait' order
     UnitType: Byte;                       // 0x6560F6
     CivIndex: Byte;                       // 0x6560F7
     MovePoints: Byte;                     // 0x6560F8 (Move * Road movement multiplier)
     byte_6560F9: Byte;
-    byte_6560FA: Byte;
+    HPLost: Byte;                         // + 0x0A
     MoveDirection: Byte;                  // 0x6560FB
     byte_6560FC: Byte;
     Counter: Byte;                        // 0x6560FD Settlers work / Caravan commodity / Air turn
@@ -883,13 +916,14 @@ type
     X: Smallint;                          //
     Y: Smallint;                          // + 0x02
     Attributes: Cardinal;                 // + 0x04
-    // 0000 0000 0000 0001 - Disorder
-    // 0000 0000 0000 0010 - We Love the King Day
+    // 0000 0000 0000 0000 0000 0000 0000 0001 - 0x00000001 Disorder
+    // 0000 0000 0000 0000 0000 0000 0000 0010 - 0x00000002 We Love the King Day
+    // 0000 0000 0100 0000 0000 0000 0000 0000 - 0x00400000 Investigated by spy
     Owner: Byte;                          // + 0x08
     Size: Byte;                           // + 0x09
     Founder: Byte;                        // + 0x0A
     TurnsCaptured: Byte;                  // + 0x0B
-    byte_64F34C: Byte;
+    KnownTo: Byte;
     RevealedSize: array[1..9] of Byte;
     Specialists: Cardinal;
     // 00 - No specialist
@@ -903,15 +937,11 @@ type
     dword_64F370: Integer;
     Improvements: array[1..5] of Byte;
     Building: Shortint;
-    byte_64F37A: Byte;
-    byte_64F37B: Byte;
-    byte_64F37C: array[1..2] of Byte;
-    byte_64F37E: Byte;
-    byte_64F37F: array[1..2] of Byte;
-    byte_64F381: Byte;
-    byte_64F382: array[1..2] of Byte;
-    word_64F384: Smallint;
-    word_64F386: array[1..2] of Smallint;
+    TradeRoutes: Shortint;
+    SuppliedTradeItem: array[0..2] of Shortint;
+    DemandedTradeItem: array[0..2] of Shortint;
+    CommodityTraded: array[0..2] of Shortint;
+    TradePartner: array[0..2] of Smallint;
     Science: Smallint;
     Tax: Smallint;
     Trade: Smallint;

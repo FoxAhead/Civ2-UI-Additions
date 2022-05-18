@@ -8,7 +8,8 @@ uses
   Graphics,
   PsAPI,
   Windows,
-  Civ2Types;
+  Civ2Types,
+  Civ2UIA_QuickInfo;
 
 type
   TEx = class
@@ -19,16 +20,13 @@ type
   protected
 
   public
-    ShowWindowStack: TStack;
     UnitsList: TList;
     UnitsListCursor: Integer;
     SuppressPopupList: TStringList;
-    CitiesList: TList;
+    QuickInfo: TQuickInfo;
     constructor Create;
     destructor Destroy; override;
     function UnitsListBuildSorted(CityIndex: Integer): Integer;
-    function UnitsListGetNextUnitIndex(CursorIncrement: Integer): Integer;
-    function CitiesListBuildSorted(CivIndex: Integer; SortCriteria: Integer): Integer;
     procedure LoadSettingsFile();
     procedure SaveSettingsFile();
     procedure LoadDefaultSettings();
@@ -107,45 +105,24 @@ begin
     Result := Units[2]^.ID - Units[1]^.ID
 end;
 
-function CompareCities(Item1, Item2: Pointer): Integer;
-var
-  Cities: array[1..2] of PCity;
-  SortCriteria: Integer;
-begin
-  Result := 0;
-  Cities[1] := PCity(Item1);
-  Cities[2] := PCity(Item2);
-  SortCriteria := Abs(Ex.FCitiesSortCriteria);
-  case SortCriteria of
-    1: Result := Cities[1].Size - Cities[2].Size;
-    2: Result := StrComp(Cities[1].Name, Cities[2].Name);
-    3: Result := Cities[1].TotalFood - Cities[2].TotalFood;
-    4: Result := Cities[1].TotalShield - Cities[2].TotalShield;
-    5: Result := Cities[1].Trade - Cities[2].Trade;
-  end;
-  Result := Result * Sign(Ex.FCitiesSortCriteria);
-end;
-
 { TEx }
 
 constructor TEx.Create;
 begin
   inherited;
   UnitsList := TList.Create();
-  CitiesList := TList.Create();
-  ShowWindowStack := TStack.Create();
   SuppressPopupList := TStringList.Create();
   SuppressPopupList.Sorted := True;
   SuppressPopupList.Duplicates := dupIgnore;
+  QuickInfo := TQuickInfo.Create();
   LoadSettingsFile();
 end;
 
 destructor TEx.Destroy;
 begin
-  ShowWindowStack.Free();
   UnitsList.Free();
-  CitiesList.Free();
   SuppressPopupList.Free();
+  QuickInfo.Free();
   inherited;
 end;
 
@@ -159,43 +136,11 @@ begin
     if (Civ2.Units[i].ID > 0) and (Civ2.Units[i].HomeCity = CityIndex) then
     begin
       UnitsList.Add(@Civ2.Units[i]);
-      //SendMessageToLoader(1, Integer(@Civ2.Units[i]));
     end;
   end;
   UnitsList.Sort(@CompareUnits);
   UnitsListCursor := 0;
   Result := UnitsList.Count;
-end;
-
-function TEx.UnitsListGetNextUnitIndex(CursorIncrement: Integer): Integer;
-var
-  Addr: Pointer;
-begin
-  UnitsListCursor := UnitsListCursor + CursorIncrement;
-  if UnitsListCursor >= UnitsList.Count then
-    Result := Civ2.GameParameters^.TotalUnits
-  else
-  begin
-    Addr := UnitsList[UnitsListCursor];
-    Result := (Integer(Addr) - Integer(Civ2.Units)) div SizeOf(TUnit);
-  end;
-end;
-
-function TEx.CitiesListBuildSorted(CivIndex: Integer; SortCriteria: Integer): Integer;
-var
-  i: Integer;
-begin
-  FCitiesSortCriteria := SortCriteria;
-  CitiesList.Clear();
-  for i := 0 to Civ2.GameParameters.TotalCities - 1 do
-  begin
-    if (Civ2.Cities[i].ID <> 0) and (Civ2.Cities[i].Owner = CivIndex) then
-    begin
-      CitiesList.Add(@Civ2.Cities[i]);
-    end;
-  end;
-  CitiesList.Sort(@CompareCities);
-  Result := CitiesList.Count;
 end;
 
 procedure TEx.LoadSettingsFile;
@@ -244,11 +189,12 @@ begin
   UIASettings.Size := SizeOf(UIASettings);
   UIASettings.ColorExposure := 0.0;
   UIASettings.ColorGamma := 1.0;
-  SetSettingsFlag(0, True);
+  FillChar(UIASettings.Flags, SizeOf(UIASettings.Flags), $FF);
+  {SetSettingsFlag(0, True);
   SetSettingsFlag(1, True);
   SetSettingsFlag(2, True);
   SetSettingsFlag(3, True);
-  SetSettingsFlag(4, True);
+  SetSettingsFlag(4, True);}
 end;
 
 function TEx.SettingsFlagSet(i: Integer): Boolean;
@@ -292,16 +238,6 @@ begin
     Result := High(ResizableDialogSectionNames) + 1;
     Exit;
   end;
-  {if Dialog.Title <> nil then
-    for i := Low(ResizableDialogTitleIndex) to High(ResizableDialogTitleIndex) do
-    begin
-      StringInList := Civ2.GetStringInList(PInteger(PInteger($00628420)^ + 4 * ResizableDialogTitleIndex[i])^);
-      if StrComp(Dialog.Title, StringInList) = 0 then
-      begin
-        Result := High(ResizableDialogSectionNames) + i;
-        Exit;
-      end;
-    end;}
 end;
 
 function TEx.CanvasGrab(DC: HDC): TCanvas;
@@ -318,7 +254,7 @@ var
 begin
   DC := FCanvas.Handle;
   FCanvas.Handle := 0;
-  FCanvas.Free;
+  FCanvas.Free();
   FCanvas := nil;
   RestoreDC(DC, FSavedDC);
 end;

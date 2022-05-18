@@ -17,6 +17,8 @@ type
     CityGlobals: PCityGlobals;
     CityWindow: PCityWindow;
     Civs: ^TCivs;
+    Commodities: PIntegerArray;
+    Cosmic: PCosmic;
     CurrCivIndex: PInteger;
     CurrPopupInfo: PPDialogWindow;
     GameParameters: PGameParameters;
@@ -27,8 +29,8 @@ type
     LoadedTxtSectionName: PChar;
     MainMenu: ^HMENU;
     MainWindowInfo: PWindowInfo;
-    MapGraphicsInfo: PGraphicsInfoMap;
-    MapGraphicsInfos: ^TMapGraphicsInfos;
+    MapWindow: PMapWindow;
+    MapWindows: PMapWindows;
     PrevWindowInfo: PWindowInfo;
     ScreenRectSize: PSize;
     ScienceAdvisorClientRect: PRect;
@@ -83,6 +85,7 @@ type
     function Crt_OperatorNew(Size: Integer): Pointer;
     function Scroll_Ctr(ControlInfoScroll: PControlInfoScroll): PControlInfoScroll;
     procedure ShowWindowInvalidateRect(ControlInfo: PControlInfo);
+    procedure GetSpriteZoom(var Numerator, Denominator: Integer);
     procedure SetSpriteZoom(AZoom: Integer);
     procedure ResetSpriteZoom();
     procedure DlgDrawTextLine(Dialog: PDialogWindow; Text: PChar; X, Y, A5: Integer);
@@ -96,7 +99,23 @@ type
     function Clamp(A1, AMin, AMax: Integer): Integer;
     procedure SetCurrFont(A1: Integer);
     procedure ShowCityWindow(CityWindow: PCityWindow; CityIndex: Integer);
+    procedure Citywin_CityButtonChange(A1: Integer);
+    procedure CityWindowClose();
+    procedure CityWindowExit();
     procedure UpdateAdvisorCityStatus();
+    function TileBg(Dst, Tile: PDrawPort; A3, A4, A5, A6, A7, A8: Integer): Integer;
+    procedure CopyToPort(Src, Dst: PDrawPort; A3, A4, A5, A6, A7, A8: Integer);
+    procedure UpdateCopyValidateAdvisor(A1: Integer);
+    procedure CopyToScreenAndValidate(GraphicsInfo: PGraphicsInfo);
+    function CivHasTech(CivIndex, Tech: Integer): LongBool;
+    function CityHasImprovement(CityIndex, Improvement: Integer): LongBool;
+    function UnitCanMove(UnitIndex: Integer): LongBool;
+    procedure ProcessOrdersGoTo(UnitIndex: Integer);
+    function HumanTurn(): Integer;
+    function ProcessUnit(): Integer;
+    function DrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer;
+    function MapSquareIsVisibleTo(X, Y, CivIndex: Integer): LongBool;
+    function CalcCityGlobals(CityIndex: Integer; Calc: LongBool): Integer;
   published
   end;
 
@@ -121,6 +140,8 @@ begin
   CityWindow := Pointer($006A91B8);
   CityGlobals := Pointer($006A6528);
   Civs := Pointer($0064C6A0);
+  Commodities := Pointer($0064B168);
+  Cosmic := Pointer($0064BCC8);
   CurrCivIndex := Pointer($0063EF6C);
   CurrPopupInfo := Pointer($006CEC84);
   GameParameters := Pointer($00655AE8);
@@ -131,8 +152,8 @@ begin
   LoadedTxtSectionName := Pointer($006CECB0);
   MainMenu := Pointer($006A64F8);
   MainWindowInfo := Pointer($006553D8);
-  MapGraphicsInfo := Pointer($0066C7A8);
-  MapGraphicsInfos := Pointer($0066C7A8);
+  MapWindow := Pointer($0066C7A8);
+  MapWindows := Pointer($0066C7A8);
   PrevWindowInfo := Pointer($00637EA4);
   ScreenRectSize := Pointer($006AB198);
   ScienceAdvisorClientRect := Pointer($0063EC34);
@@ -158,8 +179,8 @@ begin
     raise Exception.Create('Wrong size of TCityWindow');
   if SizeOf(TGraphicsInfo) <> $114 then
     raise Exception.Create('Wrong size of TGraphicsInfo');
-  if SizeOf(TGraphicsInfoMap) <> $3F0 then
-    raise Exception.Create('Wrong size of TGraphicsInfoMap');
+  if SizeOf(TMapWindow) <> $3F0 then
+    raise Exception.Create('Wrong size of TMapWindow');
   if SizeOf(TCity) <> $58 then
     raise Exception.Create('Wrong size of TCity');
   if SizeOf(TCiv) <> $594 then
@@ -313,7 +334,7 @@ asm
     push  1
     mov   ecx, Self.HumanCivIndex
     push  [ecx]
-    mov   ecx, Self.MapGraphicsInfo
+    mov   ecx, Self.MapWindow
     mov   eax, $00401F32
     call  eax
 end;
@@ -389,7 +410,7 @@ asm
     push  ScreenX
     push  MapY
     push  MapX
-    mov   ecx, Self.MapGraphicsInfo
+    mov   ecx, Self.MapWindow
     mov   eax, $00402B2B
     call  eax
     mov   @Result, eax
@@ -411,7 +432,7 @@ asm
     push  MapX
     push  WindowY
     push  WindowX
-    mov   ecx, Self.MapGraphicsInfo
+    mov   ecx, Self.MapWindow
     mov   eax, $0047A6B0
     call  eax
 end;
@@ -428,7 +449,7 @@ procedure TCiv2.CenterView(X, Y: Integer);
 asm
     push  Y
     push  X
-    mov   ecx, Self.MapGraphicsInfo
+    mov   ecx, Self.MapWindow
     mov   eax, $00403404
     call  eax
 end;
@@ -529,6 +550,15 @@ asm
     mov   ecx, ControlInfo
     mov   eax, $0040169A
     call  eax
+end;
+
+procedure TCiv2.GetSpriteZoom(var Numerator, Denominator: Integer);
+asm
+    push  Denominator
+    push  Numerator
+    mov   eax, $005CDA06
+    call  eax
+    add   esp, 8
 end;
 
 procedure TCiv2.SetSpriteZoom(AZoom: Integer);
@@ -649,10 +679,163 @@ asm
     call  eax
 end;
 
+procedure TCiv2.Citywin_CityButtonChange(A1: Integer);
+asm
+    push  A1
+    mov   eax, $004021D5
+    call  eax
+    add   esp, $4
+end;
+
+procedure TCiv2.CityWindowClose;
+asm
+    mov   eax, $00401BAE
+    call  eax
+end;
+
+procedure TCiv2.CityWindowExit;
+asm
+    mov   eax, $004034E5
+    call  eax
+end;
+
 procedure TCiv2.UpdateAdvisorCityStatus();
 asm
     mov   eax, $004029F5
     call  eax
+end;
+
+function TCiv2.TileBg(Dst, Tile: PDrawPort; A3, A4, A5, A6, A7, A8: Integer): Integer;
+asm
+    push  A8
+    push  A7
+    push  A6
+    push  A5
+    push  A4
+    push  A3
+    push  Tile
+    push  Dst
+    mov   eax, $00402C9D
+    call  eax
+    add   esp, $20
+    mov   @Result, eax
+end;
+
+procedure TCiv2.CopyToPort(Src, Dst: PDrawPort; A3, A4, A5, A6, A7, A8: Integer);
+asm
+    push  A8
+    push  A7
+    push  A6
+    push  A5
+    push  A4
+    push  A3
+    push  Dst
+    push  Src
+    mov   eax, $00402081
+    call  eax
+    add   esp, $20
+end;
+
+procedure TCiv2.UpdateCopyValidateAdvisor(A1: Integer);
+asm
+    push  A1
+    mov   eax, $00402A9A
+    call  eax
+    add   esp, $4
+end;
+
+procedure TCiv2.CopyToScreenAndValidate(GraphicsInfo: PGraphicsInfo);
+asm
+    mov   ecx, GraphicsInfo
+    mov   eax, $004014A1
+    call  eax
+end;
+
+function TCiv2.CivHasTech(CivIndex, Tech: Integer): LongBool;
+asm
+    push  Tech
+    push  CivIndex
+    mov   eax, $00402E7D
+    call  eax
+    add   esp, $8
+    mov   @Result, eax
+end;
+
+function TCiv2.CityHasImprovement(CityIndex, Improvement: Integer): LongBool;
+asm
+    push  Improvement
+    push  CityIndex
+    mov   eax, $00402C48
+    call  eax
+    add   esp, $8
+    mov   @Result, eax
+end;
+
+function TCiv2.UnitCanMove(UnitIndex: Integer): LongBool;
+asm
+    push  UnitIndex
+    mov   eax, $0040273E
+    call  eax
+    add   esp, $4
+    mov   @Result, eax
+end;
+
+procedure TCiv2.ProcessOrdersGoTo(UnitIndex: Integer);
+asm
+    push  UnitIndex
+    mov   eax, $00401145
+    call  eax
+    add   esp, $4
+end;
+
+function TCiv2.HumanTurn: Integer;
+asm
+    mov   eax, $00402BA8
+    call  eax
+    mov   @Result, eax
+end;
+
+function TCiv2.ProcessUnit: Integer;
+asm
+    mov   eax, $00402716
+    call  eax
+    mov   @Result, eax
+end;
+
+function TCiv2.DrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer;
+asm
+    push  WithoutFortress
+    push  Zoom
+    push  Top
+    push  Left
+    push  A3
+    push  UnitIndex
+    push  DrawPort
+    mov   eax, $0056BAFF
+    call  eax
+    add   esp, $1C
+    mov   @Result, eax
+end;
+
+function TCiv2.MapSquareIsVisibleTo(X, Y, CivIndex: Integer): LongBool;
+asm
+    push  CivIndex
+    push  Y
+    push  X
+    mov   eax, $00403C24
+    call  eax
+    add   esp, $0C
+    mov   @Result, eax
+end;
+
+function TCiv2.CalcCityGlobals(CityIndex: Integer; Calc: LongBool): Integer;
+asm
+    push  Calc
+    push  CityIndex
+    mov   eax, $00402603
+    call  eax
+    add   esp, $08
+    mov   @Result, eax
 end;
 
 end.
