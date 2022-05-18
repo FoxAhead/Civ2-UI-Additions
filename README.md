@@ -108,6 +108,8 @@ https://forums.civfanatics.com/resources/corrected-dlls-for-mge.24259/
 
 36. Mass move units of the same type with Shift+RightClick. With unit activated hold Shift and Right-Click on the destination square. All units of the same type capable of moving (with move points, not fortified, not on sentry etc.) will be ordered to move.
 
+37. Added gold coins to the Foreign Minister.
+
 Some experimental features that could change some original game rules or limitations without a guarantee of stability:
  - Change total units limit from default 2048. Don't use numbers greater than 32767. Saves with number of units greater than default should be loaded only with this patch.
 
