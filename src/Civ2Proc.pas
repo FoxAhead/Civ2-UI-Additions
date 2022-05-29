@@ -3,10 +3,14 @@ unit Civ2Proc;
 interface
 
 uses
+  SysUtils,
   Windows,
   Civ2Types;
 
 type
+  PShortIntArray = ^TShortIntArray;
+  TShortIntArray = array[0..32767] of ShortInt;
+
   TCiv2 = class
   private
   protected
@@ -21,6 +25,8 @@ type
     Cosmic: PCosmic;
     CurrCivIndex: PInteger;
     CurrPopupInfo: PPDialogWindow;
+    CursorX: PSmallInt;
+    CursorY: PSmallInt;
     GameParameters: PGameParameters;
     GameTurn: PWord;
     HumanCivIndex: PInteger;
@@ -29,8 +35,16 @@ type
     LoadedTxtSectionName: PChar;
     MainMenu: ^HMENU;
     MainWindowInfo: PWindowInfo;
+    MapCivData: PMapCivData;
+    MapData: ^PMapSquares;
+    MapHeader: PMapHeader;
     MapWindow: PMapWindow;
     MapWindows: PMapWindows;
+    PFDX: PShortIntArray;
+    PFDY: PShortIntArray;
+    PFStopX: PInteger;
+    PFStopY: PInteger;
+    PFData: PPFData;
     PrevWindowInfo: PWindowInfo;
     ScreenRectSize: PSize;
     ScienceAdvisorClientRect: PRect;
@@ -44,7 +58,9 @@ type
     TimesBigFontInfo: ^TFontInfo;
     TimesFontInfo: ^TFontInfo;
     Units: ^TUnits;
+    UnitSelected: ^LongBool;
     UnitTypes: ^TUnitTypes;
+    WonderCity: PWordArray;
     constructor Create();
     destructor Destroy; override;
     procedure ClearPopupActive;
@@ -114,8 +130,16 @@ type
     function HumanTurn(): Integer;
     function ProcessUnit(): Integer;
     function DrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer;
-    function MapSquareIsVisibleTo(X, Y, CivIndex: Integer): LongBool;
     function CalcCityGlobals(CityIndex: Integer; Calc: LongBool): Integer;
+    // Map
+    function WrapMapX(X: Integer): Integer;
+    function IsInMapBounds(X, Y: Integer): LongBool;
+    function MapGetCivData(X, Y, CivIndex: Integer): PByte;
+    function MapGetSquare(X, Y: Integer): PMapSquare;
+    function MapSquareIsVisibleTo(X, Y, CivIndex: Integer): LongBool;
+    // PF
+    function PFMove(X, Y, A3: Integer): Integer;
+    function PFFindUnitDir(UnitIndex: Integer): Integer;
   published
   end;
 
@@ -123,9 +147,6 @@ var
   Civ2: TCiv2;
 
 implementation
-
-uses
-  SysUtils;
 
 { TCiv2 }
 
@@ -144,6 +165,8 @@ begin
   Cosmic := Pointer($0064BCC8);
   CurrCivIndex := Pointer($0063EF6C);
   CurrPopupInfo := Pointer($006CEC84);
+  CursorX := Pointer($0064B1B4);
+  CursorY := Pointer($0064B1B0);
   GameParameters := Pointer($00655AE8);
   GameTurn := Pointer($00655AF8);
   HumanCivIndex := Pointer($006D1DA0);
@@ -152,8 +175,16 @@ begin
   LoadedTxtSectionName := Pointer($006CECB0);
   MainMenu := Pointer($006A64F8);
   MainWindowInfo := Pointer($006553D8);
+  MapCivData := Pointer($006365C0);
+  MapData := Pointer($00636598);
+  MapHeader := Pointer($006D1160);  
   MapWindow := Pointer($0066C7A8);
   MapWindows := Pointer($0066C7A8);
+  PFDX := Pointer($00628350);
+  PFDY := Pointer($00628360);
+  PFStopX := Pointer($00673FA0);
+  PFStopY := Pointer($00673FA4);
+  PFData := Pointer($0062D03C);
   PrevWindowInfo := Pointer($00637EA4);
   ScreenRectSize := Pointer($006AB198);
   ScienceAdvisorClientRect := Pointer($0063EC34);
@@ -170,7 +201,9 @@ begin
     Units := ANewUnitsAreaAddress
   else
     Units := Pointer(AUnits);
+  UnitSelected := Pointer($006D1DA8);
   UnitTypes := Pointer($0064B1B8);
+  WonderCity := Pointer($00655BE6);
 
   // Check structure sizes
   if SizeOf(TWindowInfo) <> $C5 then
@@ -817,6 +850,37 @@ asm
     mov   @Result, eax
 end;
 
+function TCiv2.CalcCityGlobals(CityIndex: Integer; Calc: LongBool): Integer;
+asm
+    push  Calc
+    push  CityIndex
+    mov   eax, $00402603
+    call  eax
+    add   esp, $08
+    mov   @Result, eax
+end;
+
+// Map
+
+function TCiv2.WrapMapX(X: Integer): Integer;
+asm
+    push  X
+    mov   eax, $004022ED
+    call  eax
+    add   esp, $04
+    mov   @Result, eax
+end;
+
+function TCiv2.IsInMapBounds(X, Y: Integer): LongBool;
+asm
+    push  Y
+    push  X
+    mov   eax, $004012D0
+    call  eax
+    add   esp, $08
+    mov   @Result, eax
+end;
+
 function TCiv2.MapSquareIsVisibleTo(X, Y, CivIndex: Integer): LongBool;
 asm
     push  CivIndex
@@ -828,11 +892,44 @@ asm
     mov   @Result, eax
 end;
 
-function TCiv2.CalcCityGlobals(CityIndex: Integer; Calc: LongBool): Integer;
+// PF
+
+function TCiv2.PFMove(X, Y, A3: Integer): Integer;
 asm
-    push  Calc
-    push  CityIndex
-    mov   eax, $00402603
+    push  A3
+    push  Y
+    push  X
+    mov   eax, $004028B0
+    call  eax
+    add   esp, $0C
+    mov   @Result, eax
+end;
+
+function TCiv2.PFFindUnitDir(UnitIndex: Integer): Integer;
+asm
+    push  UnitIndex
+    mov   eax, $00402FA9
+    call  eax
+    add   esp, $04
+    mov   @Result, eax
+end;
+
+function TCiv2.MapGetCivData(X, Y, CivIndex: Integer): PByte;
+asm
+    push  CivIndex
+    push  Y
+    push  X
+    mov   eax, $00403823
+    call  eax
+    add   esp, $0C
+    mov   @Result, eax
+end;
+
+function TCiv2.MapGetSquare(X, Y: Integer): PMapSquare;
+asm
+    push  Y
+    push  X
+    mov   eax, $00401BB3
     call  eax
     add   esp, $08
     mov   @Result, eax

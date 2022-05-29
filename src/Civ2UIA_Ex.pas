@@ -9,7 +9,10 @@ uses
   PsAPI,
   Windows,
   Civ2Types,
-  Civ2UIA_QuickInfo;
+  Civ2UIA_Types,
+  Civ2UIA_PathLine,
+  Civ2UIA_QuickInfo,
+  Civ2UIA_MapOverlay;
 
 type
   TEx = class
@@ -23,10 +26,11 @@ type
     UnitsList: TList;
     UnitsListCursor: Integer;
     SuppressPopupList: TStringList;
+    PathLine: TPathLine;
     QuickInfo: TQuickInfo;
+    MapOverlay: TMapOverlay;
     constructor Create;
     destructor Destroy; override;
-    function UnitsListBuildSorted(CityIndex: Integer): Integer;
     procedure LoadSettingsFile();
     procedure SaveSettingsFile();
     procedure LoadDefaultSettings();
@@ -81,30 +85,6 @@ const
 var
   ResNumsDoFixCache: array[105..250] of Shortint; // 1 - Yes, 0 - Undefined, -1 - No
 
-function CompareUnits(Item1, Item2: Pointer): Integer;
-var
-  Units: array[1..2] of PUnit;
-  i: Integer;
-  Weights: array[1..2] of Integer;
-  UnitType: TUnitType;
-begin
-  Units[1] := PUnit(Item1);
-  Units[2] := PUnit(Item2);
-  for i := 1 to 2 do
-  begin
-    UnitType := Civ2.UnitTypes[Units[i]^.UnitType];
-    if UnitType.Role = 5 then
-      Weights[i] := $00100000 * (Units[i]^.UnitType + 1)
-    else if UnitType.Att > 0 then
-      Weights[i] := UnitType.Def * $100 + ($F - UnitType.Domain) * $10000 + UnitType.Att
-    else
-      Weights[i] := 0;
-  end;
-  Result := Weights[2] - Weights[1];
-  if Result = 0 then
-    Result := Units[2]^.ID - Units[1]^.ID
-end;
-
 { TEx }
 
 constructor TEx.Create;
@@ -114,7 +94,9 @@ begin
   SuppressPopupList := TStringList.Create();
   SuppressPopupList.Sorted := True;
   SuppressPopupList.Duplicates := dupIgnore;
+  PathLine := TPathLine.Create();
   QuickInfo := TQuickInfo.Create();
+  MapOverlay := TMapOverlay.Create();
   LoadSettingsFile();
 end;
 
@@ -122,25 +104,10 @@ destructor TEx.Destroy;
 begin
   UnitsList.Free();
   SuppressPopupList.Free();
+  PathLine.Free();
   QuickInfo.Free();
+  MapOverlay.Free();
   inherited;
-end;
-
-function TEx.UnitsListBuildSorted(CityIndex: Integer): Integer;
-var
-  i: Integer;
-begin
-  UnitsList.Clear();
-  for i := 0 to Civ2.GameParameters^.TotalUnits - 1 do
-  begin
-    if (Civ2.Units[i].ID > 0) and (Civ2.Units[i].HomeCity = CityIndex) then
-    begin
-      UnitsList.Add(@Civ2.Units[i]);
-    end;
-  end;
-  UnitsList.Sort(@CompareUnits);
-  UnitsListCursor := 0;
-  Result := UnitsList.Count;
 end;
 
 procedure TEx.LoadSettingsFile;

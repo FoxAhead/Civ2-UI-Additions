@@ -121,7 +121,7 @@ begin
       if (NewCityIndex >= 0) then
       begin
         if (Civ2.Cities[NewCityIndex].Owner = Civ2.HumanCivIndex^)
-          or (Civ2.GameParameters.RevealMap <> 0)
+          or (Civ2.GameParameters.RevealMap)
           or (Civ2.Cities[NewCityIndex].Attributes and $400000 <> 0) then
         begin
           NewQuickInfoParts := 1 or 2;
@@ -140,7 +140,7 @@ begin
         begin
           Unit1 := @Civ2.Units[i];
           if (Unit1.ID <> 0) and (Unit1.X = NewMapPoint.X) and (Unit1.Y = NewMapPoint.Y) then
-            if (Unit1.CivIndex = Civ2.HumanCivIndex^) or (Civ2.GameParameters.RevealMap <> 0) then
+            if (Unit1.CivIndex = Civ2.HumanCivIndex^) or (Civ2.GameParameters.RevealMap) then
             begin
               NewQuickInfoParts := NewQuickInfoParts or 2;
               Break;
@@ -254,6 +254,7 @@ var
   UnitsSpriteZoom: Integer;
   TradeItem: Shortint;
   SavedCityGlobals: TCityGlobals;
+  WondersCount: Integer;
 begin
   SetFromCursor();
   if FChanged then
@@ -307,6 +308,28 @@ begin
         end;
         if Canvas.PenPos.X > Canvas.PenOrigin.X then
           Canvas.PenBR;
+        // Wonders
+        WondersCount := 0;
+        for i := 0 to 27 do
+          if Civ2.WonderCity[i] = FCityIndex then
+            Inc(WondersCount);
+        if WondersCount > 0 then
+        begin
+          j := 0;
+          WondersCount := Ceil(WondersCount / ((WondersCount + 6) div 7));
+          for i := 0 to 27 do
+          begin
+            if Civ2.WonderCity[i] = FCityIndex then
+            begin
+              Canvas.CopySprite(@PSprites($645160)^[i + 39], 2, 2);
+              Inc(j);
+              if j mod WondersCount = 0 then
+                Canvas.PenBR;
+            end;
+          end;
+          if Canvas.PenPos.X > Canvas.PenOrigin.X then
+            Canvas.PenBR;
+        end;
 
         // Draw Units Supported
         SortedUnitsList := TSortedUnitsList.Create(FCityIndex, True);

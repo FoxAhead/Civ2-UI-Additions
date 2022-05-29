@@ -56,12 +56,6 @@ type
     MouseOver: TPoint;
   end;
 
-  TDrawTestData = record
-    MapDeviceContext: HDC;
-    Counter: Cardinal;
-    DrawPort: TDrawPort;
-  end;
-
   TUIASettings = packed record
     Version: Integer;
     Size: Integer;

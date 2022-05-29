@@ -59,6 +59,8 @@ type
 var
   FormSettings: TFormSettings;
 
+procedure ShowSettingsDialog;
+
 implementation
 
 uses
@@ -73,6 +75,16 @@ uses
   Civ2UIA_Ex;
 
 {$R *.dfm}
+
+procedure ShowSettingsDialog;
+var
+  FormSettings: TFormSettings;
+begin
+  FormSettings := TFormSettings.Create(nil);
+  FormSettings.ShowModal();
+  FormSettings.Free();
+  Ex.SaveSettingsFile();
+end;
 
 procedure TFormSettings.FormCreate(Sender: TObject);
 var
@@ -110,7 +122,7 @@ begin
   // Also recreate main window brush for background
   Civ2.RecreateBrush(Civ2.MainWindowInfo, $9E);
   // Also set new palette for map overlay - to be consistent with the game look
-  Civ2.SetDIBColorTableFromPalette(DrawTestData.DrawPort.DrawInfo, GraphicsInfo.WindowInfo.Palette);
+  Civ2.SetDIBColorTableFromPalette(Ex.MapOverlay.DrawPort.DrawInfo, GraphicsInfo.WindowInfo.Palette);
   // Redraw main window with all subwindows
   HWindow := GetParent(GraphicsInfo.WindowInfo.WindowStructure^.HWindow);
   RedrawWindow(HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);

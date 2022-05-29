@@ -67,6 +67,16 @@ type
 
   PGameParameters = ^TGameParameters;
 
+  PMapHeader = ^TMapHeader;
+
+  PMapCivData = ^TMapCivData;
+
+  PMapSquare = ^TMapSquare;
+
+  PMapSquares = ^TMapSquares;
+
+  PPFData = ^TPFData;
+
   PSprite = ^TSprite;
 
   PSprites = ^TSprites;
@@ -232,8 +242,8 @@ type
     ControlInfo: TControlInfo;
     Active: Integer;                      // + 0x2C
     Proc: Pointer;                        // + 0x30
-    Unknown_34: Integer;                  // + 0x34
-    Unknown_38: Integer;                  // + 0x38
+    ButtonColor: Integer;                 // + 0x34
+    FontInfo: PFontInfo;                  // + 0x38
   end;
 
   TControlInfoButtons = array[0..0] of TControlInfoButton;
@@ -798,7 +808,7 @@ type
     Turn: Word;
     Year: Word;
     word_655AFC: Word;
-    ActiveUnitIndex: Word;                // Current unit index
+    ActiveUnitIndex: SmallInt;            // Current unit index
     word_655B00: Word;
     MultiType: Byte;                      // Multiplayer Game Type
     // 0 - Singleplayer
@@ -807,10 +817,16 @@ type
     // 4 - Internet
     byte_655B03: Byte;                    // PlayerTribeNumber?
     byte_655B04: Byte;
-    SomeCivIndex: Byte;                   // Active Unit Civ index?
+    SomeCivIndex: Shortint;               // Active Unit Civ index?
     byte_655B06: Byte;
-    RevealMap: Byte;
+    RevealMap: Boolean;
     DifficultyLevel: Byte;
+    // 0 - Chieftain (easiest)
+    // 1 - Warlord
+    // 2 - Prince
+    // 3 - King
+    // 4 - Emperor
+    // 5 - Deity (toughest)
     BarbarianActivity: Byte;
     TribesLeftInPlay: Byte;
     HumanPlayers: Byte;
@@ -829,6 +845,37 @@ type
     byte_655B40: Byte;
     byte_655B41: array[1..3] of Byte;
     byte_655B44: Byte;
+  end;
+
+  TMapHeader = packed record
+    SizeX: SmallInt;
+    SizeY: SmallInt;
+    Area: SmallInt;
+    Flat: SmallInt;
+    Seed: SmallInt;
+    ArrayW: SmallInt;
+    ArrayH: SmallInt;
+  end;
+
+  TMapCivData = array[0..7] of PByteArray;
+
+  TMapSquare = packed record
+    TerrainType: Byte;
+    Improvements: Byte;
+    CityRadii: Byte;
+    MassIndex: Byte;
+    Visibility: Byte;
+    OwnershipAndFertility: Byte;
+  end;
+  TMapSquares = array[0..32000] of TMapSquare;
+
+  TPFData = packed record
+    UnitType: Integer;
+    field_4: Integer;
+    CivIndex: Integer;
+    field_C: Integer;
+    Debug: Integer;
+    NeedDebug: Integer;
   end;
 
   TImprovement = packed record            // Size = 0x08
@@ -876,18 +923,20 @@ type
     Y: Word;                              // Y
     Attributes: Word;
     // 0000 0000 0000 0010 - 0x0002 ?Flag checked in UnitCanMove
-    // 0010 0000 0000 0000 - 0x2000 Veteran    
+    // 0000 0100 0000 0000 - 0x0400 Unit causes discontent
+    // 0000 1000 0000 0000 - 0x0800 Unit is supported
+    // 0010 0000 0000 0000 - 0x2000 Veteran
     // 0100 0000 0000 0000 - 0x4000 Unit issued with the 'wait' order
     UnitType: Byte;                       // 0x6560F6
-    CivIndex: Byte;                       // 0x6560F7
-    MovePoints: Byte;                     // 0x6560F8 (Move * Road movement multiplier)
-    byte_6560F9: Byte;
+    CivIndex: Shortint;                   // 0x6560F7
+    MovePoints: Shortint;                 // 0x6560F8 (Move * Road movement multiplier)
+    Visibility: Byte;
     HPLost: Byte;                         // + 0x0A
     MoveDirection: Byte;                  // 0x6560FB
     byte_6560FC: Byte;
     Counter: Byte;                        // 0x6560FD Settlers work / Caravan commodity / Air turn
     MoveIteration: Byte;
-    Orders: Byte;                         // 0x6560FF
+    Orders: Shortint;                     // 0x6560FF
     // 0x01 Fortify
     // 0x02 Fortified
     // 0x03 Sleep
@@ -918,6 +967,7 @@ type
     Attributes: Cardinal;                 // + 0x04
     // 0000 0000 0000 0000 0000 0000 0000 0001 - 0x00000001 Disorder
     // 0000 0000 0000 0000 0000 0000 0000 0010 - 0x00000002 We Love the King Day
+    // 0000 0000 0000 0000 0000 0000 0000 0100 - 0x00000004 Improvement sold
     // 0000 0000 0100 0000 0000 0000 0000 0000 - 0x00400000 Investigated by spy
     Owner: Byte;                          // + 0x08
     Size: Byte;                           // + 0x09
@@ -955,12 +1005,25 @@ type
   TCities = array[0..$FF] of TCity;       // 64F340
 
   TCiv = packed record                    // Size = 0x594
-    Unknown1: Word;                       //          64C6A0
+    Flags: Word;                          //          64C6A0
+    // 0x0001 - Skip next Oedo year (eg, used when falling into anarchy)
+    // 0x0002 - Tribe is at war with another tribe? Used for peace turns calculation
+    // 0x0004 - Related to anarchy? On at the start of games
+    // 0x0008 - Tribe has just recovered from revolution (allows government change)
+    // 0x0020 - Free advance available from receiving Philosophy (cleared when received)
+    // 0x0200 - Female
     Gold: Integer;                        // + 0x02 = 64C6A2
     Leader: Word;                         // + 0x06 = 64C6A6
     Beakers: Word;                        // + 0x08 = 64C6A8
     Unknown3: array[$A..$14] of Byte;
     Government: Byte;
+    // 0 - Anarchy
+    // 1 - Despotism
+    // 2 - Monarchy
+    // 3 - Communism
+    // 4 - Fundamentalism
+    // 5 - Republic
+    // 6 - Democracy
     Unknown4: array[$16..$1F] of Byte;
     Treaties: array[0..7] of Integer;
     // 0x00000001 Contact
@@ -970,6 +1033,7 @@ type
     // 0x00000010 Vendetta
     // 0x00000080 Embassy
     // 0x00002000 War
+    // 0x00040000 Accepted tribute
     Unknown9: array[$40..$153] of Byte;
     DefMinUnitBuilding: array[0..61] of Byte;
     Unknown10: array[$192..$593] of Byte;

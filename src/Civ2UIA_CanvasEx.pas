@@ -86,9 +86,9 @@ end;
 
 function TCanvasEx.SetTextColors(MainColorIndex, ShadowColorIndex: Integer): TCanvasEx;
 begin
-  Font.Color:=ColorFromIndex(MainColorIndex);
-  FontShadowColor:=ColorFromIndex(ShadowColorIndex);
-  Result:= Self;
+  Font.Color := ColorFromIndex(MainColorIndex);
+  FontShadowColor := ColorFromIndex(ShadowColorIndex);
+  Result := Self;
 end;
 
 function TCanvasEx.SetSpriteZoom(Zoom: Integer): TCanvasEx;
@@ -137,10 +137,10 @@ begin
   else if (Align and DT_BOTTOM) <> 0 then
     OffsetY := -TextHeight(Text);
   FontMainColor := Font.Color;
+  P := PenPos;
   if FontShadows <> SHADOW_NONE then
   begin
     Font.Color := FontShadowColor;
-    P := PenPos;
     FontShadows1 := FontShadows;
     for SY := -1 to 1 do
     begin

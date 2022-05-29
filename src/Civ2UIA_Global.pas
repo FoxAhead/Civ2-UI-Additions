@@ -10,6 +10,8 @@ uses
 
 const
   WLTDKColorIndex: Integer = $72;
+  //
+  LowMapZoom: Byte = $FA;
 
 var
   ChangeSpecialistDown: Boolean;
@@ -27,7 +29,6 @@ var
   //
   CityWindowEx: TCityWindowEx;
   AdvisorWindowEx: TAdvisorWindowEx;
-  DrawTestData: TDrawTestData;
   MapMessagesList: TList;
   UIASettings: TUIASettings;
   //
