@@ -65,7 +65,7 @@ Sorting order is: role 5 (Settlers, Engineers) is first, then attacking units or
 
 21. Set focus to City window when opened from Advisor and back to Advisor when closed. Originally, the focus stayed on the Advisor window, so none of the City hotkeys worked, and pressing Esc closed the Advisor instead of the City window.
 
-22. Celebrating city in yellow color instead of white in Attitude Advisor (F4). So it's more noticeable now.  
+22. Celebrating city in yellow color instead of white in Attitude Advisor (F4). So it's more noticeable now. And food surplus/shortage icon if city has it  
 ![Screenshot](Screenshots/AttitudeAdvisorCelebratingYellow.png?raw=true "Screenshot")
 
 23. Indicating attitude in the city window. Texts below citizen sprites are colored as in Attitude Advisor. This helps to immediately see the effect of the used specialists.  
@@ -109,6 +109,15 @@ https://forums.civfanatics.com/resources/corrected-dlls-for-mge.24259/
 36. Mass move units of the same type with Shift+RightClick. With unit activated hold Shift and Right-Click on the destination square. All units of the same type capable of moving (with move points, not fortified, not on sentry etc.) will be ordered to move.
 
 37. Added gold coins to the Foreign Minister.
+
+37. Two new View-menu items: `Arrange Windows S` and `Arrange Windows L`. They differ in slightly smaller and larger dimensions of the side panel compared to the standard option `Arrange Windows`.
+
+38. PathLines for city trade routes and unit movement.  
+![Screenshot](Screenshots/PathLineCity.png?raw=true "PathLineCity")
+![Screenshot](Screenshots/PathLineUnit.png?raw=true "PathLineUnit")  
+With city slected (right-click on it to place blinking white cursor) and Shift pressed moving mouse around will draw the path along which qualified road or railroad should be built to get permanent trade bonus. Moving mouse over this same city will draw all (up to three) existing trade routes. More details about qualified roads here:  
+https://apolyton.net/forum/miscellaneous/archives/civ2-strategy-archive-aa/104062-trade-roads-%C2%96-determination-of-the-bonus-road-and-railroad-connection  
+With the active unit selected and Shift pressed, moving the mouse will draw a predictable path based on your knowledge of the world map (existing units and terrain improvements). That is, when drawing a path, hidden foreign units, cities or roads are not taken into account.
 
 Some experimental features that could change some original game rules or limitations without a guarantee of stability:
  - Change total units limit from default 2048. Don't use numbers greater than 32767. Saves with number of units greater than default should be loaded only with this patch.
