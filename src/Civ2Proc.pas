@@ -9,6 +9,7 @@ uses
 
 type
   PShortIntArray = ^TShortIntArray;
+
   TShortIntArray = array[0..32767] of ShortInt;
 
   TCiv2 = class
@@ -33,7 +34,7 @@ type
     Improvements: ^TImprovements;
     Leaders: ^TLeaders;
     LoadedTxtSectionName: PChar;
-    MainMenu: ^HMENU;
+    MenuBar: PMenuBar;
     MainWindowInfo: PWindowInfo;
     MapCivData: PMapCivData;
     MapData: ^PMapSquares;
@@ -131,6 +132,7 @@ type
     function ProcessUnit(): Integer;
     function DrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer;
     function CalcCityGlobals(CityIndex: Integer; Calc: LongBool): Integer;
+    procedure ArrangeWindows();
     // Map
     function WrapMapX(X: Integer): Integer;
     function IsInMapBounds(X, Y: Integer): LongBool;
@@ -140,6 +142,10 @@ type
     // PF
     function PFMove(X, Y, A3: Integer): Integer;
     function PFFindUnitDir(UnitIndex: Integer): Integer;
+    // MenuBar
+    function MenuBarAddMenu(MenuBar: PMenuBar; Num: Integer; Text: PChar): PMenu;
+    function MenuBarAddSubMenu(MenuBar: PMenuBar; Num, SubNum: Integer; Text: PChar; Len: Integer): PMenu;
+    function MenuBarGetSubMenu(MenuBar: PMenuBar; Num: Integer): PMenu;
   published
   end;
 
@@ -173,11 +179,11 @@ begin
   Improvements := Pointer($0064C488);
   Leaders := Pointer($006554F8);
   LoadedTxtSectionName := Pointer($006CECB0);
-  MainMenu := Pointer($006A64F8);
+  MenuBar := Pointer($006A64F8);
   MainWindowInfo := Pointer($006553D8);
   MapCivData := Pointer($006365C0);
   MapData := Pointer($00636598);
-  MapHeader := Pointer($006D1160);  
+  MapHeader := Pointer($006D1160);
   MapWindow := Pointer($0066C7A8);
   MapWindows := Pointer($0066C7A8);
   PFDX := Pointer($00628350);
@@ -860,7 +866,15 @@ asm
     mov   @Result, eax
 end;
 
+procedure TCiv2.ArrangeWindows;
+asm
+    mov   eax, $004039F4
+    call  eax
+end;
+
+//
 // Map
+//
 
 function TCiv2.WrapMapX(X: Integer): Integer;
 asm
@@ -892,7 +906,9 @@ asm
     mov   @Result, eax
 end;
 
+//
 // PF
+//
 
 function TCiv2.PFMove(X, Y, A3: Integer): Integer;
 asm
@@ -932,6 +948,41 @@ asm
     mov   eax, $00401BB3
     call  eax
     add   esp, $08
+    mov   @Result, eax
+end;
+
+//
+// MenuBar
+//
+
+function TCiv2.MenuBarAddMenu(MenuBar: PMenuBar; Num: Integer; Text: PChar): PMenu;
+asm
+    push  Text
+    push  Num
+    mov   ecx, MenuBar
+    mov   eax, $0040117C
+    call  eax
+    mov   @Result, eax
+end;
+
+function TCiv2.MenuBarAddSubMenu(MenuBar: PMenuBar; Num, SubNum: Integer; Text: PChar; Len: Integer): PMenu;
+asm
+    push  Len
+    push  Text
+    push  SubNum
+    push  Num
+    mov   ecx, MenuBar
+    mov   eax, $00402D10
+    call  eax
+    mov   @Result, eax
+end;
+
+function TCiv2.MenuBarGetSubMenu(MenuBar: PMenuBar; Num: Integer): PMenu;
+asm
+    push  Num
+    mov   ecx, MenuBar
+    mov   eax, $004039EF
+    call  eax
     mov   @Result, eax
 end;
 

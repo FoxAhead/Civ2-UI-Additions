@@ -13,6 +13,14 @@ type
 
   PCitySpritesInfo = ^TCitySpritesInfo;
 
+  PHeap = ^THeap;
+
+  PMenu = ^TMenu;
+
+  PMenuBar = ^TMenuBar;
+
+  PMenuInfo = ^TMenuInfo;
+
   PWindowInfo = ^TWindowInfo;
 
   PFontInfo = ^TFontInfo;
@@ -40,8 +48,6 @@ type
   PListItem = ^TListItem;
 
   PDlgTextLine = ^TDlgTextLine;
-
-  PHeap = ^THeap;
 
   PDrawPort = ^TDrawPort;
 
@@ -114,6 +120,42 @@ type
     Proc24: Pointer;                      // + 0x5C
     ProcEnterSizeMove: Pointer;           // + 0x60
     ProcExitSizeMove: Pointer;            // + 0x64
+  end;
+
+  THeap = packed record                   // Size = $12
+    Unknown_00: Byte;
+    Unknown_01: Byte;
+    Unknown_02: Byte;
+    Unknown_03: Byte;
+    hMem: HGLOBAL;
+    pMem: Pointer;
+    Size: Word;
+    AllocSize: Word;
+    FreeSize: Word;
+  end;
+
+  TMenu = packed record
+    Text: PChar;
+    Num: Integer;
+    Flags: Cardinal;
+    SubCount: Integer;
+    Next: PMenu;
+    Prev: PMenu;
+    FirstSubMenuOrParent: PMenu;
+  end;
+
+  TMenuBar = packed record
+    hMenu: HMENU;
+    Heap: THeap;
+    Unknown_16: Word;
+    Flags: Cardinal;
+    FirstMenu: PMenu;
+  end;
+
+  TMenuInfo = packed record
+    WindowInfo: PWindowInfo;
+    MenuBar: PMenuBar;
+    Proc: Pointer;
   end;
 
   // WindowProc1        - GetWindowLongA(hWnd, 8)
@@ -284,18 +326,6 @@ type
   PControlInfoCheckbox = Pointer;
 
   PControlInfoEdit = Pointer;
-
-  THeap = packed record                   // Size = $12
-    Unknown_00: Byte;
-    Unknown_01: Byte;
-    Unknown_02: Byte;
-    Unknown_03: Byte;
-    hMem: HGLOBAL;
-    pMem: Pointer;
-    Size: Word;
-    AllocSize: Word;
-    FreeSize: Word;
-  end;
 
   TButton = packed record
     StdType: Integer;
@@ -647,7 +677,7 @@ type
     HappyCitizens: Integer;
     Tax: Integer;
     field_30: Integer;
-    field_34: Integer;
+    AttUnitsInCity: Integer;
     RowsInFoodBox: Integer;
     field_3C: Integer;
     Support: Integer;
@@ -656,9 +686,9 @@ type
     field_4C: Integer;
     field_50: Integer;
     ShieldsInRow: Integer;
-    field_58: Integer;
+    TradeCorruption: Integer;
     field_5C: Integer;
-    field_60: Integer;
+    DistanceToCapital: Integer;
     field_64: array[1..4] of char;
     TradeRevenue: array[0..2] of Integer;
     field_74: Integer;
@@ -672,14 +702,12 @@ type
     field_94: Integer;
     field_98: Integer;
     field_9C: Integer;
-    field_A0: Integer;
-    Total: Integer;
-    field_A8: Integer;
+    TotalRes: array[0..2] of Integer;
     field_AC: Integer;
-    field_B0: Integer;
+    Settlers: Integer;
     field_B4: Integer;
     field_B8: Integer;
-    field_BC: Integer;
+    AttUnitsOfDiscontent: Integer;
     field_C0: Integer;
     field_C4: array[1..4] of char;
     field_C8: char;
@@ -690,14 +718,14 @@ type
     field_CD: array[1..3] of char;
     field_D0: Integer;
     Lux: Integer;
-    field_D8: Integer;
+    Capital: Integer;
     FreeCitizens: Integer;
     SettlersEat: Integer;
-    field_E4: Integer;
+    PaidUnits: Integer;
     field_E8: Integer;
     field_EC: array[1..4] of char;
     field_F0: Integer;
-    field_F4: Integer;
+    PrevFoodDelta: Integer;
     field_F8: char;
     field_F9: char;
     gapFA: BYTE;
@@ -771,27 +799,27 @@ type
 
   TCosmic = packed record                 // Size = 0x16
     RoadMovementMultiplier: Byte;
-    Cosmic2: Byte;
-    Cosmic3: Byte;
-    Cosmic4: Byte;
+    ChanceTriremeLost: Byte;
+    CitizenEats: Byte;
+    RowsInFoodBox: Byte;
     RowsInShieldBox: Byte;
-    Cosmic6: Byte;
-    Cosmic7: Byte;
-    Cosmic8: Byte;
-    Cosmic9: Byte;
-    Cosmic10: Byte;
-    Cosmic11: Byte;
-    Cosmic12: Byte;
+    SettlersEatUpToMonarchy: Byte;
+    SettlersEatFromCommunism: Byte;
+    CitySizeFirstUnhappinessChieftain: Byte;
+    RiotFactor: Byte;
+    AqueductSize: Byte;
+    SewerSystemSize: Byte;
+    TechParadigm: Byte;
     BaseTransformTime: Byte;
-    Cosmic14: Byte;
-    Cosmic15: Byte;
-    Cosmic16: Byte;
-    Cosmic17: Byte;
-    Cosmic18: Byte;
+    FreeSupportMonarchy: Byte;
+    FreeSupportCommunism: Byte;
+    FreeSupportFundamentalism: Byte;
+    CommunismPalaceDistance: Byte;
+    FundamentalismLosesScience: Byte;
     ShieldPenalty: Byte;
-    Cosmic20: Byte;
-    Cosmic21: Byte;
-    Cosmic22: Byte;
+    ParadropRange: Byte;
+    MassThrustParadigm: Byte;
+    FundamentalismMaxScience: Byte;
   end;
 
   TGameParameters = packed record
@@ -861,7 +889,32 @@ type
 
   TMapSquare = packed record
     TerrainType: Byte;
+    // 0000 0000 - 0x00 Desert
+    // 0000 0001 - 0x01 Plains
+    // 0000 0010 - 0x02 Grassland
+    // 0000 0011 - 0x03 Forest
+    // 0000 0100 - 0x04 Hills
+    // 0000 0101 - 0x05 Mountains
+    // 0000 0110 - 0x06 Tundra
+    // 0000 0111 - 0x07 Glacier
+    // 0000 1000 - 0x08 Swamp
+    // 0000 1001 - 0x09 Jungle
+    // 0000 1010 - 0x0A Ocean
+    // 0010 0000 - 0x20 Only used for resource tiles. Indicates that the tile was being animated when the game was saved - no apparent effect.
+    // 0100 0000 - 0x40 No resource
+    // 1000 0000 - 0x80 River
     Improvements: Byte;
+    // 0000 0000 - 0x00 Nothing
+    // 0000 0001 - 0x01 Unit Present
+    // 0000 0010 - 0x02 City Present
+    // 0000 0100 - 0x04 Irrigation
+    // 0000 1000 - 0x08 Mining
+    // 0000 1100 - 0x0C Farmland
+    // 0001 0000 - 0x10 Road
+    // 0011 0000 - 0x30 Railroad (+ Road)
+    // 0100 0000 - 0x40 Fortress
+    // 0100 0010 - 0x42 Airbase
+    // 1000 0000 - 0x80 Pollution
     CityRadii: Byte;
     MassIndex: Byte;
     Visibility: Byte;

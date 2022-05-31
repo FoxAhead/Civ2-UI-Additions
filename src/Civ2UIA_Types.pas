@@ -91,8 +91,10 @@ const
   SHADOW_B_ = $40;
   SHADOW_BR = $80;
   SHADOW_ALL = $FF;
-  IDM_GITHUB = $FF01;
-  IDM_SETTINGS = $FF02;
+  IDM_SETTINGS = $A01;
+  IDM_ABOUT = $A02;
+  IDA_ARRANGE_S = $329;
+  IDA_ARRANGE_L = $32A;
 
 implementation
 

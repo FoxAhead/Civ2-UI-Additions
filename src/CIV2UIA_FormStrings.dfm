@@ -18,6 +18,17 @@ object FormStrings: TFormStrings
     402)
   PixelsPerInch = 96
   TextHeight = 13
+  object Label1: TLabel
+    Left = 2
+    Top = 2
+    Width = 301
+    Height = 78
+    Caption = 
+      'List of popup names from GAME.TXT without first @ symbol.'#13#10'For e' +
+      'xample:'#13#10'BOND007'#13#10'BONDGLORY'#13#10'This list is saved in the Civ2UIASu' +
+      'ppressPopup.txt file.'#13#10'Suppressed messages will be shown in the ' +
+      'map overlay instead.'
+  end
   object Memo1: TMemo
     Left = 0
     Top = 88
@@ -38,27 +49,5 @@ object FormStrings: TFormStrings
     Caption = 'Close'
     TabOrder = 1
     OnClick = Button1Click
-  end
-  object Memo2: TMemo
-    Left = 0
-    Top = 0
-    Width = 305
-    Height = 81
-    TabStop = False
-    Anchors = [akLeft, akTop, akRight]
-    BorderStyle = bsNone
-    Color = clBtnFace
-    Ctl3D = False
-    Enabled = False
-    Lines.Strings = (
-      'List of popup names from GAME.TXT without first @ symbol.'
-      'For example:'
-      'BOND007'
-      'BONDGLORY'
-      'This list is saved in the Civ2UIASuppressPopup.txt file.'
-      'Suppressed messages will be shown in the map overlay instead.')
-    ParentCtl3D = False
-    ReadOnly = True
-    TabOrder = 2
   end
 end

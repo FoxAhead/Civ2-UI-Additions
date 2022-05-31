@@ -41,8 +41,8 @@ uses
   Civ2UIA_SortedAbstractList in 'Civ2UIA_SortedAbstractList.pas',
   Civ2UIA_CanvasEx in 'Civ2UIA_CanvasEx.pas',
   Civ2UIA_MapOverlay in 'Civ2UIA_MapOverlay.pas',
-  FileInfo in 'FileInfo.pas',
-  Civ2UIA_PathLine in 'Civ2UIA_PathLine.pas';
+  Civ2UIA_PathLine in 'Civ2UIA_PathLine.pas',
+  Civ2UIA_FormAbout in 'Civ2UIA_FormAbout.pas' {FormAbout};
 
 {$R *.res}
 
@@ -451,34 +451,6 @@ begin
   Civ2.UpdateCityWindow(Civ2.CityWindow, 1);
 end;
 
-{procedure CityWindowButtonUp(X, Y: Integer); stdcall;
-var
-  SIndex, SType: Integer;
-begin
-  Civ2.GetInfoOfClickedCitySprite(@Civ2.CityWindow.CitySpritesInfo, X, Y, SIndex, SType);
-  if SType = 2 then
-    CityChangeAllSpecialists(SIndex, 0);
-end;}
-
-function PatchCommandHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
-begin
-  Result := True;
-  if Msg = WM_COMMAND then
-  begin
-    case LOWORD(WParam) of
-      IDM_GITHUB:
-        begin
-          ShellExecute(0, 'open', 'https://github.com/FoxAhead/Civ2-UI-Additions', nil, nil, SW_SHOW);
-          Result := False;
-        end;
-      IDM_SETTINGS:
-        begin
-          ShowSettingsDialog();
-        end;
-    end;
-  end;
-end;
-
 function PatchMouseWheelHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 var
   CursorScreen: TPoint;
@@ -492,16 +464,12 @@ var
   nPrevPos: Integer;
   nPos: Integer;
   Delta: Integer;
-  //WindowInfo: Pointer;
   WindowType: TWindowType;
   ScrollLines: Integer;
   CityWindowScrollLines: Integer;
 label
   EndOfFunction;
 begin
-  //
-  //MapMessagesList.Add(TMapMessage.Create(IntToStr(DrawTestData.Counter)));
-
   Result := True;
   CityWindowScrollLines := 3;
 
@@ -555,17 +523,6 @@ begin
     end;
   end;
 
-  {if WindowType = wtUnitsListPopup then
-  begin
-    if ChangeListOfUnitsStart(Sign(Delta) * -3) then
-    begin
-      Civ2.CurrPopupInfo^^.SelectedItem := $FFFFFFFC;
-      Civ2.ClearPopupActive;
-    end;
-    Result := False;
-    goto EndOfFunction;
-  end;}
-
   if (HWndScrollBar > 0) and IsWindowVisible(HWndScrollBar) and (IsWindowEnabled(HWndScrollBar)) then
   begin
     ScrollLines := 3;
@@ -589,7 +546,6 @@ begin
     SetScrollPos(HWndScrollBar, SB_CTL, nPrevPos - Delta * ScrollLines, True);
     nPos := GetScrollPos(HWndScrollBar, SB_CTL);
     ControlInfoScroll^.CurrentPosition := nPos;
-    //WindowInfo := ControlInfoScroll^.ControlInfo.WindowInfo;
     Civ2.PrevWindowInfo := ControlInfoScroll^.ControlInfo.WindowInfo;
     Civ2.CallRedrawAfterScroll(ControlInfoScroll, nPos);
     Result := False;
@@ -610,37 +566,6 @@ begin
 
 end;
 
-function PatchVScrollHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
-var
-  ScrollPos: Integer;
-  Delta: Integer;
-begin
-  Result := True;
-  {Delta := 0;
-  if GuessWindowType(HWindow) = wtUnitsListPopup then
-  begin
-    case LOWORD(WParam) of
-      SB_LINEUP:
-        Delta := -1;
-      SB_LINEDOWN:
-        Delta := 1;
-      SB_PAGEUP:
-        Delta := -8;
-      SB_PAGEDOWN:
-        Delta := 8;
-      SB_THUMBPOSITION:
-        Delta := HiWord(WParam) - ListOfUnits.Start;
-    end;
-    if ChangeListOfUnitsStart(Delta) then
-    begin
-      SetScrollPos(LParam, SB_CTL, ListOfUnits.Start, True);
-      Civ2.CurrPopupInfo^^.SelectedItem := $FFFFFFFC;
-      Civ2.ClearPopupActive;
-      Result := False;
-    end;
-  end;}
-end;
-
 function PatchMButtonUpHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 var
   Screen: TPoint;
@@ -656,9 +581,6 @@ begin
   Screen.Y := Smallint((LParam shr 16) and $FFFF);
   MButtonIsDown := (LOWORD(WParam) and MK_MBUTTON) <> 0;
   WindowType := GuessWindowType(HWindow);
-  {IsMapWindow := False;
-  if Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure <> nil then
-    IsMapWindow := (HWindow = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure^.HWindow);}
   IsMapWindow := (WindowType = wtMap);
   case Msg of
     WM_MBUTTONDOWN:
@@ -672,9 +594,6 @@ begin
       end
       else if (LOWORD(WParam) and MK_SHIFT) <> 0 then
       begin
-        //SendMessageToLoader(MapGraphicsInfo^.MapCenter.X, MapGraphicsInfo^.MapCenter.Y);
-        //SendMessageToLoader(MapGraphicsInfo^.MapHalf.cx, MapGraphicsInfo^.MapHalf.cy);
-        //SendMessageToLoader(MapGraphicsInfo^.MapRect.Left, MapGraphicsInfo^.MapRect.Top);
         Result := False;
       end
       else
@@ -703,11 +622,6 @@ begin
           MapDelta.Y := (Delta.Y * 2 + Civ2.MapWindow.MapCellSize2.cy) div (Civ2.MapWindow.MapCellSize.cy - 1);
           if not Odd(MapDelta.X + MapDelta.Y) then
           begin
-            if (LOWORD(WParam) and MK_SHIFT) <> 0 then
-            begin
-              //SendMessageToLoader(Delta.X, Delta.Y);
-              //SendMessageToLoader(MapDelta.X, MapDelta.Y);
-            end;
             Xc := MouseDrag.StartMapMean.X - MapDelta.X;
             Yc := MouseDrag.StartMapMean.Y - MapDelta.Y;
             if Odd(Xc + Yc) then
@@ -760,11 +674,6 @@ begin
               Result := False;
             end;
           end;
-        {        wtCityWindow:
-                  begin
-                    CityWindowButtonUp(Screen.X, Screen.Y);
-                    Result := False;
-                  end;}
       end;
   end;
 end;
@@ -795,18 +704,12 @@ end;
 function PatchMessageHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
 begin
   case Msg of
-    WM_COMMAND:
-      Result := PatchCommandHandler(HWindow, Msg, WParam, LParam, FromCommon);
     WM_MOUSEWHEEL:
       Result := PatchMouseWheelHandler(HWindow, Msg, WParam, LParam, FromCommon);
-    WM_VSCROLL:
-      Result := PatchVScrollHandler(HWindow, Msg, WParam, LParam, FromCommon);
     WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE:
       Result := PatchMButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
     WM_LBUTTONUP:
       Result := PatchLButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
-    //    WM_RBUTTONUP:
-    //      Result := PatchRButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
   else
     Result := True;                       // Message not handled
   end;
@@ -917,44 +820,6 @@ begin
   Result := PopupResult;
 end;
 
-procedure PatchCallPopupListOfUnits(); register;
-asm
-    mov   ListOfUnits.Start, 0
-    push  2
-    push  [esp + $08]      // UnitIndex
-    mov   eax, A_j_Q_GetNumberOfUnitsInStack_sub_5B50AD
-    call  eax
-    add   esp, 8
-    mov   ListOfUnits.Length, eax
-
-@@LABEL_POPUP:
-    push  [esp + $0C]
-    push  [esp + $0C]
-    push  [esp + $0C]      // UnitIndex
-    mov   eax, A_Q_PopupListOfUnits_sub_5B6AEA
-    call  eax
-    add   esp, $0C
-    cmp   eax, $FFFFFFFC
-    je    @@LABEL_POPUP
-    ret
-end;
-
-procedure PatchPopupListOfUnits(); register;
-asm
-    mov   eax, [ebp - $340]
-    sub   eax, ListOfUnits.Start
-    cmp   eax, 1
-    jl    @@LABEL1
-    cmp   eax, 9
-    jg    @@LABEL1
-    mov   eax, $005B6C09
-    jmp   eax
-
-@@LABEL1:
-    mov   eax, $005B6BD8
-    jmp   eax
-end;
-
 var
   ScrollBarControlInfo: TControlInfoScroll;
 
@@ -971,14 +836,6 @@ begin
     SetScrollRange(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
     SetScrollPos(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
   end;
-end;
-
-procedure PatchCreateUnitsListPopupParts(); register;
-asm
-    mov   [ebp - $108], eax        // saved instruction "mov     [ebp+var_108], eax"
-    call  PatchCallCreateScrollBar
-    push  $005A3397
-    ret
 end;
 
 function PatchDrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer; cdecl;
@@ -998,7 +855,6 @@ begin
   UnitType := Civ2.Units^[UnitIndex].UnitType;
   if ((Civ2.UnitTypes^[UnitType].Role = 5) or (Civ2.UnitTypes^[UnitType].Domain = 1)) and (Civ2.Units^[UnitIndex].CivIndex = Civ2.HumanCivIndex^) and (Civ2.Units^[UnitIndex].Counter > 0) then
   begin
-    //TextOut := IntToStr(Civ2.Units^[UnitIndex].Counter) + Format(' 0x%.4x', [UnitIndex]);
     TextOut := IntToStr(Civ2.Units^[UnitIndex].Counter);
     Canvas := TCanvasEx.Create(DrawPort);
     Canvas.Brush.Style := bsClear;
@@ -1017,45 +873,7 @@ begin
   end;
 end;
 
-procedure PatchDrawSideBar(Arg0: Integer); cdecl;
-var
-  DC: HDC;
-  Canvas: TCanvas;
-  SavedDC: Integer;
-  TextOut: string;
-  Top: Integer;
-  Left: Integer;
-  TurnsRotation: Integer;
-begin
-  asm
-    push  Arg0
-    mov   eax, $00569363 // Call Q_DrawSideBar_sub_569363
-    call  eax
-    add   esp, $04
-  end;
-  DC := Civ2.SideBarGraphicsInfo^.DrawPort.DrawInfo^.DeviceContext;
-  SavedDC := SaveDC(DC);
-  Canvas := TCanvas.Create();
-  Canvas.Handle := DC;
-  Canvas.Font.Handle := CopyFont(Civ2.SideBarFontInfo^.Handle^^);
-  Canvas.Brush.Style := bsClear;
-  Top := Civ2.SideBarClientRect^.Top + (Civ2.SideBarFontInfo^.Height - 1) * 2;
-  TurnsRotation := ((Civ2.GameTurn^ - 1) and 3) + 1;
-  TextOut := 'Turn ' + IntToStr(Civ2.GameTurn^);
-  Left := Civ2.SideBarClientRect^.Right - Canvas.TextExtent(TextOut).cx - 1;
-  TextOutWithShadows(Canvas, TextOut, Left, Top, TColor($444444), TColor($CCCCCC), SHADOW_BR);
-  {
-  TextOut := 'Oedo';
-  Left := SideBarClientRect^.Right - Canvas.TextExtent(TextOut).cx - 1;
-  TextOutWithShadows(Canvas, TextOut, Left, Top, clOlive, clBlack, SHADOW_BR);
-  TextOut := Copy(WideString(TextOut), 1, TurnsRotation);
-  TextOutWithShadows(Canvas, TextOut, Left, Top, clYellow, clBlack, SHADOW_NONE);
-  }
-  Canvas.Free;
-  RestoreDC(DC, SavedDC);
-end;
-
-procedure PatchDrawSideBarV2Ex; stdcall;
+procedure PatchDrawSideBarEx; stdcall;
 var
   TextOut: string;
   Top: Integer;
@@ -1066,12 +884,12 @@ begin
   Civ2.DrawStringRight(Civ2.ChText, Civ2.SideBarClientRect^.Right, Top, 0);
 end;
 
-procedure PatchDrawSideBarV2; register;
+procedure PatchDrawSideBar; register;
 asm
     mov   eax, $00401E0B //Q_DrawString_sub_401E0B
     call  eax
     add   esp, $0C
-    call  PatchDrawSideBarV2Ex
+    call  PatchDrawSideBarEx
     push  $00569552
     ret
 end;
@@ -1118,16 +936,114 @@ begin
   end;
 end;
 
-function PatchCreateMainMenu(): HMENU; stdcall;
+//
+// MenuBar
+//
+
+procedure MoveMenu(Menu, Menu1: PMenu; Before: Boolean = False); stdcall;
 var
-  SubMenu: HMENU;
+  MenuCopy, Menu1Copy: TMenu;
 begin
-  SubMenu := CreatePopupMenu();
-  AppendMenu(SubMenu, MF_STRING, IDM_GITHUB, 'GitHub');
-  AppendMenu(SubMenu, MF_STRING, IDM_SETTINGS, 'Settings...');
-  AppendMenu(Civ2.MainMenu^, MF_POPUP, SubMenu, 'UI Additions');
-  Result := Civ2.MainMenu^;
+  MenuCopy := Menu^;
+  Menu1Copy := Menu1^;
+  if Before then
+  begin
+    if (Menu1.Prev = Menu) or (Menu.Next = Menu1) then
+      Exit;
+    if Menu1.Prev <> nil then
+      Menu1.Prev.Next := Menu;
+    Menu.Prev := Menu1Copy.Prev;
+    Menu.Next := Menu1;
+    Menu1.Prev := Menu;
+    if MenuCopy.Prev <> nil then
+      MenuCopy.Prev.Next := MenuCopy.Next;
+    if MenuCopy.Next <> nil then
+      MenuCopy.Next.Prev := MenuCopy.Prev;
+  end
+  else
+  begin
+    if (Menu1.Next = Menu) or (Menu.Prev = Menu1) then
+      Exit;
+    if Menu1.Next <> nil then
+      Menu1.Next.Prev := Menu;
+    Menu.Prev := Menu1;
+    Menu.Next := Menu1Copy.Next;
+    Menu1.Next := Menu;
+    if MenuCopy.Prev <> nil then
+      MenuCopy.Prev.Next := MenuCopy.Next;
+    if MenuCopy.Next <> nil then
+      MenuCopy.Next.Prev := MenuCopy.Prev;
+  end;
 end;
+
+procedure PatchBuildMenuBarEx(); stdcall;
+var
+  MenuArrange: PMenu;
+  MenuArrangeS: PMenu;
+  MenuArrangeL: PMenu;
+  MenuSeparator: PMenu;
+  Text: array[0..255] of Char;
+  P: PChar;
+begin
+  Civ2.MenuBarAddMenu(Civ2.MenuBar, $A, '&UI Additions');
+  Civ2.MenuBarAddSubMenu(Civ2.MenuBar, $A, IDM_SETTINGS, '&Settings...', 0);
+  Civ2.MenuBarAddSubMenu(Civ2.MenuBar, $A, 0, nil, 0);
+  Civ2.MenuBarAddSubMenu(Civ2.MenuBar, $A, IDM_ABOUT, '&About...', 0);
+
+  MenuArrange := Civ2.MenuBarGetSubMenu(Civ2.MenuBar, $328);
+  if MenuArrange <> nil then
+  begin
+    StrCopy(Text, MenuArrange.Text);
+    StrCat(Text, ' S');
+    P := StrEnd(Text) - 1;
+    Civ2.MenuBarAddSubMenu(Civ2.MenuBar, 3, 0, nil, 0);
+    MenuArrangeS := Civ2.MenuBarAddSubMenu(Civ2.MenuBar, 3, IDA_ARRANGE_S, Text, 0);
+    MoveMenu(MenuArrange, MenuArrangeS, False);
+    P^ := 'L';
+    MenuArrangeL := Civ2.MenuBarAddSubMenu(Civ2.MenuBar, 3, IDA_ARRANGE_L, Text, 0);
+  end;
+end;
+
+procedure PatchBuildMenuBar(); register;
+asm
+    mov   eax, $0040194C // j_Q_FClose_sub_4A2020();
+    call  eax
+    call  PatchBuildMenuBarEx
+    push  $004E4C3D
+    ret
+end;
+
+procedure PatchMenuExecDefaultCaseEx(SubNum: Integer); stdcall;
+begin
+  case SubNum of
+    IDM_SETTINGS:
+      ShowFormSettings();
+    IDM_ABOUT:
+      ShowFormAbout();
+    IDA_ARRANGE_S:
+      begin
+        ArrangeWindowMiniMapWidth := 185;
+        Civ2.ArrangeWindows();
+        ArrangeWindowMiniMapWidth := -1;
+      end;
+    IDA_ARRANGE_L:
+      begin
+        ArrangeWindowMiniMapWidth := 350;
+        Civ2.ArrangeWindows();
+        ArrangeWindowMiniMapWidth := -1;
+      end;
+  end;
+end;
+
+procedure PatchMenuExecDefaultCase(); register;
+asm
+    push  [ebp + $0C] // int aSubNum
+    call  PatchMenuExecDefaultCaseEx
+    push  $004E3A81
+    ret
+end;
+
+//
 
 procedure PatchEditBox64Bit(); register;
 asm
@@ -1203,7 +1119,6 @@ function PatchWindowProcMsMrTimerAfter(): Integer; stdcall;
 begin
   Result := 0;
   PatchCheckCDStatus();
-  //DrawTest();
 end;
 
 procedure PatchLoadMainIcon(IconName: PChar); stdcall;
@@ -1418,7 +1333,7 @@ begin
   if HomeUnits > 0 then
   begin
     Text := string(Civ2.ChText);
-    Text := Text + ' / ' + IntToStr(HomeUnits);// + '?' + IntToStr(Civ2.CityGlobals.field_E4);
+    Text := Text + ' / ' + IntToStr(HomeUnits);
     StrCopy(Civ2.ChText, PChar(Text));
   end;
 end;
@@ -1466,7 +1381,7 @@ var
   LeftToDo, Production: Integer;
 begin
   LeftToDo := RealCost - 1 - Done;
-  Production := Min(Max(1, Civ2.CityGlobals.Total - Civ2.CityGlobals.Support), 1000);
+  Production := Min(Max(1, Civ2.CityGlobals.TotalRes[1] - Civ2.CityGlobals.Support), 1000);
   Result := Min(Max(1, LeftToDo div Production + 1), 999);
 end;
 
@@ -1478,18 +1393,14 @@ var
   P: PChar;
   Text: string;
   RealCost: Integer;
-  //, LeftToDo, Production: Integer;
 begin
   RealCost := Cost * Civ2.CityGlobals.ShieldsInRow;
-  {LeftToDo := RealCost - 1 - Done;
-  Production := Min(Max(1, Civ2.CityGlobals.Total - Civ2.CityGlobals.Support), 1000);}
   P := StrEnd(Civ2.ChText) - 1;
   if P^ = '(' then
     P^ := #00;
   Text := string(Civ2.ChText);
   Text := Text + IntToStr(RealCost) + '#644F00:3# (';
   StrPCopy(Civ2.ChText, Text);
-  //Result := Min(Max(1, LeftToDo div Production + 1), 999);
   Result := GetTurnsToComplete(RealCost, Done);
 end;
 
@@ -1767,29 +1678,11 @@ begin
   Ex.QuickInfo.Update();
 end;
 
-{var
-  PrevGetFocus: HWND;}
-
-procedure PatchOnWmTimerDrawEx2(); stdcall;
-//var
-//  CurrGetFocus: HWND;
-begin
-  {  //DrawTest();
-    CurrGetFocus := GetFocus();
-    if (CurrGetFocus <> PrevGetFocus) and (CurrGetFocus <> 0) then
-    begin
-      PrevGetFocus := CurrGetFocus;
-      //SendMessageToLoader($FFFF, CurrGetFocus);
-      //MapMessagesList.Add(TMapMessage.Create(Format('GetFocus() = %.8x', [CurrGetFocus])));
-    end;}
-end;
-
 procedure PatchOnWmTimerDraw(); register;
 asm
     call  PatchOnWmTimerDrawEx1
     mov   eax, $004131C0
     call  eax
-    call  PatchOnWmTimerDrawEx2
 end;
 
 procedure PatchCopyToScreenBitBlt(SrcDI: PDrawInfo; XSrc, YSrc, Width, Height: Integer; DestWS: PWindowStructure; XDest, YDest: Integer); cdecl;
@@ -1816,38 +1709,6 @@ begin
   end;
 end;
 
-function PatchPopupSimpleMessageEx(Dialog: PDialogWindow; SectionName: PChar): Integer; stdcall;
-var
-  TextLine: PDlgTextLine;
-  Text: string;
-begin
-  Result := 0;
-  if Ex.SimplePopupSuppressed(SectionName) then
-  begin
-    if Dialog.Title <> nil then
-      Text := string(Dialog.Title) + ': ';
-    TextLine := Dialog.FirstTextLine;
-    while TextLine <> nil do
-    begin
-      Text := Text + ' ' + string(TextLine.Text);
-      TextLine := TextLine.Next;
-    end;
-    MapMessagesList.Add(TMapMessage.Create(Text));
-  end
-  else
-    Result := Civ2.CreateDialogAndWait(Dialog, 0);
-end;
-
-procedure PatchPopupSimpleMessage(); register;
-asm
-    push  [ebp + $0C]  // char *aSectionName
-    lea   ecx, [ebp - $300] // T_DialogWindow vDlg
-    push  ecx
-    call  PatchPopupSimpleMessageEx
-    push  $0051D5E2
-    ret
-end;
-
 procedure PatchLoadPopupDialogAfterEx(Dialog: PDialogWindow; FileName, SectionName: PChar); stdcall;
 var
   TextLine: PDlgTextLine;
@@ -1866,7 +1727,6 @@ begin
         TextLine := TextLine.Next;
       end;
       MapMessagesList.Add(TMapMessage.Create(Text));
-      //Dialog.Flags := Dialog.Flags or 8;
       Dialog.PressedButton := $12345678;
     end
   end;
@@ -1886,15 +1746,15 @@ end;
 
 procedure PatchCreateDialogAndWaitBefore(); register;
 asm
-    mov  [ebp - $114], ecx
-    cmp  [ecx + $DC], $12345678 // Dialog.PressedButton
-    je   @LABEL_NODIAOLOG
+    mov   [ebp - $114], ecx
+    cmp   [ecx + $DC], $12345678 // Dialog.PressedButton
+    je    @LABEL_NODIAOLOG
     push  $005A5F46
     ret
 
 @LABEL_NODIAOLOG:
-    mov  [ecx + $DC], 0
-    xor  eax, eax
+    mov   [ecx + $DC], 0
+    XOR   eax, eax
     push  $005A6323
     ret
 end;
@@ -2200,7 +2060,6 @@ begin
         Dialog.Rects3[0].Bottom := Dialog.Rects3[0].Bottom + DeltaY;
         Dialog.ButtonsTop := Dialog.ButtonsTop + DeltaY;
         UIASettings.DialogLines[DialogIndex] := Dialog.ListboxPageSize[0];
-        //SendMessageToLoader(1, UIASettings.DialogLines[DialogIndex]);
       end
       else if DialogIndex in ResizableDialogList then
       begin
@@ -2250,15 +2109,12 @@ begin
       Dialog.Flags := Dialog.Flags or $1000000; // Always create scrollbar for sizable listbox
       ListboxItemHeight := Dialog.FontInfo3.Height + 1;
       MinPageSize := Dialog.ListboxPageSize[0];
-      //MaxPageSize := (Civ2.ScreenRectSize.cy - 125) div ListboxItemHeight;
       MaxPageSize := Min((Civ2.ScreenRectSize.cy - 125) div ListboxItemHeight, Dialog.NumLines) + 1;
-      //SendMessageToLoader(2, UIASettings.DialogLines[DialogIndex]);
       Dialog.ListboxPageSize[0] := Max(Min(MaxPageSize, UIASettings.DialogLines[DialogIndex]), MinPageSize);
       Dialog.ListboxHeight[0] := Dialog.ListboxPageSize[0] * (Dialog.FontInfo3.Height + 1) + 2;
     end
     else if (DialogIndex in ResizableDialogList) and (Dialog.NumListItems > 9) then
     begin
-      //      Dialog._Extra.ListPageStart := 0;
     end
     else
       Dialog._Extra.DialogIndex := 0;
@@ -2404,7 +2260,6 @@ end;
 
 procedure PatchCreateDialogPartsList(); register;
 asm
-//    mov   [ebp - $108], eax        // saved instruction "mov     [ebp+var_108], eax"
     push  [ebp - $198]               // This
     call  PatchCreateDialogPartsListEx
     push  $005A3391
@@ -2564,7 +2419,6 @@ begin
     RightPart := Bar + 1;
     Bar^ := #00;
   end;
-  //  Civ2.sub_401BC7(AECX, AText, ALeft + AECX.ListboxSpriteAreaWidth[AECX.ScrollOrientation], ATop, ASelected, ADisabled);
   SLT := TStringList.Create();
   SLS := TStringList.Create();
   SLT.Text := StringReplace(string(AText), '#', #13#10, [rfReplaceAll]);
@@ -2655,7 +2509,6 @@ begin
     Inc(i);
   end;
   Text1[j] := #00;
-  //StrCopy(Text, Text1); // For debugging
   Result := Civ2.GetTextExtentX(FontInfo, Text1);
 end;
 
@@ -2779,6 +2632,7 @@ asm
 end;
 
 //
+// TODO: Move to separate unit
 // Enhanced City Status advisor
 //
 
@@ -2872,7 +2726,6 @@ begin
   begin
     MSWindow := @Civ2.AdvisorWindow.MSWindow;
     AdvisorWindowEx.MouseOver := Point(Part, ListIndex);
-    //Civ2.UpdateCopyValidateAdvisor(1);
     Civ2.CopyToScreenAndValidate(@MSWindow.GraphicsInfo);
     if (ListIndex >= 0) and (Part = 2) then
     begin
@@ -2944,12 +2797,18 @@ begin
     for i := 1 to 6 do
     begin
       case i of
-        1: X1 := 60;
-        2: X1 := 138;
-        3: X1 := 270 - 16;
-        4: X1 := 312 - 14;
-        5: X1 := 354 - 16;
-        6: X1 := 381;
+        1:
+          X1 := 60;
+        2:
+          X1 := 138;
+        3:
+          X1 := 270 - 16;
+        4:
+          X1 := 312 - 14;
+        5:
+          X1 := 354 - 16;
+        6:
+          X1 := 381;
       end;
       AdvisorWindowEx.Rects[i] := Rect(X1, Y1, X1 + 12, Y1 + 12);
       Canvas.FrameRect(AdvisorWindowEx.Rects[i]);
@@ -3065,7 +2924,6 @@ begin
       AdvisorWindowEx.MouseOver.Y := -2;
 
       Y1 := Y1 + LineHeight;
-
     end;
   end;
   if Civ2.AdvisorWindow.ControlsInitialized = 0 then
@@ -3098,6 +2956,80 @@ asm
     ret
 end;
 
+//
+// Enhanced Attitude Advisor
+//
+procedure PatchUpdateAdvisorAttitudeEx(ScrollPosition, Page, A20: Integer; var Top1: Integer); stdcall;
+var
+  CivIndex: Integer;
+  i, j: Integer;
+  City: PCity;
+begin
+  CivIndex := Civ2.AdvisorWindow.CurrCivIndex;
+  j := 0;
+  for i := 0 to Civ2.GameParameters.TotalCities - 1 do
+  begin
+    City := @Civ2.Cities[i];
+    if (City.ID <> 0) and (City.Owner = CivIndex) and (j >= ScrollPosition) and (Page + ScrollPosition > j - 1) then
+    begin
+      Inc(j);
+      if (A20 <> 0) and (Civ2.Civs[CivIndex].Government >= 5) then
+        Civ2.CalcCityGlobals(i, True);
+      Civ2.DrawCitySprite(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort, i, 0, Civ2.AdvisorWindow.MSWindow.ClientTopLeft.X + ((j and 1) shl 6) + 2, Top1, 0);
+      Civ2.SetCurrFont($0063EAB8);
+      Civ2.SetFontColorWithShadow($25, $12, 1, 1);
+      // Etc... May be... TODO
+      Top1 := Top1 + 32;
+    end;
+  end;
+end;
+
+procedure PatchUpdateAdvisorAttitude(); register;
+asm
+    lea   eax, [ebp - $4C] // int vTop1
+    push  eax
+    push  [ebp - $2C]      // int v20
+    push  [ebp - $4]       // int vPage
+    push  [ebp - $40]      // int vScrollPosition
+    call  PatchUpdateAdvisorAttitudeEx
+    push  $0042DF7B
+    ret
+end;
+
+procedure PatchUpdateAdvisorAttitudeLineEx(CityIndex: Integer; var Top1: Integer); stdcall;
+var
+  Canvas: TCanvasEx;
+  SavedCityGlobals: TCityGlobals;
+  FoodDelta: Integer;
+begin
+  SavedCityGlobals := Civ2.CityGlobals^;
+  Civ2.CalcCityGlobals(CityIndex, True);
+  FoodDelta := Civ2.CityGlobals.TotalRes[0] - Civ2.CityGlobals.SettlersEat * Civ2.CityGlobals.Settlers - Civ2.Cosmic.CitizenEats * Civ2.Cities[CityIndex].Size;
+  if FoodDelta <> 0 then
+  begin
+    Canvas := TCanvasEx.Create(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort);
+    Canvas.MoveTo(Civ2.AdvisorWindow.MSWindow.ClientTopLeft.X + $8C - 16, Top1 + 11);
+    if FoodDelta > 0 then
+      Canvas.CopySprite(@PSprites($644F00)^[1])
+    else
+      Canvas.CopySprite(@PSprites($644F00)^[0]);
+    Canvas.Free();
+  end;
+  Civ2.CityGlobals^ := SavedCityGlobals;
+  Top1 := Top1 + Civ2.AdvisorWindow.LineHeight;
+end;
+
+procedure PatchUpdateAdvisorAttitudeLine(); register;
+asm
+    lea   eax, [ebp - $4C] // int vTop1
+    push  eax
+    push  [ebp - $30]      // int i
+    call  PatchUpdateAdvisorAttitudeLineEx
+    push  $0042DD16
+    ret
+end;
+
+// Extend vertical map overscroll
 procedure PatchCalcMapRectTopEx(MapWindow: PMapWindow); stdcall;
 begin
   if MapWindow.MapRect.Top + 2 * MapWindow.MapHalf.cy > PWord($006D1162)^ + 2 then
@@ -3145,25 +3077,10 @@ begin
         repeat
           Civ2.GameParameters.ActiveUnitIndex := i;
           Civ2.ProcessUnit();
-        until (
-          (not Civ2.UnitCanMove(i))
-          or ((Unit2.X = GotoX) and (Unit2.Y = GotoY))
-          or (Unit2.Orders <> $0B)
-          );
-        //UnitsList.Add(Unit2);
-        //Civ2.ProcessOrdersGoTo(i);
-        //SendMessageToLoader(1, i);
-        //Civ2.ProcessUnit();
-        //Civ2.HumanTurn();
-        //SendMessageToLoader(2, i);
+        until ((not Civ2.UnitCanMove(i)) or ((Unit2.X = GotoX) and (Unit2.Y = GotoY)) or (Unit2.Orders <> $0B));
         Result := 1;
       end;
     end;
-    {for i := 0 to UnitsList.Count - 1 do
-    begin
-      UnitIndex := (Integer(UnitsList[i]) - Integer(Civ2.Units)) div SizeOf(TUnit);
-      Civ2.ProcessOrdersGoTo(UnitIndex);
-    end;}
     if Result = 1 then
     begin
       PInteger($0062BCB0)^ := 0;
@@ -3206,33 +3123,12 @@ begin
     Result := PInteger($0062D04C)^;
 end;
 
-procedure PatchUIAVersionInfoEx(); stdcall;
-var
-  Canvas: TCanvasEx;
-begin
-  Canvas := TCanvasEx.Create(Civ2.MainWindowInfo.WindowStructure.DrawPort);
-
-  Canvas.Font.Name := 'Small Fonts';
-  Canvas.Font.Size := 7;
-  Canvas.Brush.Style := bsClear;
-  Canvas.SetTextColors(10, 31);
-  Canvas.TextOutWithShadows('UI Additions v1.18.0.175');
-  Canvas.Free();
-end;
-
-procedure PatchUIAVersionInfo(); register;
-asm
-    call  PatchUIAVersionInfoEx
-    push  $00589B6B
-    ret
-end;
-
 procedure PatchCreateButtonColor(AWindowInfo: PWindowInfo; ACode: Integer; ARect: PRect; AText: PChar); stdcall;
 var
   This: PControlInfoButton;
 begin
   asm
-    mov  This, ecx
+    mov   This, ecx
   end;
   This.ButtonColor := $23;
   asm
@@ -3246,22 +3142,19 @@ begin
   end;
 end;
 
+// Draw version info in top right corner
 procedure PatchWindowProcMSWindowWmPaintAfter(AHWnd: HWND; const APaint: TPaintStruct); stdcall;
 var
   Canvas: TCanvasEx;
   R: TRect;
-  ModName: array[0..MAX_PATH] of Char;
-  ModNameString: string;
   TextOut: string;
 begin
   if AHWnd = Civ2.MainWindowInfo.WindowStructure.HWindow then
   begin
-    Windows.GetModuleFileName(HInstance, ModName, SizeOf(ModName));
-    ModNameString := string(ModName);
-    TextOut := ExtractFileName(ModNameString) + ' v' + CurrentFileInfo(ModNameString);
+    TextOut := ExtractFileName(Ex.ModuleNameString) + ' v' + Ex.VersionString;
     GetClientRect(AHWnd, R);
     Canvas := TCanvasEx.Create(APaint.hdc);
-    Canvas.Font.Name := 'Small Fonts';
+    Canvas.Font.Name := 'MS Sans Serif';
     Canvas.Font.Size := 8;
     Canvas.Brush.Style := bsClear;
     Canvas.SetTextColors(10, 31);
@@ -3271,6 +3164,33 @@ begin
   end;
 
   EndPaint(AHWnd, APaint);
+end;
+
+//
+// Arrange windows
+//
+procedure PatchSetWinRectMiniMapEx(var Width, Height: Integer); stdcall;
+var
+  Scale: Integer;
+begin
+  if ArrangeWindowMiniMapWidth > 0 then
+  begin
+    Width := ArrangeWindowMiniMapWidth;
+    Scale := Width div Civ2.MapHeader.SizeX;
+    Height := Scale * Civ2.MapHeader.SizeY;
+  end;
+end;
+
+procedure PatchSetWinRectMiniMap(); register;
+asm
+    lea   eax, [ebp - $14] // int vHeight
+    push  eax
+    lea   eax, [ebp - $10] // int vWidth
+    push  eax
+    call  PatchSetWinRectMiniMapEx
+    mov   eax, [$0063359C] // int V_CaptionLeft_dword_63359C
+    push  $004078DC
+    ret
 end;
 
 {$O+}
@@ -3293,14 +3213,13 @@ begin
     WriteMemory(HProcess, $005EACDE, [], @PatchWindowProc1);
     WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
     WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
-    //WriteMemory(HProcess, $00403035, [OP_JMP], @PatchCallPopupListOfUnits);
-    //WriteMemory(HProcess, $005B6BF7, [OP_JMP], @PatchPopupListOfUnits);
-    //WriteMemory(HProcess, $005A3391, [OP_NOP, OP_JMP], @PatchCreateUnitsListPopupParts);
     WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
-    //WriteMemory(HProcess, $0040365C, [OP_JMP], @PatchDrawSideBar);
-    WriteMemory(HProcess, $0056954A, [OP_JMP], @PatchDrawSideBarV2);
+    WriteMemory(HProcess, $0056954A, [OP_JMP], @PatchDrawSideBar);
     WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
-    WriteMemory(HProcess, $005799DD, [OP_CALL], @PatchCreateMainMenu);
+
+    WriteMemory(HProcess, $004E4C38, [OP_JMP], @PatchBuildMenuBar);
+    WriteMemory(HProcess, $004E3A72, [OP_CALL], @PatchMenuExecDefaultCase);
+
     WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchWindowProcMsMrTimerAfter);
     WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
     WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
@@ -3376,7 +3295,6 @@ begin
   WriteMemory(HProcess, $0059EFCE, [OP_JMP], @PatchDlgAddListboxItemGetTextExtentX); // Calculate TextExtentX without sprites placeholders
 
   // (0) Suppress specific simple popup message
-  //WriteMemory(HProcess, $0051D5D5, [OP_JMP], @PatchPopupSimpleMessage);
   WriteMemory(HProcess, $005A6C12, [OP_JMP], @PatchLoadPopupDialogAfter);
   WriteMemory(HProcess, $005A5F40, [OP_JMP], @PatchCreateDialogAndWaitBefore);
 
@@ -3436,9 +3354,13 @@ begin
   // Fix mk.dll (229.gif, 250.gif) and pv.dll (105.gif)
   WriteMemory(HProcess, $005DB2D4, [OP_JMP], @PatchFindAndLoadResource);
 
-  // Advisor City Status Extended
+  // Enhanced City Status Advisor
   WriteMemory(HProcess, $0042D099, [OP_JMP], @PatchUpdateAdvisorCityStatus);
   WriteMemory(HProcess, $0042D5EB, [], @PatchWndProcAdvisorCityStatusLButtonUp, True);
+
+  // Enhanced Attitude Advisor
+  //WriteMemory(HProcess, $0042DD0A, [OP_JMP], @PatchUpdateAdvisorAttitude);
+  WriteMemory(HProcess, $0042DF70, [OP_JMP], @PatchUpdateAdvisorAttitudeLine);
 
   // Extend vertical map overscroll
   WriteMemory(HProcess, $0047A2F2, [OP_JMP], @PatchCalcMapRectTop);
@@ -3447,13 +3369,7 @@ begin
   WriteMemory(HProcess, $004111F3, [], @PatchMapWindowClickMassMove);
   WriteMemory(HProcess, $004111FD, [], @PatchMapWindowClickMassMove);
 
-  // Tests
-  // HookImportedFunctions(HProcess);
-  //WriteMemory(HProcess, $005DBC7B, [$18]); // MSWindowClass cbWndExtra
-  //WriteMemory(HProcess, $004ACE98, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]); // MOVEDEBUG
-  //WriteMemory(HProcess, $004ABFF1, [OP_CALL], @PatchMoveDebug);
   // Version info
-  //WriteMemory(HProcess, $00589B5C, [OP_CALL], @PatchUIAVersionInfo);
   WriteMemory(HProcess, $005DC520, [OP_NOP, OP_CALL], @PatchWindowProcMSWindowWmPaintAfter);
 
   //MapZoom
@@ -3468,11 +3384,19 @@ begin
   WriteMemory(HProcess, $0047B572 + 3, [LowMapZoom]);
   WriteMemory(HProcess, $0047B794 + 3, [LowMapZoom]);
 
-  // Button color
-  //WriteMemory(HProcess, $00401CDF, [OP_JMP], @PatchCreateButtonColor);
-
   // Add cancel button to Sell City Improvement dialog
   WriteMemory(HProcess, $00505F28, [OP_CALL], @PatchCitywinCityMouseImprovements);
+
+  // Arrange windows
+  WriteMemory(HProcess, $004078D7, [OP_JMP], @PatchSetWinRectMiniMap);
+
+  // Tests
+  // HookImportedFunctions(HProcess);
+  //WriteMemory(HProcess, $005DBC7B, [$18]); // MSWindowClass cbWndExtra
+  //WriteMemory(HProcess, $004ACE98, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]); // MOVEDEBUG
+  //WriteMemory(HProcess, $004ABFF1, [OP_CALL], @PatchMoveDebug);
+  // Button color
+  //WriteMemory(HProcess, $00401CDF, [OP_JMP], @PatchCreateButtonColor);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

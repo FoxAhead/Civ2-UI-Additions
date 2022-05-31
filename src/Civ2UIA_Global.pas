@@ -35,6 +35,8 @@ var
   ResizableAdvisorWindows: set of Byte = [1..7];
   ResizableDialogListbox: set of Byte = [1..4];
   ResizableDialogList: set of Byte = [5];
+  // Arrange windows
+  ArrangeWindowMiniMapWidth: Integer = -1;
 
 implementation
 

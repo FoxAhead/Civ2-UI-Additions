@@ -59,7 +59,7 @@ type
 var
   FormSettings: TFormSettings;
 
-procedure ShowSettingsDialog;
+procedure ShowFormSettings;
 
 implementation
 
@@ -76,11 +76,12 @@ uses
 
 {$R *.dfm}
 
-procedure ShowSettingsDialog;
+procedure ShowFormSettings;
 var
   FormSettings: TFormSettings;
 begin
   FormSettings := TFormSettings.Create(nil);
+  SetWindowLong(FormSettings.Handle, GWL_HWNDPARENT, Civ2.MainWindowInfo.WindowStructure.HWindow);
   FormSettings.ShowModal();
   FormSettings.Free();
   Ex.SaveSettingsFile();
@@ -180,6 +181,7 @@ var
   i: Integer;
 begin
   FormStrings := TFormStrings.Create(Self);
+  SetWindowLong(FormStrings.Handle, GWL_HWNDPARENT, Self.Handle);
   FormStrings.Memo1.Lines.Assign(Ex.SuppressPopupList);
   FormStrings.ShowModal();
   for i := 0 to FormStrings.Memo1.Lines.Count - 1 do

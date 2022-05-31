@@ -29,8 +29,11 @@ type
     PathLine: TPathLine;
     QuickInfo: TQuickInfo;
     MapOverlay: TMapOverlay;
+    ModuleNameString: string;
+    VersionString: string;
     constructor Create;
     destructor Destroy; override;
+    procedure GetModuleVersion();
     procedure LoadSettingsFile();
     procedure SaveSettingsFile();
     procedure LoadDefaultSettings();
@@ -53,6 +56,7 @@ implementation
 uses
   Math,
   SysUtils,
+  FileInfo,
   Civ2Proc,
   Civ2UIA_Proc,
   Civ2UIA_Global,
@@ -85,7 +89,7 @@ const
 var
   ResNumsDoFixCache: array[105..250] of Shortint; // 1 - Yes, 0 - Undefined, -1 - No
 
-{ TEx }
+  { TEx }
 
 constructor TEx.Create;
 begin
@@ -98,6 +102,7 @@ begin
   QuickInfo := TQuickInfo.Create();
   MapOverlay := TMapOverlay.Create();
   LoadSettingsFile();
+  GetModuleVersion();
 end;
 
 destructor TEx.Destroy;
@@ -108,6 +113,15 @@ begin
   QuickInfo.Free();
   MapOverlay.Free();
   inherited;
+end;
+
+procedure TEx.GetModuleVersion();
+var
+  ModuleName: array[0..MAX_PATH] of Char;
+begin
+  Windows.GetModuleFileName(HInstance, ModuleName, SizeOf(ModuleName));
+  ModuleNameString := string(ModuleName);
+  VersionString := CurrentFileInfo(ModuleNameString);
 end;
 
 procedure TEx.LoadSettingsFile;

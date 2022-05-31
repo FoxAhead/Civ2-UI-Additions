@@ -255,6 +255,9 @@ var
   TradeItem: Shortint;
   SavedCityGlobals: TCityGlobals;
   WondersCount: Integer;
+  FoodDelta: Integer;
+  FoodDeltaString: string;
+  TradeString: string;
 begin
   SetFromCursor();
   if FChanged then
@@ -262,6 +265,9 @@ begin
     ResetDrawPort();
     if FQuickInfoParts > 0 then
     begin
+      SavedCityGlobals := Civ2.CityGlobals^;
+      if FCityIndex >= 0 then
+        Civ2.CalcCityGlobals(FCityIndex, True);
       Canvas := TCanvasEx.Create(@FDrawPort);
       ColorFrame := Canvas.ColorFromIndex(39);
       UnitsSpriteZoom := -2;
@@ -280,12 +286,23 @@ begin
       begin
         City := @Civ2.Cities[FCityIndex];
 
+        FoodDelta := Civ2.CityGlobals.TotalRes[0] - Civ2.CityGlobals.SettlersEat * Civ2.CityGlobals.Settlers - Civ2.Cosmic.CitizenEats * City.Size;
+        if FoodDelta > 0 then
+          FoodDeltaString := Format('(+%d)', [FoodDelta])
+        else if FoodDelta < 0 then
+          FoodDeltaString := Format('(%d)', [FoodDelta]);
+        if City.Trade <> City.BaseTrade then
+          TradeString := Format('%d(%d)', [City.Trade, City.BaseTrade])
+        else
+          TradeString := Format('%d', [City.Trade]);
+
         // Draw city values
         Canvas.SetSpriteZoom(0);
-        Canvas.TextOutWithShadows(IntToStr(City.TotalFood)).CopySprite(@PSprites($644F00)^[1], 1, 2).PenDX(3);
+        Canvas.TextOutWithShadows(Format('%d%s', [City.TotalFood, FoodDeltaString])).CopySprite(@PSprites($644F00)^[1], 1, 2).PenDX(3);
         Canvas.TextOutWithShadows(IntToStr(City.TotalShield)).CopySprite(@PSprites($644F00)^[3], -1, 2).PenDX(1);
-        Canvas.TextOutWithShadows(IntToStr(City.Trade)).CopySprite(@PSprites($644F00)^[5], 1, 2).PenDX(3);
+        Canvas.TextOutWithShadows(TradeString).CopySprite(@PSprites($644F00)^[5], 1, 2).PenDX(3);
         Canvas.TextOutWithShadows(IntToStr(City.Tax)).CopySprite(@PSprites($648860)^[1], 0, 2).PenDX(3);
+        Canvas.TextOutWithShadows(IntToStr(Civ2.CityGlobals.Lux)).CopySprite(@PSprites($648860)^[0], -1, 1).PenDX(1);
         Canvas.TextOutWithShadows(IntToStr(City.Science)).CopySprite(@PSprites($648860)^[2], -2, 2);
         Canvas.PenBR;
 
@@ -405,8 +422,6 @@ begin
           begin
             Canvas.PenDY(2);
             Civ2.ResetSpriteZoom();
-            SavedCityGlobals := Civ2.CityGlobals^;
-            Civ2.CalcCityGlobals(FCityIndex, True);
             for i := 0 to Civ2.Cities[FCityIndex].TradeRoutes - 1 do
             begin
               TextOut := string(Civ2.Cities[Civ2.Cities[FCityIndex].TradePartner[i]].Name) + ' ';
@@ -423,7 +438,6 @@ begin
                 Canvas.TextOutWithShadows(TextOut).CopySprite(@PSprites($645068)^[2], 2, 3).PenBR;
               end;
             end;
-            Civ2.CityGlobals^ := SavedCityGlobals;
           end;
         end;
       end;
@@ -438,6 +452,7 @@ begin
 
       //Civ2.ResetSpriteZoom();
       Canvas.Free();
+      Civ2.CityGlobals^ := SavedCityGlobals;
     end;
     FChanged := False;
   end;
