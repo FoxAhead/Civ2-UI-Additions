@@ -59,6 +59,8 @@ type
 var
   FormSettings: TFormSettings;
 
+procedure ShowFormSettings;
+
 implementation
 
 uses
@@ -73,6 +75,17 @@ uses
   Civ2UIA_Ex;
 
 {$R *.dfm}
+
+procedure ShowFormSettings;
+var
+  FormSettings: TFormSettings;
+begin
+  FormSettings := TFormSettings.Create(nil);
+  SetWindowLong(FormSettings.Handle, GWL_HWNDPARENT, Civ2.MainWindowInfo.WindowStructure.HWindow);
+  FormSettings.ShowModal();
+  FormSettings.Free();
+  Ex.SaveSettingsFile();
+end;
 
 procedure TFormSettings.FormCreate(Sender: TObject);
 var
@@ -110,7 +123,7 @@ begin
   // Also recreate main window brush for background
   Civ2.RecreateBrush(Civ2.MainWindowInfo, $9E);
   // Also set new palette for map overlay - to be consistent with the game look
-  Civ2.SetDIBColorTableFromPalette(DrawTestData.DrawPort.DrawInfo, GraphicsInfo.WindowInfo.Palette);
+  Civ2.SetDIBColorTableFromPalette(Ex.MapOverlay.DrawPort.DrawInfo, GraphicsInfo.WindowInfo.Palette);
   // Redraw main window with all subwindows
   HWindow := GetParent(GraphicsInfo.WindowInfo.WindowStructure^.HWindow);
   RedrawWindow(HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
@@ -168,6 +181,7 @@ var
   i: Integer;
 begin
   FormStrings := TFormStrings.Create(Self);
+  SetWindowLong(FormStrings.Handle, GWL_HWNDPARENT, Self.Handle);
   FormStrings.Memo1.Lines.Assign(Ex.SuppressPopupList);
   FormStrings.ShowModal();
   for i := 0 to FormStrings.Memo1.Lines.Count - 1 do

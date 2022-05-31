@@ -18,7 +18,7 @@ type
   TFormStrings = class(TForm)
     Memo1: TMemo;
     Button1: TButton;
-    Memo2: TMemo;
+    Label1: TLabel;
     procedure Button1Click(Sender: TObject);
     procedure Memo1KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
   private                                 { Private declarations }

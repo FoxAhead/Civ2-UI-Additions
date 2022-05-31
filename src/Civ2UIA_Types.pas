@@ -56,12 +56,6 @@ type
     MouseOver: TPoint;
   end;
 
-  TDrawTestData = record
-    MapDeviceContext: HDC;
-    Counter: Cardinal;
-    DrawPort: TDrawPort;
-  end;
-
   TUIASettings = packed record
     Version: Integer;
     Size: Integer;
@@ -97,8 +91,10 @@ const
   SHADOW_B_ = $40;
   SHADOW_BR = $80;
   SHADOW_ALL = $FF;
-  IDM_GITHUB = $FF01;
-  IDM_SETTINGS = $FF02;
+  IDM_SETTINGS = $A01;
+  IDM_ABOUT = $A02;
+  IDA_ARRANGE_S = $329;
+  IDA_ARRANGE_L = $32A;
 
 implementation
 

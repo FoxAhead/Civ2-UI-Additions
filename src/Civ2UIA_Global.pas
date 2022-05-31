@@ -10,6 +10,8 @@ uses
 
 const
   WLTDKColorIndex: Integer = $72;
+  //
+  LowMapZoom: Byte = $FA;
 
 var
   ChangeSpecialistDown: Boolean;
@@ -27,13 +29,14 @@ var
   //
   CityWindowEx: TCityWindowEx;
   AdvisorWindowEx: TAdvisorWindowEx;
-  DrawTestData: TDrawTestData;
   MapMessagesList: TList;
   UIASettings: TUIASettings;
   //
   ResizableAdvisorWindows: set of Byte = [1..7];
   ResizableDialogListbox: set of Byte = [1..4];
   ResizableDialogList: set of Byte = [5];
+  // Arrange windows
+  ArrangeWindowMiniMapWidth: Integer = -1;
 
 implementation
 
