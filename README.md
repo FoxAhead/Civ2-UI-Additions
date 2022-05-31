@@ -115,7 +115,7 @@ https://forums.civfanatics.com/resources/corrected-dlls-for-mge.24259/
 38. PathLines for city trade routes and unit movement.  
 ![Screenshot](Screenshots/PathLineCity.png?raw=true "PathLineCity")
 ![Screenshot](Screenshots/PathLineUnit.png?raw=true "PathLineUnit")  
-With city slected (right-click on it to place blinking white cursor) and Shift pressed moving mouse around will draw the path along which qualified road or railroad should be built to get permanent trade bonus. Moving mouse over this same city will draw all (up to three) existing trade routes. More details about qualified roads here:  
+With city selected (right-click on it to place blinking white cursor) and Shift pressed moving mouse around will draw the path along which qualified road or railroad should be built to get permanent trade bonus. Moving mouse over this same city will draw all (up to three) existing trade routes. More details about qualified roads here:  
 https://apolyton.net/forum/miscellaneous/archives/civ2-strategy-archive-aa/104062-trade-roads-%C2%96-determination-of-the-bonus-road-and-railroad-connection  
 With the active unit selected and Shift pressed, moving the mouse will draw a predictable path based on your knowledge of the world map (existing units and terrain improvements). That is, when drawing a path, hidden foreign units, cities or roads are not taken into account.
 
