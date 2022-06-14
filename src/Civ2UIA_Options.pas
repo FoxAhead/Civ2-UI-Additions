@@ -52,7 +52,7 @@ var
     iUnitsLimit: 32000;                   // Default = 2048
     // civ2patch
     civ2patchEnable: True;
-    HostileAiOn: True;
+    HostileAiOn: False;
     RetirementYearOn: False;
     RetirementWarningYear: 2000;          // Default = 2000
     RetirementYear: 2020;                 // Default = 2020

@@ -87,6 +87,7 @@ begin
   begin
     EditDll.Text := OpenDialogDll.FileName;
     DllName := OpenDialogDll.FileName;
+    LabelVersion.Caption := 'Version ' + CurrentFileInfo(DllName);
   end;
 end;
 
@@ -112,11 +113,12 @@ begin
     Visible := False;
     Terminating := CheckLaunchClose();
   end;
-  if not Terminating then
+  if not Terminating then 
   begin
     Visible := True;
     Application.ShowMainForm := True;
-    LabelVersion.Caption := 'Version ' + CurrentFileInfo(Application.ExeName);
+    //LabelVersion.Caption := 'Version ' + CurrentFileInfo(Application.ExeName);
+    LabelVersion.Caption := 'Version ' + CurrentFileInfo(DllName);
     AdjustFormToDebug();
   end;
 end;

@@ -110,14 +110,23 @@ https://forums.civfanatics.com/resources/corrected-dlls-for-mge.24259/
 
 37. Added gold coins to the Foreign Minister.
 
-37. Two new View-menu items: `Arrange Windows S` and `Arrange Windows L`. They differ in slightly smaller and larger dimensions of the side panel compared to the standard option `Arrange Windows`.
+38. Two new View-menu items: `Arrange Windows S` and `Arrange Windows L`. They differ in slightly smaller and larger dimensions of the side panel compared to the standard option `Arrange Windows`.
 
-38. PathLines for city trade routes and unit movement.  
+39. PathLines for city trade routes and unit movement.  
 ![Screenshot](Screenshots/PathLineCity.png?raw=true "PathLineCity")
 ![Screenshot](Screenshots/PathLineUnit.png?raw=true "PathLineUnit")  
 With city selected (right-click on it to place blinking white cursor) and Shift pressed moving mouse around will draw the path along which qualified road or railroad should be built to get permanent trade bonus. Moving mouse over this same city will draw all (up to three) existing trade routes. More details about qualified roads here:  
 https://apolyton.net/forum/miscellaneous/archives/civ2-strategy-archive-aa/104062-trade-roads-%C2%96-determination-of-the-bonus-road-and-railroad-connection  
 With the active unit selected and Shift pressed, moving the mouse will draw a predictable path based on your knowledge of the world map (existing units and terrain improvements). That is, when drawing a path, hidden foreign units, cities or roads are not taken into account.
+
+40. Fix dye-copper demand bug. Due to uninitialized variable of number of roads there was very high demand quotients for dye and copper. More info on How Supply and Demand Lists Are Determine:  
+https://apolyton.net/forum/civilization-series/civilization-i-and-civilization-ii/79947-how-supply-and-demand-lists-are-determined
+
+41. Better grayed sprites for units on sentry. Instead of a simple gray silhouette, the unit is displayed in gray halftones, which helps to better recognize the type of unit.
+
+42. Key `U` now also loads (sets on Sentry) all ground units in stack. Pressing `U` when there are no units on guard on the stack puts all ground units on that stack back on guard.
+
+43. New game default map zoom 1:1. Now, when starting a new game, the map zoom is set to 1:1 (level 0), regardless of the screen width (previously, if the screen width was more than 1000 pixels, the zoom was set to level 2).
 
 Some experimental features that could change some original game rules or limitations without a guarantee of stability:
  - Change total units limit from default 2048. Don't use numbers greater than 32767. Saves with number of units greater than default should be loaded only with this patch.

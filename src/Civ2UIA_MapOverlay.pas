@@ -49,7 +49,7 @@ begin
       if MapDeviceContext <> MapDrawPort.DrawInfo.DeviceContext then
       begin
         MapDeviceContext := MapDrawPort.DrawInfo.DeviceContext;
-        Civ2.DrawPort_Reset(@DrawPort, MapDrawPort.RectWidth, MapDrawPort.RectHeight);
+        Civ2.DrawPort_Reset(@DrawPort, MapDrawPort.Width, MapDrawPort.Height);
         Civ2.SetDIBColorTableFromPalette(DrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.Palette);
       end;
     end;
