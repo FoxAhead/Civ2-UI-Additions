@@ -2047,8 +2047,8 @@ begin
     begin
       DialogIndex := Dialog._Extra.DialogIndex;
 
-      DeltaY := Dialog.GraphicsInfo^.DrawPort.RectHeight - Dialog.ClientSize.cy + 1;
-      Dialog.ClientSize.cy := Dialog.GraphicsInfo^.DrawPort.RectHeight + 1;
+      DeltaY := Dialog.GraphicsInfo^.DrawPort.Height - Dialog.ClientSize.cy + 1;
+      Dialog.ClientSize.cy := Dialog.GraphicsInfo^.DrawPort.Height + 1;
 
       if DialogIndex in ResizableDialogListbox then
       begin
@@ -3172,11 +3172,15 @@ end;
 procedure PatchSetWinRectMiniMapEx(var Width, Height: Integer); stdcall;
 var
   Scale: Integer;
+  MaxScale: Integer;
+  R: TRect;
 begin
   if ArrangeWindowMiniMapWidth > 0 then
   begin
     Width := ArrangeWindowMiniMapWidth;
-    Scale := Width div Civ2.MapHeader.SizeX;
+    GetClientRect(Civ2.MainWindowInfo.WindowStructure.HWindow, R);
+    MaxScale := RectHeight(R) div 5 div Civ2.MapHeader.SizeY;
+    Scale := Max(Min(Width div Civ2.MapHeader.SizeX, MaxScale), 1);
     Height := Scale * Civ2.MapHeader.SizeY;
   end;
 end;
@@ -3191,6 +3195,282 @@ asm
     mov   eax, [$0063359C] // int V_CaptionLeft_dword_63359C
     push  $004078DC
     ret
+end;
+
+//
+
+procedure PatchLoadSpritesUnitsEx(DrawPort: PDrawPort); stdcall;
+var
+  i, j, k, l, m: Integer;
+  ColorIndex: Integer;
+  MinIndex, MaxIndex: Integer;
+  RGB1, RGB2: RGBQuad;
+  X, Y: Integer;
+  RGBs: array[0..255] of RGBQuad;
+  Pixel: COLORREF;
+  DrawPort2: TDrawPort;
+  Weight, Gray, MinGray, MaxGray: Integer;
+  Delta, MidGray2, MinGray2, MaxGray2: Integer;
+  GrayK1, GrayK2: Double;
+  Height, Len: Integer;
+  Pxl: PByte;
+  Sprite: PSprite;
+  SumGray, CountGray: Integer;
+  MidGray: Double;
+begin
+  GetDIBColorTable(DrawPort.DrawInfo.DeviceContext, 0, 256, RGBs);
+  {ZeroMemory(@DrawPort2, SizeOf(DrawPort2));
+  Civ2.DrawPort_Reset(@DrawPort2, DrawPort.Width, DrawPort.Height);
+  Civ2.CopyToPort(DrawPort, @DrawPort2, 0, 0, 0, 0, DrawPort.Width, DrawPort.Height);
+  Weight := 5;
+  for i := 10 to 245 do
+  begin
+    Gray := (RGBs[i].rgbBlue + RGBs[i].rgbGreen + RGBs[i].rgbRed) div 3;
+    Gray := $A0;
+    RGBs[i].rgbBlue := (RGBs[i].rgbBlue + Gray * Weight) div (Weight + 1);
+    RGBs[i].rgbGreen := (RGBs[i].rgbGreen + Gray * Weight) div (Weight + 1);
+    RGBs[i].rgbRed := (RGBs[i].rgbRed + Gray * Weight) div (Weight + 1);
+  end;
+  SetDIBColorTable(DrawPort2.DrawInfo.DeviceContext, 0, 256, RGBs);
+  BitBlt(DrawPort.DrawInfo.DeviceContext, 0, 0, DrawPort.Width, DrawPort.Height, DrawPort2.DrawInfo.DeviceContext, 0, 0, SRCCOPY);}
+
+  //Civ2.CopyToPort(@DrawPort2, DrawPort, 0, 0, 0, 0, DrawPort2.Width, DrawPort2.Height);
+
+  {MinIndex := 255;
+  MaxIndex := 0;}
+  {for i := 0 to DrawPort.DrawInfo.Height - 1 do
+    for j := 0 to DrawPort.DrawInfo.BmWidth4 - 1 do
+    begin
+      ColorIndex := DrawPort.DrawInfo.PBmp[i * DrawPort.DrawInfo.BmWidth4 + j];
+      if (ColorIndex >= 10) and (ColorIndex <= 245) then
+      begin}
+        {Pixel := GetPixel(DrawPort.DrawInfo.DeviceContext, j, i);
+        Pixel := Pixel and $FF0000FF;
+        SetPixel(DrawPort.DrawInfo.DeviceContext, j, i, Pixel);}
+        {MinIndex := Min(MinIndex, ColorIndex);
+        MaxIndex := Max(MaxIndex, ColorIndex);}
+        {RGB1 := RGBs[ColorIndex];
+        ColorIndex := (RGB1.rgbBlue + RGB1.rgbGreen + RGB1.rgbRed) * 31 div 765 div 2 + 16;
+        DrawPort.DrawInfo.PBmp[i * DrawPort.DrawInfo.BmWidth4 + j] := ColorIndex + 10;
+      end;
+    end;}
+
+  for i := 0 to 62 do
+  begin
+    X := 1 + (i mod 9) * 65;
+    Y := 1 + (i div 9) * 49;
+    Civ2.DisposeSprite(@Ex.UnitSpriteSentry[i]);
+    Civ2.ExtractSprite64x48(@Ex.UnitSpriteSentry[i], X, Y);
+  end;
+
+  for i := 0 to 62 do
+  begin
+    Sprite := @Ex.UnitSpriteSentry[i];
+    Height := RectHeight(Sprite.Rectangle2);
+    MinGray := 31;
+    MaxGray := 0;
+    SumGray := 0;
+    CountGray := 0;
+    // First pass
+    Pxl := Sprite.pMem;
+    for j := 0 to Height - 1 do
+    begin
+      Inc(Pxl, 4);
+      Len := PInteger(Pxl)^;
+      Inc(Pxl, 4);
+      for k := 0 to Len - 1 do
+      begin
+        if (Pxl^ >= 10) and (Pxl^ <= 245) then
+        begin
+          RGB1 := RGBs[Pxl^];
+          Gray := (RGB1.rgbBlue + RGB1.rgbGreen + RGB1.rgbRed) * 31 div 765;
+          Inc(SumGray, Gray);
+          Inc(CountGray);
+          MinGray := Min(MinGray, Gray);
+          MaxGray := Max(MaxGray, Gray);
+          Pxl^ := Gray + 10;
+        end;
+        Inc(Pxl);
+      end;
+    end;
+    if CountGray <> 0 then
+      MidGray := SumGray / CountGray
+    else
+      MidGray := (MinGray + MaxGray) div 2;
+    Delta := 4;
+    MidGray2 := 16;
+    MinGray2 := MidGray2 - Delta;
+    MaxGray2 := MidGray2 + Delta;
+    GrayK1 := 0;
+    GrayK2 := 0;
+    if MidGray <> MinGray then
+      GrayK1 := (MidGray2 - MinGray2) / (MidGray - MinGray);
+    if MaxGray <> MidGray then
+      GrayK2 := (MaxGray2 - MidGray2) / (MaxGray - MidGray);
+    // Second pass
+    Pxl := Sprite.pMem;
+    for j := 0 to Height - 1 do
+    begin
+      Inc(Pxl, 4);
+      Len := PInteger(Pxl)^;
+      Inc(Pxl, 4);
+      for k := 0 to Len - 1 do
+      begin
+        if (Pxl^ >= 10) and (Pxl^ <= 245) then
+        begin
+          Gray := Pxl^ - 10;
+          if Gray < MidGray then
+            Gray := Trunc(MidGray2 - (MidGray - Gray) * GrayK1)
+          else
+            Gray := Trunc(MidGray2 + (Gray - MidGray) * GrayK2);
+          Pxl^ := Gray + 10;
+        end;
+        Inc(Pxl);
+      end;
+    end;
+  end;
+
+  Civ2.DrawPort_Reset(DrawPort, 0, 0);
+end;
+
+procedure PatchLoadSpritesUnits(); register;
+asm
+    push  ecx
+    call  PatchLoadSpritesUnitsEx
+    push  $0044B499
+    ret
+end;
+
+procedure PatchDrawUnitSentry(AEAX, AEDX: Integer; AECX: PSprite; ATint, ATop, ALeft: Integer; DrawPort: PDrawPort; ARect: PRect); register;
+var
+  UnitType: Integer;
+begin
+  UnitType := (Integer(AECX) - $641848) div SizeOf(TSprite);
+  //Ex.GenerateUnitSpriteSentry();
+  //Civ2.CopySprite(AECX, ARect, DrawPort, ALeft, ATop);
+  Civ2.CopySprite(@Ex.UnitSpriteSentry[UnitType], ARect, DrawPort, ALeft, ATop);
+end;
+
+procedure PatchDrawMapSquareOwnershipEx(MapWindow: PMapWindow; Left, Top, MapX, MapY, CivIndex: Integer); stdcall;
+var
+  Canvas: TCanvasEx;
+  Ownership, Ownership2: Integer;
+  i: Integer;
+  DX, DY: Integer;
+begin
+  {if (Civ2.GameParameters.GraphicAndGameOptions and $20) = 0 then
+    Exit;}
+  if not Civ2.MapSquareIsVisibleTo(MapX, MapY, CivIndex) then
+    Exit;
+  DX := 2;
+  DY := 1;
+  //Ownership := Civ2.MapGetOwnership(MapX, MapY);
+  Ownership := Civ2.MapGetSquareCityRadii(MapX, MapY);
+  if Ownership > 0 then
+  begin
+    Canvas := TCanvasEx.Create(@MapWindow.MSWindow.GraphicsInfo.DrawPort);
+    Canvas.Brush.Color := Canvas.ColorFromIndex(Civ2.GetCivColor1(Ownership));
+    //Canvas.FillRect(Bounds(Left + MapWindow.MapCellSize2.cx - 5, Top + MapWindow.MapCellSize2.cy - 5, 10, 10));
+    Canvas.Pen.Color := Canvas.ColorFromIndex(Civ2.GetCivColor1(Ownership));
+    Canvas.Pen.Width := 2;
+    for i := 0 to 3 do
+    begin
+      //Ownership2 := Civ2.MapGetOwnership(MapX + Civ2.PFDX[i * 2], MapY + Civ2.PFDY[i * 2]);
+      Ownership2 := Civ2.MapGetSquareCityRadii(MapX + Civ2.PFDX[i * 2], MapY + Civ2.PFDY[i * 2]);
+      if Ownership <> Ownership2 then
+      begin
+        case i of
+          0:
+            begin
+              Canvas.MoveTo(Left + MapWindow.MapCellSize2.cx - 1, Top + DY + 1);
+              Canvas.LineTo(Left + MapWindow.MapCellSize.cx - 3, Top + MapWindow.MapCellSize2.cy + 1);
+            end;
+          1:
+            begin
+              Canvas.MoveTo(Left + MapWindow.MapCellSize.cx - 4, Top + MapWindow.MapCellSize2.cy);
+              Canvas.LineTo(Left + MapWindow.MapCellSize2.cx - 2, Top + MapWindow.MapCellSize.cy - 1);
+            end;
+          2:
+            begin
+              Canvas.MoveTo(Left + 3, Top + MapWindow.MapCellSize2.cy);
+              Canvas.LineTo(Left + MapWindow.MapCellSize2.cx + 1, Top + MapWindow.MapCellSize.cy - 1);
+            end;
+          3:
+            begin
+              Canvas.MoveTo(Left + MapWindow.MapCellSize2.cx, Top + 2);
+              Canvas.LineTo(Left + 2, Top + MapWindow.MapCellSize2.cy + 1);
+            end;
+        end;
+      end;
+    end;
+    Canvas.Free();
+  end;
+end;
+
+procedure PatchDrawMapSquareOwnership(); register;
+asm
+    push  [ebp + $10] //  int aCiv
+    push  [ebp + $0C] //  int aMapY
+    push  [ebp + $08] //  int aMapX
+    push  [ebp - $0C] //  int Top
+    push  [ebp - $08] //  int Left
+    push  [ebp - $34] //  P_MapWindow this
+    call  PatchDrawMapSquareOwnershipEx
+    //mov   eax, $00401AD7 // call    Q_PurgeMessages_sub_401AD7
+    //call  eax
+    push  $0047C2EB
+    ret
+end;
+
+procedure PatchOrderLoadUnload(); stdcall;
+var
+  UnitIndex, i: Integer;
+  Unit1: PUnit;
+  Unloaded: Boolean;
+begin
+  UnitIndex := -1;
+  Unloaded := False;
+  if Civ2.GameParameters.ActiveUnitIndex >= 0 then
+  begin
+    Unit1 := @Civ2.Units[Civ2.GameParameters.ActiveUnitIndex];
+    if Civ2.UnitTypes[Unit1.UnitType].Domain = 2 then
+      Unit1.Attributes := Unit1.Attributes or $4000;
+    i := Civ2.GetTopUnitInStack(Civ2.GameParameters.ActiveUnitIndex);
+    while i >= 0 do
+    begin
+      Unit1 := @Civ2.Units[i];
+      if (Civ2.UnitTypes[Unit1.UnitType].Domain = 0) and (Unit1.Orders = 3) then
+      begin
+        Unit1.Orders := -1;
+        Unloaded := True;
+        if Civ2.UnitCanMove(i) then
+          UnitIndex := i;
+      end;
+      i := Civ2.GetNextUnitInStack(i);
+    end;
+    if Unloaded then
+    begin
+      if UnitIndex >= 0 then
+      begin
+        Civ2.GameParameters.ActiveUnitIndex := UnitIndex;
+        Civ2.UnitSelected^ := False;
+        Civ2.AfterActiveUnitChanged(0);
+      end;
+    end
+    else
+    begin
+      i := Civ2.GetTopUnitInStack(Civ2.GameParameters.ActiveUnitIndex);
+      while i >= 0 do
+      begin
+        Unit1 := @Civ2.Units[i];
+        if (Civ2.UnitTypes[Unit1.UnitType].Domain = 0) and (Unit1.Orders = -1) and (Civ2.UnitCanMove(i)) then
+        begin
+          Unit1.Orders := 3;
+        end;
+        i := Civ2.GetNextUnitInStack(i);
+      end;
+    end;
+  end;
 end;
 
 {$O+}
@@ -3390,6 +3670,19 @@ begin
   // Arrange windows
   WriteMemory(HProcess, $004078D7, [OP_JMP], @PatchSetWinRectMiniMap);
 
+  // Fix dye-copper demand bug
+  WriteMemory(HProcess, $0043D61D + 3, [$FF, $FF, $FF, $FF]);
+
+  // Order load/unload
+  WriteMemory(HProcess, $00402EB9, [OP_JMP], @PatchOrderLoadUnload);
+
+  // Default new game map zoom 1:1
+  WriteMemory(HProcess, $00413770 + 7, [$00]);
+
+  // Draw Unit Sentry
+  WriteMemory(HProcess, $0044B48F, [OP_CALL], @PatchLoadSpritesUnits);
+  WriteMemory(HProcess, $0056C4EF, [OP_CALL], @PatchDrawUnitSentry);
+
   // Tests
   // HookImportedFunctions(HProcess);
   //WriteMemory(HProcess, $005DBC7B, [$18]); // MSWindowClass cbWndExtra
@@ -3397,6 +3690,10 @@ begin
   //WriteMemory(HProcess, $004ABFF1, [OP_CALL], @PatchMoveDebug);
   // Button color
   //WriteMemory(HProcess, $00401CDF, [OP_JMP], @PatchCreateButtonColor);
+
+  // Draw Map
+  //WriteMemory(HProcess, $0047A8D5, [OP_JMP], Pointer($0047BA16));
+  //WriteMemory(HProcess, $0047C2E6, [OP_JMP], @PatchDrawMapSquareOwnership);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

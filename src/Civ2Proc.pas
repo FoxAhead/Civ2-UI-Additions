@@ -133,12 +133,21 @@ type
     function DrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer;
     function CalcCityGlobals(CityIndex: Integer; Calc: LongBool): Integer;
     procedure ArrangeWindows();
+    procedure CopySpriteToSprite(Source, Target: PSprite);
+    procedure DisposeSprite(Sprite: PSprite);
+    procedure ExtractSprite64x48(Sprite: PSprite; Left, Top: Integer);
+    function GetCivColor1(CivIndex: Integer): Integer;
+    function GetTopUnitInStack(UnitIndex: Integer): Integer;
+    function GetNextUnitInStack(UnitIndex: Integer): Integer;
+    procedure AfterActiveUnitChanged(A1: Integer);
     // Map
     function WrapMapX(X: Integer): Integer;
     function IsInMapBounds(X, Y: Integer): LongBool;
     function MapGetCivData(X, Y, CivIndex: Integer): PByte;
     function MapGetSquare(X, Y: Integer): PMapSquare;
     function MapSquareIsVisibleTo(X, Y, CivIndex: Integer): LongBool;
+    function MapGetOwnership(X, Y: Integer): Integer;
+    function MapGetSquareCityRadii(X, Y: Integer): Integer;
     // PF
     function PFMove(X, Y, A3: Integer): Integer;
     function PFFindUnitDir(UnitIndex: Integer): Integer;
@@ -872,6 +881,67 @@ asm
     call  eax
 end;
 
+procedure TCiv2.CopySpriteToSprite(Source, Target: PSprite);
+asm
+    push  Target
+    mov   ecx, Source
+    mov   eax, $005CF23F
+    call  eax
+end;
+
+procedure TCiv2.DisposeSprite(Sprite: PSprite);
+asm
+    mov   ecx, Sprite
+    mov   eax, $005CDF50
+    call  eax
+end;
+
+procedure TCiv2.ExtractSprite64x48(Sprite: PSprite; Left, Top: Integer);
+asm
+    push  Top
+    push  Left
+    push  Sprite
+    mov   ecx, Sprite
+    mov   eax, $0044AC07
+    call  eax
+    add   esp, $0C
+end;
+
+function TCiv2.GetCivColor1(CivIndex: Integer): Integer;
+asm
+    push  CivIndex
+    mov   eax, $00401F8C
+    call  eax
+    add   esp, $04
+    mov   @Result, eax
+end;
+
+function TCiv2.GetTopUnitInStack(UnitIndex: Integer): Integer;
+asm
+    push  UnitIndex
+    mov   eax, $00403391
+    call  eax
+    add   esp, $04
+    mov   @Result, eax
+end;
+
+function TCiv2.GetNextUnitInStack(UnitIndex: Integer): Integer;
+asm
+    push  UnitIndex
+    mov   eax, $00402E23
+    call  eax
+    add   esp, $04
+    mov   @Result, eax
+end;
+
+procedure TCiv2.AfterActiveUnitChanged(A1: Integer);
+asm
+    push  A1
+    mov   eax, $004016EF
+    call  eax
+    add   esp, $04
+end;
+
 //
 // Map
 //
@@ -903,6 +973,16 @@ asm
     mov   eax, $00403C24
     call  eax
     add   esp, $0C
+    mov   @Result, eax
+end;
+
+function TCiv2.MapGetOwnership(X, Y: Integer): Integer;
+asm
+    push  Y
+    push  X
+    mov   eax, $004029BE
+    call  eax
+    add   esp, $08
     mov   @Result, eax
 end;
 
@@ -951,6 +1031,16 @@ asm
     mov   @Result, eax
 end;
 
+function TCiv2.MapGetSquareCityRadii(X, Y: Integer): Integer;
+asm
+    push  Y
+    push  X
+    mov   eax, $00403A67
+    call  eax
+    add   esp, $08
+    mov   @Result, eax
+end;
+
 //
 // MenuBar
 //
@@ -985,5 +1075,6 @@ asm
     call  eax
     mov   @Result, eax
 end;
+
 
 end.

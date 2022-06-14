@@ -515,8 +515,8 @@ type
 
   TDrawPort = packed record               // Part of TGraphicsInfo; TODO: Move to TGraphicsInfo
     _Proc: Pointer;
-    RectWidth: Integer;
-    RectHeight: Integer;
+    Width: Integer;
+    Height: Integer;
     BmWidth4: Integer;
     BmWidth4u: Integer;
     ClientRectangle: TRect;
@@ -650,7 +650,7 @@ type
     ImproveCount: Integer;
     Unknown7: array[$15BC..$15D3] of Byte; // + 15B8
     WindowSize: Integer;                  // + 15D4 = 6AA78C  // 1, 2, 3
-    Unknown8: Integer;                    //
+    Zoom: Integer;                        //
     RectCitizens: TRect;                  //
     Rect1: TRect;                         // + 15EC
     RectFoodStorage: TRect;               //
@@ -825,6 +825,7 @@ type
   TGameParameters = packed record
     word_655AE8: Word;
     GraphicAndGameOptions: Integer;
+    // 0x0020 - Show Map Grid
     // 0x0100 - Tutorial help.
     // 0x1000 - Show enemy moves.
     // 0x4000 - Always wait at end of turn.

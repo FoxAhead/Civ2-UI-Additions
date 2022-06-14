@@ -265,7 +265,7 @@ begin
       if FCityIndex >= 0 then
         Canvas.Pen.Color := Canvas.ColorFromIndex(121)
       else
-        Canvas.Pen.Color := Canvas.ColorFromIndex(94);
+        Canvas.Pen.Color := Canvas.ColorFromIndex(175);
       Canvas.Pen.Width := ScaleByZoom(2, Civ2.MapWindow.MapZoom + 1);
       Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1, FStartPoint.Y + 1);
       Canvas.PenPos := ScreenPoint;

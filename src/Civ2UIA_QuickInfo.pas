@@ -166,8 +166,8 @@ begin
   if FBgTile.DrawInfo = nil then
   begin
     BgTile := PDrawPort($00640990);
-    Civ2.DrawPort_Reset(@FBgTile, BgTile.RectWidth, BgTile.RectHeight);
-    Civ2.CopyToPort(BgTile, @FBgTile, 0, 0, 0, 0, BgTile.RectWidth, BgTile.RectHeight);
+    Civ2.DrawPort_Reset(@FBgTile, BgTile.Width, BgTile.Height);
+    Civ2.CopyToPort(BgTile, @FBgTile, 0, 0, 0, 0, BgTile.Width, BgTile.Height);
     for i := 0 to FBgTile.DrawInfo.BmWidth4 * FBgTile.DrawInfo.Height - 1 do
     begin
       ColorGray := Clamp(FBgTile.DrawInfo.PBmp[i], 10, 41) - 10;
@@ -254,7 +254,7 @@ var
   UnitsSpriteZoom: Integer;
   TradeItem: Shortint;
   SavedCityGlobals: TCityGlobals;
-  WondersCount: Integer;
+  WondersCount, MaxWondersInRow: Integer;
   FoodDelta: Integer;
   FoodDeltaString: string;
   TradeString: string;
@@ -325,6 +325,7 @@ begin
         end;
         if Canvas.PenPos.X > Canvas.PenOrigin.X then
           Canvas.PenBR;
+
         // Wonders
         WondersCount := 0;
         for i := 0 to 27 do
@@ -333,7 +334,8 @@ begin
         if WondersCount > 0 then
         begin
           j := 0;
-          WondersCount := Ceil(WondersCount / ((WondersCount + 6) div 7));
+          MaxWondersInRow := (Canvas.MaxPen.X - 4) div 29;
+          WondersCount := Ceil(WondersCount / ((WondersCount + MaxWondersInRow - 1) div MaxWondersInRow));
           for i := 0 to 27 do
           begin
             if Civ2.WonderCity[i] = FCityIndex then

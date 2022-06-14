@@ -31,6 +31,7 @@ type
     MapOverlay: TMapOverlay;
     ModuleNameString: string;
     VersionString: string;
+    UnitSpriteSentry: array[0..63] of TSprite;
     constructor Create;
     destructor Destroy; override;
     procedure GetModuleVersion();
@@ -44,6 +45,7 @@ type
     procedure CanvasRelease();
     function SimplePopupSuppressed(SectionName: PChar): Boolean;
     function DllGifNeedFixing(ResNum: Integer): Boolean;
+    procedure GenerateUnitSpriteSentry();
   published
 
   end;
@@ -292,6 +294,44 @@ begin
     end;
     Result := (ResNumsDoFixCache[ResNum] = 1);
   end;
+end;
+
+procedure TEx.GenerateUnitSpriteSentry;
+var
+  Sprite1: PSprite;
+  i, j: Integer;
+  Size: Integer;
+  Pixel: PByte;
+  Color: Byte;
+  Len: Integer;
+  DrawPort: TDrawPort;
+  R: TRect;
+begin
+{  ZeroMemory(@DrawPort, SizeOf(DrawPort));
+  Civ2.DrawPort_Reset(@DrawPort, 64, 48);
+  for i := Low(UnitSpriteSentry) to High(UnitSpriteSentry) do
+  begin
+    if UnitSpriteSentry[i].hMem <> 0 then
+      Exit;
+    Sprite1 := @PSprites($641848)[i];
+    Civ2.CopySprite(Sprite1, @R, @DrawPort, 0, 0);
+
+    {SendMessageToLoader(RectWidth(Sprite1.Rectangle1), RectHeight(Sprite1.Rectangle1));
+    SendMessageToLoader(RectWidth(Sprite1.Rectangle2), RectHeight(Sprite1.Rectangle2));
+    SendMessageToLoader(RectWidth(Sprite1.Rectangle3), RectHeight(Sprite1.Rectangle3));}
+    {Civ2.CopySpriteToSprite(Sprite1, @UnitSpriteSentry[i]);
+    Size := GlobalSize(UnitSpriteSentry[i].hMem);
+    SendMessageToLoader(i, Size);
+    {for j := 0 to Size - 1 do
+    begin
+      Pixel := @PByteArray(UnitSpriteSentry[i].pMem)[j];
+      if i = 1 then
+        SendMessageToLoader(j, Pixel^);
+      if Pixel^ <> 0 then
+        Pixel^ := 31;
+    end;}
+  //end;
+  //Civ2.DrawPort_Reset(@DrawPort, 0, 0);
 end;
 
 end.
