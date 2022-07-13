@@ -355,7 +355,6 @@ type
     // 0x00000004 - Checkboxes
     // 0x00000008 - Don't show
     // 0x00000020 - Created
-    // 0x02000000 - Without Ok button (StdType = 0)
     // 0x00000040 - Has Help button (StdType = 1)
     // 0x00000200 - Created parts
     // 0x00000400 - ClearPopup
@@ -365,6 +364,7 @@ type
     // 0x00010000 - System popup
     // 0x00040000 - System listbox
     // 0x01000000 - Force scrollbar for listbox
+    // 0x02000000 - Without Ok button (StdType = 0)
     ClientSize: TSize;
     ScrollOrientation: Integer;
     ListboxWidth: array[0..1] of Integer;

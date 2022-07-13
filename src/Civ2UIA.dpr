@@ -878,7 +878,7 @@ var
   TextOut: string;
   Top: Integer;
 begin
-  TextOut := 'Turn ' + IntToStr(Civ2.GameTurn^);
+  TextOut := Format('%s %d', [GetLabelString($2D), Civ2.GameParameters.Turn]);
   StrCopy(Civ2.ChText, PChar(TextOut));
   Top := Civ2.SideBarClientRect^.Top + (Civ2.SideBarFontInfo^.Height - 1) * 2;
   Civ2.DrawStringRight(Civ2.ChText, Civ2.SideBarClientRect^.Right, Top, 0);
@@ -1463,17 +1463,29 @@ asm
     add   esp, $14
 end;
 
-procedure PatchShowDialogForeignMinisterGoldEx(Gold: Integer); stdcall;
+procedure PatchShowDialogForeignMinisterGoldEx(Dialog: PDialogWindow; Gold: Integer); stdcall;
 var
   Text: string;
 begin
-  Text := string(Civ2.ChText);
-  Text := Text + IntToStr(Gold) + '#648860:1#';
-  StrPCopy(Civ2.ChText, Text);
+  if Dialog.Flags and $41000 = $1000 then
+  begin
+    Text := string(Civ2.ChText);
+    Text := Text + IntToStr(Gold) + '#648860:1#';
+    StrPCopy(Civ2.ChText, Text);
+  end
+  else
+    asm
+       push Gold
+       mov  eax, $00401F37 // j_Q_StrcatGold_sub_43C8A0
+       call eax
+       add  esp, 4
+    end;
 end;
 
 procedure PatchShowDialogForeignMinisterGold(); register;
 asm
+    lea   eax, [ebp - $30C] // T_DialogWindow vDlg1
+    push  eax
     call  PatchShowDialogForeignMinisterGoldEx
     push  $00430D79
     ret
@@ -2788,7 +2800,7 @@ begin
     X1 := MSWindow.ClientTopLeft.X + 150;
     Civ2.SetCurrFont($0063EAB8);          // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
     Civ2.SetFontColorWithShadow($25, $12, -1, -1);
-    Text := Format('Cities: %d', [Cities]);
+    Text := Format('%s: %d', [GetLabelString($C5), Cities]);
     Civ2.DrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 12, Y1 - 3, 0);
     // SORT ARROWS
     Canvas := TCanvasEx.Create(DrawPort);
