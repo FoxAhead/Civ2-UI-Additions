@@ -29,7 +29,6 @@ type
     CursorX: PSmallInt;
     CursorY: PSmallInt;
     GameParameters: PGameParameters;
-    GameTurn: PWord;
     HumanCivIndex: PInteger;
     Improvements: ^TImprovements;
     Leaders: ^TLeaders;
@@ -183,7 +182,6 @@ begin
   CursorX := Pointer($0064B1B4);
   CursorY := Pointer($0064B1B0);
   GameParameters := Pointer($00655AE8);
-  GameTurn := Pointer($00655AF8);
   HumanCivIndex := Pointer($006D1DA0);
   Improvements := Pointer($0064C488);
   Leaders := Pointer($006554F8);
