@@ -3485,6 +3485,15 @@ begin
   end;
 end;
 
+procedure PatchAIAttitude(); register;
+asm
+    mov   [ebp - $30], 0 // Fix: Initialize variable
+    mov   eax, $004031CF // Restore overwritten call to sub_4031CF
+    call  eax
+    push  $00560DAB
+    ret
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -3694,6 +3703,9 @@ begin
   // Draw Unit Sentry
   WriteMemory(HProcess, $0044B48F, [OP_CALL], @PatchLoadSpritesUnits);
   WriteMemory(HProcess, $0056C4EF, [OP_CALL], @PatchDrawUnitSentry);
+
+  // Patch AI Attitude
+  WriteMemory(HProcess, $00560DA6, [OP_JMP], @PatchAIAttitude);
 
   // Tests
   // HookImportedFunctions(HProcess);

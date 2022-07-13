@@ -563,8 +563,8 @@ begin
     Result := Options.iUnitsLimit;
   if Key = 'civ2patchEnable' then
     Result := Options.civ2patchEnable;
-  if Key = 'HostileAiOn' then
-    Result := Options.HostileAiOn;
+  {if Key = 'HostileAiOn' then
+    Result := Options.HostileAiOn;}
   if Key = 'RetirementYearOn' then
     Result := Options.RetirementYearOn;
   if Key = 'RetirementWarningYear' then
@@ -619,8 +619,8 @@ begin
     Options.iUnitsLimit := Value;
   if Key = 'civ2patchEnable' then
     Options.civ2patchEnable := Value;
-  if Key = 'HostileAiOn' then
-    Options.HostileAiOn := Value;
+  {if Key = 'HostileAiOn' then
+    Options.HostileAiOn := Value;}
   if Key = 'RetirementYearOn' then
     Options.RetirementYearOn := Value;
   if Key = 'RetirementWarningYear' then
