@@ -128,6 +128,9 @@ https://apolyton.net/forum/civilization-series/civilization-i-and-civilization-i
 
 43. New game default map zoom 1:1. Now, when starting a new game, the map zoom is set to 1:1 (level 0), regardless of the screen width (previously, if the screen width was more than 1000 pixels, the zoom was set to level 2).
 
+44. Finally fixed AI attitude calculation. Due to the uninitialized variable, every turn the attitude of the AI changed to the minimum, which made the AI very aggressive towards the player. This bug turned out to be so obvious that it was decided to completely remove the option to enable it. This bug is fixed by default without any options.
+Unlike the previous version of the patch, which originated somewhere in the deep history of this forum, and which completely cut off the change in the attitude, now the calculation of the attitude should be performed as it was intended by the algorithm.
+
 Some experimental features that could change some original game rules or limitations without a guarantee of stability:
  - Change total units limit from default 2048. Don't use numbers greater than 32767. Saves with number of units greater than default should be loaded only with this patch.
 
@@ -135,7 +138,6 @@ Also some enhancements from [civ2patch project](https://github.com/vinceho/civ2p
  - reducing CPU usage when the application is idle
 
 and patches that affect some game rules and limitations:
- - AI hostility
  - Retirement year
  - Population limit
  - Gold limit
