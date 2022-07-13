@@ -176,10 +176,10 @@ begin
   Result := PeekMessage(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
 end;
 
-procedure C2PatchHostileAi(HProcess: THandle);
+{procedure C2PatchHostileAi(HProcess: THandle);
 begin
   WriteMemory(HProcess, $00561FC9, [$90, $90, $90, $90, $90, $90, $90, $90]);
-end;
+end;}
 
 procedure C2PatchTimeLimit(HProcess: THandle);
 begin
@@ -228,8 +228,8 @@ end;
 
 procedure C2Patches(HProcess: THandle);
 begin
-  if UIAOPtions^.HostileAiOn then
-    C2PatchHostileAi(HProcess);
+  {if UIAOPtions^.HostileAiOn then
+    C2PatchHostileAi(HProcess);}
   if UIAOPtions^.RetirementYearOn then
     C2PatchTimeLimit(HProcess);
   if UIAOPtions^.PopulationLimitOn then

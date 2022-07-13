@@ -19,7 +19,7 @@ type
     iUnitsLimit: Word;
     // civ2patch
     civ2patchEnable: Boolean;
-    HostileAiOn: Boolean;
+    //HostileAiOn: Boolean;
     RetirementYearOn: Boolean;
     RetirementWarningYear: Word;
     RetirementYear: Word;
@@ -52,7 +52,7 @@ var
     iUnitsLimit: 32000;                   // Default = 2048
     // civ2patch
     civ2patchEnable: True;
-    HostileAiOn: False;
+    //HostileAiOn: False;
     RetirementYearOn: False;
     RetirementWarningYear: 2000;          // Default = 2000
     RetirementYear: 2020;                 // Default = 2020

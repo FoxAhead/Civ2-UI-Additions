@@ -51,7 +51,6 @@ Stability is not guaranteed.">
 https://github.com/vinceho/civ2patch
 These patches change some game rules or limitations.">
 		<boolean key="civ2patchEnable" name="Enable" description="Enable patches from civ2patch">
-			<boolean key="HostileAiOn" name="Hostile AI" description="When enabled, AI will not be unreasonably hostile to the player."/>
 			<boolean key="RetirementYearOn" name="Retirement year" description="When enabled, allow the retirement year to be modified.">
 				<integer key="RetirementWarningYear" name="Warning year"/>
 				<integer key="RetirementYear" name="Retirement year"/>
