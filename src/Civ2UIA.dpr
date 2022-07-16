@@ -2902,7 +2902,7 @@ begin
       begin
         Building := -City.Building;
         Text := string(Civ2.GetStringInList(Civ2.Improvements[Building].StringIndex)) + ' ';
-        if Building > 39 then
+        if Building >= 39 then
         begin
           Civ2.SetFontColorWithShadow($5E, $A, -1, -1);
         end;
