@@ -871,6 +871,13 @@ begin
     Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER);
     Canvas.Free;
   end;
+
+  // Debug: unit index
+  {Canvas := TCanvasEx.Create(DrawPort);
+  TextOut := IntToStr(UnitIndex);
+  Canvas.MoveTo(Left + ScaleByZoom(32, Zoom), Top + ScaleByZoom(16, Zoom));
+  Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER);
+  Canvas.Free;}
 end;
 
 procedure PatchDrawSideBarEx; stdcall;
@@ -1581,12 +1588,15 @@ asm
     ret
 end;
 
-procedure PatchBreakUnitMoving; register;
+procedure PatchBreakUnitMoving(UnitIndex: Integer); cdecl;
+var
+  Unit1: PUnit;
 begin
-  if not Ex.SettingsFlagSet(2) then
-    asm
-    mov   eax, $0042738C
-    jmp   eax
+  Unit1 := @Civ2.Units[UnitIndex];
+  if (Civ2.GameParameters.HumanPlayers and (1 shl Unit1.CivIndex) = 0) or (not Ex.SettingsFlagSet(2)) then
+    if ((Unit1.Orders and $F) = $B) and (Civ2.UnitTypes[Unit1.UnitType].Role <> 7) then
+    begin
+      Unit1.Orders := -1;
     end;
 end;
 
@@ -2902,7 +2912,7 @@ begin
       begin
         Building := -City.Building;
         Text := string(Civ2.GetStringInList(Civ2.Improvements[Building].StringIndex)) + ' ';
-        if Building > 39 then
+        if Building >= 39 then
         begin
           Civ2.SetFontColorWithShadow($5E, $A, -1, -1);
         end;
