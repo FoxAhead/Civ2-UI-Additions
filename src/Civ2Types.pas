@@ -513,7 +513,7 @@ type
     ListItemMaxHeight: Integer;
   end;
 
-  TDrawPort = packed record               // Part of TGraphicsInfo; TODO: Move to TGraphicsInfo
+  TDrawPort = packed record               // Part of TGraphicsInfo;
     _Proc: Pointer;
     Width: Integer;
     Height: Integer;
