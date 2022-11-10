@@ -7,10 +7,11 @@ uses
   Civ2Types,
   Windows,
   Civ2UIA_CanvasEx,
+  Civ2UIA_MapOverlayModule,
   Civ2UIA_SortedUnitsList;
 
 type
-  TQuickInfo = class
+  TQuickInfo = class(TInterfacedObject, IMapOverlayModule)
   private
     FDrawPort: TDrawPort;
     FBgTile: TDrawPort;
@@ -40,6 +41,7 @@ type
     procedure ResetDrawPort();
     procedure Update();
     procedure Draw(DrawPort: PDrawPort);
+    function HasSomethingToDraw(): Boolean;
   published
   end;
 
@@ -458,6 +460,11 @@ begin
     end;
     FChanged := False;
   end;
+end;
+
+function TQuickInfo.HasSomethingToDraw: Boolean;
+begin
+  Result := (FQuickInfoParts <> 0);
 end;
 
 end.

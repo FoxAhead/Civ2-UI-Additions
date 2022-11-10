@@ -67,7 +67,7 @@ begin
   SendMessageToLoader(1, 0);
   SendMessageToLoader(CallerAddress, HWindow);
   OriginalAddress := OriginalAddresses[1];
-  MapMessagesList.Add(TMapMessage.Create(Format('%.6x SetFocus(%.8x)', [CallerAddress, HWindow])));
+  Ex.MapMessages.Add(TMapMessage.Create(Format('%.6x SetFocus(%.8x)', [CallerAddress, HWindow])));
   asm
     push  HWindow
     mov   eax, OriginalAddress
@@ -88,7 +88,7 @@ begin
   SendMessageToLoader(2, 0);
   SendMessageToLoader(CallerAddress, HWindow);
   OriginalAddress := OriginalAddresses[2];
-  MapMessagesList.Add(TMapMessage.Create(Format('%.6x DestroyWindow(%.8x)', [CallerAddress, HWindow])));
+  Ex.MapMessages.Add(TMapMessage.Create(Format('%.6x DestroyWindow(%.8x)', [CallerAddress, HWindow])));
   asm
     push  HWindow
     mov   eax, OriginalAddress

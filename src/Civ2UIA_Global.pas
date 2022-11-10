@@ -29,7 +29,6 @@ var
   //
   CityWindowEx: TCityWindowEx;
   AdvisorWindowEx: TAdvisorWindowEx;
-  MapMessagesList: TList;
   UIASettings: TUIASettings;
   //
   ResizableAdvisorWindows: set of Byte = [1..7];
