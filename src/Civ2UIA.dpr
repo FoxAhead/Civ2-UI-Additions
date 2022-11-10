@@ -2858,6 +2858,11 @@ begin
       CityIndex := AdvisorWindowEx.SortedCitiesList.GetIndexIndex(i); // (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
       Civ2.DrawCitySprite(DrawPort, CityIndex, 0, X1, Y1, 0);
 
+      // Begin Debug CityIndex
+      //Text := IntToStr(CityIndex);
+      //Civ2.DrawString(PChar(Text), X1, Y1);
+      // End Debug CityIndex
+
       Civ2.SetCurrFont($0063EAB8);        // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
       Civ2.SetFontColorWithShadow($25, $12, 1, 1);
 
@@ -3724,6 +3729,9 @@ begin
   //WriteMemory(HProcess, $004ABFF1, [OP_CALL], @PatchMoveDebug);
   // Button color
   //WriteMemory(HProcess, $00401CDF, [OP_JMP], @PatchCreateButtonColor);
+
+  // Exclude drawing city top
+  //WriteMemory(HProcess, $00508C1F, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
 
   // Draw Map
   //WriteMemory(HProcess, $0047A8D5, [OP_JMP], Pointer($0047BA16));

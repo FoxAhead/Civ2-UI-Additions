@@ -831,6 +831,11 @@ type
     // 0x4000 - Always wait at end of turn.
     word_655AEE: Word;
     MapFlags: Word;
+    // 0x0002 - ?Finished
+    // 0x0004 - Map SizeX*SizeY >= 6000
+    // 0x0008 - Map SizeX*SizeY <  3000
+    // 0x0040 - ?Scenario
+    // 0x0080 - ?Scenario started
     word_655AF2: Word;
     word_655AF4: Word;
     word_655AF6: Word;
@@ -1022,6 +1027,7 @@ type
     // 0000 0000 0000 0000 0000 0000 0000 0001 - 0x00000001 Disorder
     // 0000 0000 0000 0000 0000 0000 0000 0010 - 0x00000002 We Love the King Day
     // 0000 0000 0000 0000 0000 0000 0000 0100 - 0x00000004 Improvement sold
+    // 0000 0000 0000 0001 0000 0000 0000 0000 - 0x00010000 Airlifted
     // 0000 0000 0100 0000 0000 0000 0000 0000 - 0x00400000 Investigated by spy
     Owner: Byte;                          // + 0x08
     Size: Byte;                           // + 0x09
