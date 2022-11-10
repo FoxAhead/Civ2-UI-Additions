@@ -12,6 +12,7 @@ uses
   Civ2UIA_Types,
   Civ2UIA_PathLine,
   Civ2UIA_QuickInfo,
+  Civ2UIA_MapMessages,
   Civ2UIA_MapOverlay;
 
 type
@@ -28,6 +29,7 @@ type
     SuppressPopupList: TStringList;
     PathLine: TPathLine;
     QuickInfo: TQuickInfo;
+    MapMessages: TMapMessages;
     MapOverlay: TMapOverlay;
     ModuleNameString: string;
     VersionString: string;
@@ -102,7 +104,11 @@ begin
   SuppressPopupList.Duplicates := dupIgnore;
   PathLine := TPathLine.Create();
   QuickInfo := TQuickInfo.Create();
+  MapMessages := TMapMessages.Create();
   MapOverlay := TMapOverlay.Create();
+  MapOverlay.AddModule(PathLine);
+  MapOverlay.AddModule(QuickInfo);
+  MapOverlay.AddModule(MapMessages);
   LoadSettingsFile();
   GetModuleVersion();
 end;
@@ -111,9 +117,10 @@ destructor TEx.Destroy;
 begin
   UnitsList.Free();
   SuppressPopupList.Free();
-  PathLine.Free();
-  QuickInfo.Free();
   MapOverlay.Free();
+  MapMessages.Free();
+  QuickInfo.Free();
+  PathLine.Free();
   inherited;
 end;
 

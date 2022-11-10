@@ -4,11 +4,12 @@ interface
 
 uses
   Civ2Types,
+  Civ2UIA_MapOverlayModule,
   Classes,
   Types;
 
 type
-  TPathLine = class
+  TPathLine = class(TInterfacedObject, IMapOverlayModule)
   private
     FChanged: Boolean;
     FLines: Integer;
@@ -33,6 +34,7 @@ type
     destructor Destroy; override;
     procedure Update();
     procedure Draw(DrawPort: PDrawPort);
+    function HasSomethingToDraw(): Boolean;
   published
   end;
 
@@ -323,6 +325,11 @@ begin
     FCityIndex := Value;
     FChanged := True;
   end;
+end;
+
+function TPathLine.HasSomethingToDraw: Boolean;
+begin
+  Result := (FLines > 0);
 end;
 
 end.

@@ -42,7 +42,9 @@ uses
   Civ2UIA_CanvasEx in 'Civ2UIA_CanvasEx.pas',
   Civ2UIA_MapOverlay in 'Civ2UIA_MapOverlay.pas',
   Civ2UIA_PathLine in 'Civ2UIA_PathLine.pas',
-  Civ2UIA_FormAbout in 'Civ2UIA_FormAbout.pas' {FormAbout};
+  Civ2UIA_FormAbout in 'Civ2UIA_FormAbout.pas' {FormAbout},
+  Civ2UIA_MapOverlayModule in 'Civ2UIA_MapOverlayModule.pas',
+  Civ2UIA_MapMessages in 'Civ2UIA_MapMessages.pas';
 
 {$R *.res}
 
@@ -211,43 +213,10 @@ begin
 end;
 
 procedure DrawMapOverlay(DrawPort: PDrawPort);
-var
-  Canvas: TCanvasEx;
-  i: Integer;
-  TextOut: string;
-  X1, Y1: Integer;
-  TextSize: TSize;
-  TextExtent: TSize;
-  TextColor: TColor;
-  MapMessage: TMapMessage;
 begin
   if DrawPort.DrawInfo.DeviceContext <> 0 then
   begin
-    // PathLine
-    Ex.PathLine.Draw(DrawPort);
-    // Quickinfo tooltip
-    Ex.QuickInfo.Draw(DrawPort);
-
-    Canvas := TCanvasEx.Create(DrawPort);
-    Canvas.Brush.Style := bsClear;
-    Canvas.Font.Style := [];
-    Canvas.Font.Size := 10;
-    Canvas.Font.Name := 'Arial';
-
-    // Message Queue
-    for i := 0 to MapMessagesList.Count - 1 do
-    begin
-      if i > 35 then
-        Break;
-      MapMessage := TMapMessage(MapMessagesList.Items[i]);
-      X1 := Min(255, 512 div 50 * (MapMessage.Timer + 10));
-      TextColor := TColor(X1 * $10101);
-      TextSize := Canvas.TextExtent(MapMessage.TextOut);
-      Y1 := Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.ClientRectangle.Right - TextSize.cx - 20;
-      TextOutWithShadows(TCanvas(Canvas), MapMessage.TextOut, Y1, 100 + i * 20, TextColor, clBlack, SHADOW_ALL);
-    end;
-
-    Canvas.Free();
+    Ex.MapOverlay.DrawModules(DrawPort);
   end;
 end;
 
@@ -1671,33 +1640,8 @@ end;
 // Tests
 
 procedure PatchOnWmTimerDrawEx1(); stdcall;
-var
-  i: Integer;
-  MapMessage: TMapMessage;
-  KeyState: SHORT;
-  MousePoint: TPoint;
-  WindowHandle: HWND;
-  CityIndex: Integer;
 begin
-  if Civ2.CurrPopupInfo^ = nil then
-  begin
-    for i := 0 to MapMessagesList.Count - 1 do
-    begin
-      if i > 35 then
-        Break;
-      MapMessage := TMapMessage(MapMessagesList.Items[i]);
-      Dec(MapMessage.Timer);
-      if MapMessage.Timer <= 0 then
-      begin
-        MapMessage.Free();
-        MapMessagesList.Items[i] := nil;
-      end;
-    end;
-    MapMessagesList.Pack();
-  end;
-  //
-  Ex.PathLine.Update();
-  Ex.QuickInfo.Update();
+  Ex.MapOverlay.UpdateModules();
 end;
 
 procedure PatchOnWmTimerDraw(); register;
@@ -1717,7 +1661,7 @@ begin
     begin
       if (DestWS.Palette <> 0) and (PInteger($00638B48)^ = 1) then // V_PaletteBasedDevice_dword_638B48
         RealizePalette(DestWS.DeviceContext);
-      if (Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo <> nil) and (SrcDI = Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo) then
+      if (SrcDI = Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo) and (Ex.MapOverlay.HasSomethingToDraw()) then
       begin
         Ex.MapOverlay.RefreshDrawInfo();
         VSrcDC := Ex.MapOverlay.DrawPort.DrawInfo^.DeviceContext;
@@ -1748,7 +1692,7 @@ begin
         Text := Text + ' ' + string(TextLine.Text);
         TextLine := TextLine.Next;
       end;
-      MapMessagesList.Add(TMapMessage.Create(Text));
+      Ex.MapMessages.Add(TMapMessage.Create(Text));
       Dialog.PressedButton := $12345678;
     end
   end;
@@ -3738,7 +3682,7 @@ end;
 
 procedure CreateGlobals();
 begin
-  MapMessagesList := TList.Create;
+  //MapMessagesList := TList.Create;
   Civ2 := TCiv2.Create();
   Ex := TEx.Create();
 end;
