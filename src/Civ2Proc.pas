@@ -17,6 +17,7 @@ type
   protected
   public
     AdvisorWindow: PAdvisorWindow;
+    CDRoot: PChar;
     ChText: PChar;
     Cities: ^TCities;
     CityGlobals: PCityGlobals;
@@ -170,6 +171,7 @@ begin
   // For inline ASM all TCiv2 fileds can be referenced directly only inside TCiv2 class, and as Self.FieldName
   // Important: by default EAX register contains Self reference
   AdvisorWindow := Pointer($0063EB10);
+  CDRoot := Pointer($006AB680);
   ChText := Pointer($00679640);
   Cities := Pointer($0064F340);
   CityWindow := Pointer($006A91B8);

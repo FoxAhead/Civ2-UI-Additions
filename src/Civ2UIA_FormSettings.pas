@@ -123,7 +123,7 @@ begin
   // Also recreate main window brush for background
   Civ2.RecreateBrush(Civ2.MainWindowInfo, $9E);
   // Also set new palette for map overlay - to be consistent with the game look
-  Civ2.SetDIBColorTableFromPalette(Ex.MapOverlay.DrawPort.DrawInfo, GraphicsInfo.WindowInfo.Palette);
+  Ex.MapOverlay.SetDIBColorTableFromPalette(GraphicsInfo.WindowInfo.Palette);
   // Redraw main window with all subwindows
   HWindow := GetParent(GraphicsInfo.WindowInfo.WindowStructure^.HWindow);
   RedrawWindow(HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);

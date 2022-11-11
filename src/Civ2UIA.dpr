@@ -44,7 +44,8 @@ uses
   Civ2UIA_PathLine in 'Civ2UIA_PathLine.pas',
   Civ2UIA_FormAbout in 'Civ2UIA_FormAbout.pas' {FormAbout},
   Civ2UIA_MapOverlayModule in 'Civ2UIA_MapOverlayModule.pas',
-  Civ2UIA_MapMessages in 'Civ2UIA_MapMessages.pas';
+  Civ2UIA_MapMessages in 'Civ2UIA_MapMessages.pas',
+  Civ2UIA_PatchCDCheck in 'Civ2UIA_PatchCDCheck.pas';
 
 {$R *.res}
 
@@ -210,14 +211,6 @@ begin
   Canvas.Free;
   RestoreDC(DC, SavedDC);
   InvalidateRect(Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure^.HWindow, @R, True);
-end;
-
-procedure DrawMapOverlay(DrawPort: PDrawPort);
-begin
-  if DrawPort.DrawInfo.DeviceContext <> 0 then
-  begin
-    Ex.MapOverlay.DrawModules(DrawPort);
-  end;
 end;
 
 procedure GammaCorrection(var Value: Byte; Gamma, Exposure: Double);
@@ -1652,8 +1645,6 @@ asm
 end;
 
 procedure PatchCopyToScreenBitBlt(SrcDI: PDrawInfo; XSrc, YSrc, Width, Height: Integer; DestWS: PWindowStructure; XDest, YDest: Integer); cdecl;
-var
-  VSrcDC: HDC;
 begin
   if SrcDI <> nil then
   begin
@@ -1661,15 +1652,7 @@ begin
     begin
       if (DestWS.Palette <> 0) and (PInteger($00638B48)^ = 1) then // V_PaletteBasedDevice_dword_638B48
         RealizePalette(DestWS.DeviceContext);
-      if (SrcDI = Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo) and (Ex.MapOverlay.HasSomethingToDraw()) then
-      begin
-        Ex.MapOverlay.RefreshDrawInfo();
-        VSrcDC := Ex.MapOverlay.DrawPort.DrawInfo^.DeviceContext;
-        BitBlt(VSrcDC, 0, 0, SrcDI.Width, SrcDI.Height, SrcDI.DeviceContext, 0, 0, SRCCOPY);
-        DrawMapOverlay(@Ex.MapOverlay.DrawPort);
-        BitBlt(DestWS.DeviceContext, 0, 0, SrcDI.Width, SrcDI.Height, VSrcDC, 0, 0, SRCCOPY);
-      end
-      else
+      if not Ex.MapOverlay.CopyToScreenBitBlt(SrcDI, DestWS) then
         BitBlt(DestWS.DeviceContext, XDest, YDest, Width, Height, SrcDI.DeviceContext, XSrc, YSrc, SRCCOPY);
     end;
   end;
@@ -3502,12 +3485,12 @@ begin
   end;
   if UIAOPtions.Patch64bitOn then
     WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
-  if UIAOPtions.DisableCDCheckOn then
+  {if UIAOPtions.DisableCDCheckOn then
   begin
     WriteMemory(HProcess, $0056463C, [$03]);
     WriteMemory(HProcess, $0056467A, [$EB, $12]);
     WriteMemory(HProcess, $005646A7, [$80]);
-  end;
+  end;}
   if UIAOPtions^.CpuUsageOn then
     C2PatchIdleCpu(HProcess);
   if UIAOPtions^.SocketBufferOn then
@@ -3528,7 +3511,9 @@ begin
   begin
     PatchUnitsLimit(HProcess);
   end;
-
+  // CDCheck
+  WriteMemory(HProcess, $00402BE9, [OP_JMP], @PatchCDCheckAuto);
+  
   // Color correction
   WriteMemory(HProcess, $005DEAD1, [OP_JMP], @PatchPaletteGamma);
 
