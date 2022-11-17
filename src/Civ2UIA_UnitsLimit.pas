@@ -2419,7 +2419,7 @@ var
   BytesWritten: Cardinal;
   UnitsArrayOffset: Cardinal;
   Diff: Integer;
-  UnitsLimit: Word;
+  UnitsLimit800, UnitsLimit802, UnitsLimit79C, UnitsLimit7F8: Word;
 begin
   GetMem(NewUnitsAreaAddress, UIAOPtions^.iUnitsLimit * SizeOf(TUnit));
   ZeroMemory(NewUnitsAreaAddress, UIAOPtions^.iUnitsLimit * SizeOf(TUnit));
@@ -2431,16 +2431,21 @@ begin
     UnitsArrayOffset := Integer(UnitsArrayOffset) + Diff;
     WriteProcessMemory(HProcess, Pointer(GUnitLimitPatchAddr[i]), @UnitsArrayOffset, 4, BytesWritten);
   end;
-  UnitsLimit := UIAOPtions^.iUnitsLimit + 2; // 0x802
-  WriteMemory(HProcess, $005B5452, WordRec(UnitsLimit).Bytes);
-  WriteMemory(HProcess, $005B25A6, WordRec(UnitsLimit).Bytes);
-  WriteMemory(HProcess, $005B3E71, WordRec(UIAOPtions^.iUnitsLimit).Bytes);
-  UnitsLimit := UIAOPtions^.iUnitsLimit - 100; // 0x79C
-  WriteMemory(HProcess, $005B3E95, WordRec(UnitsLimit).Bytes);
-  UnitsLimit := UIAOPtions^.iUnitsLimit - 8; // 0x7F8
-  WriteMemory(HProcess, $005B3EC0, WordRec(UnitsLimit).Bytes);
-  WriteMemory(HProcess, $005B50E3, WordRec(UIAOPtions^.iUnitsLimit).Bytes);
-  WriteMemory(HProcess, $005B4547, WordRec(UIAOPtions^.iUnitsLimit).Bytes);
+  UnitsLimit800 := UIAOPtions^.iUnitsLimit; //0x800
+  UnitsLimit802 := UIAOPtions^.iUnitsLimit + 2; // 0x802
+  UnitsLimit79C := UIAOPtions^.iUnitsLimit - 100; // 0x79C
+  UnitsLimit7F8 := UIAOPtions^.iUnitsLimit - 8; // 0x7F8
+  WriteMemory(HProcess, $0041FC9A, WordRec(UnitsLimit800).Bytes);
+  WriteMemory(HProcess, $00472D2C, WordRec(UnitsLimit800).Bytes);
+  WriteMemory(HProcess, $004E1A25, WordRec(UnitsLimit800).Bytes);
+  WriteMemory(HProcess, $005B25A6, WordRec(UnitsLimit802).Bytes);
+  WriteMemory(HProcess, $005B25FD, WordRec(UnitsLimit800).Bytes);
+  WriteMemory(HProcess, $005B3E71, WordRec(UnitsLimit800).Bytes);
+  WriteMemory(HProcess, $005B3E95, WordRec(UnitsLimit79C).Bytes);
+  WriteMemory(HProcess, $005B3EC0, WordRec(UnitsLimit7F8).Bytes);
+  WriteMemory(HProcess, $005B4547, WordRec(UnitsLimit800).Bytes);
+  WriteMemory(HProcess, $005B50E3, WordRec(UnitsLimit800).Bytes);
+  WriteMemory(HProcess, $005B5452, WordRec(UnitsLimit802).Bytes);
 end;
 
 end.
