@@ -114,7 +114,7 @@ IncludeVerInfo=1
 AutoIncBuild=1
 MajorVer=1
 MinorVer=20
-Release=1
+Release=3
 Build=767
 Debug=0
 PreRelease=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=1.20.1.767
+FileVersion=1.20.3.767
 InternalName=
 LegalCopyright=
 LegalTrademarks=
