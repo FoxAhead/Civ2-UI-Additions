@@ -2419,10 +2419,11 @@ var
   BytesWritten: Cardinal;
   UnitsArrayOffset: Cardinal;
   Diff: Integer;
-  UnitsLimit800, UnitsLimit802, UnitsLimit79C, UnitsLimit7F8: Word;
+  UnitsLimit800, UnitsLimit801, UnitsLimit802, UnitsLimit79C, UnitsLimit7F8: Word;
+  UnitsLimit801x20: Cardinal;
 begin
-  GetMem(NewUnitsAreaAddress, UIAOPtions^.iUnitsLimit * SizeOf(TUnit));
-  ZeroMemory(NewUnitsAreaAddress, UIAOPtions^.iUnitsLimit * SizeOf(TUnit));
+  GetMem(NewUnitsAreaAddress, (UIAOPtions^.iUnitsLimit + 2) * SizeOf(TUnit));
+  ZeroMemory(NewUnitsAreaAddress, (UIAOPtions^.iUnitsLimit + 2) * SizeOf(TUnit));
   Diff := Integer(NewUnitsAreaAddress) - AUnits;
   ANewUnitsAreaAddress := NewUnitsAreaAddress;
   for i := Low(GUnitLimitPatchAddr) to High(GUnitLimitPatchAddr) do
@@ -2432,11 +2433,15 @@ begin
     WriteProcessMemory(HProcess, Pointer(GUnitLimitPatchAddr[i]), @UnitsArrayOffset, 4, BytesWritten);
   end;
   UnitsLimit800 := UIAOPtions^.iUnitsLimit; //0x800
+  UnitsLimit801 := UIAOPtions^.iUnitsLimit + 1; //0x801
+  UnitsLimit801x20 := UnitsLimit801 * $20;
   UnitsLimit802 := UIAOPtions^.iUnitsLimit + 2; // 0x802
   UnitsLimit79C := UIAOPtions^.iUnitsLimit - 100; // 0x79C
   UnitsLimit7F8 := UIAOPtions^.iUnitsLimit - 8; // 0x7F8
   WriteMemory(HProcess, $0041FC9A, WordRec(UnitsLimit800).Bytes);
   WriteMemory(HProcess, $00472D2C, WordRec(UnitsLimit800).Bytes);
+  WriteMemory(HProcess, $0047E36B, LongRec(UnitsLimit801x20).Bytes);
+  WriteMemory(HProcess, $0047E37B, WordRec(UnitsLimit801).Bytes);
   WriteMemory(HProcess, $004E1A25, WordRec(UnitsLimit800).Bytes);
   WriteMemory(HProcess, $005B25A6, WordRec(UnitsLimit802).Bytes);
   WriteMemory(HProcess, $005B25FD, WordRec(UnitsLimit800).Bytes);
