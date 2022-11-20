@@ -212,14 +212,6 @@ begin
   InvalidateRect(Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure^.HWindow, @R, True);
 end;
 
-procedure DrawMapOverlay(DrawPort: PDrawPort);
-begin
-  if DrawPort.DrawInfo.DeviceContext <> 0 then
-  begin
-    Ex.MapOverlay.DrawModules(DrawPort);
-  end;
-end;
-
 procedure GammaCorrection(var Value: Byte; Gamma, Exposure: Double);
 var
   NewValue: Double;
@@ -1652,8 +1644,6 @@ asm
 end;
 
 procedure PatchCopyToScreenBitBlt(SrcDI: PDrawInfo; XSrc, YSrc, Width, Height: Integer; DestWS: PWindowStructure; XDest, YDest: Integer); cdecl;
-var
-  VSrcDC: HDC;
 begin
   if SrcDI <> nil then
   begin
@@ -1661,15 +1651,7 @@ begin
     begin
       if (DestWS.Palette <> 0) and (PInteger($00638B48)^ = 1) then // V_PaletteBasedDevice_dword_638B48
         RealizePalette(DestWS.DeviceContext);
-      if (SrcDI = Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo) and (Ex.MapOverlay.HasSomethingToDraw()) then
-      begin
-        Ex.MapOverlay.RefreshDrawInfo();
-        VSrcDC := Ex.MapOverlay.DrawPort.DrawInfo^.DeviceContext;
-        BitBlt(VSrcDC, 0, 0, SrcDI.Width, SrcDI.Height, SrcDI.DeviceContext, 0, 0, SRCCOPY);
-        DrawMapOverlay(@Ex.MapOverlay.DrawPort);
-        BitBlt(DestWS.DeviceContext, 0, 0, SrcDI.Width, SrcDI.Height, VSrcDC, 0, 0, SRCCOPY);
-      end
-      else
+      if not Ex.MapOverlay.CopyToScreenBitBlt(SrcDI, DestWS) then
         BitBlt(DestWS.DeviceContext, XDest, YDest, Width, Height, SrcDI.DeviceContext, XSrc, YSrc, SRCCOPY);
     end;
   end;

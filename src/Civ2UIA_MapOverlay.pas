@@ -11,19 +11,21 @@ uses
 type
   TMapOverlay = class
   private
+    FDrawPort: TDrawPort;
     FModulesList: TInterfaceList;
     FTimesToDraw: Integer;
+    FMapDeviceContext: HDC;
+    procedure RefreshDrawInfo();
+    procedure DrawModules();
   protected
   public
-    MapDeviceContext: HDC;
-    DrawPort: TDrawPort;
     constructor Create;
     destructor Destroy; override;
     function HasSomethingToDraw(): Boolean;
-    procedure RefreshDrawInfo();
     procedure UpdateModules();
-    procedure DrawModules(DrawPort: PDrawPort);
     procedure AddModule(Module: IMapOverlayModule);
+    function CopyToScreenBitBlt(SrcDI: PDrawInfo; DestWS: PWindowStructure): Boolean;
+    procedure SetDIBColorTableFromPalette(Palette: Pointer);
   published
   end;
 
@@ -39,6 +41,23 @@ begin
   FModulesList.Add(Module);
 end;
 
+function TMapOverlay.CopyToScreenBitBlt(SrcDI: PDrawInfo; DestWS: PWindowStructure): Boolean;
+var
+  VSrcDC: HDC;
+begin
+  if (SrcDI = Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo) and (HasSomethingToDraw()) then
+  begin
+    Result := True;
+    RefreshDrawInfo();
+    VSrcDC := FDrawPort.DrawInfo^.DeviceContext;
+    BitBlt(VSrcDC, 0, 0, SrcDI.Width, SrcDI.Height, SrcDI.DeviceContext, 0, 0, SRCCOPY);
+    DrawModules();
+    BitBlt(DestWS.DeviceContext, 0, 0, SrcDI.Width, SrcDI.Height, VSrcDC, 0, 0, SRCCOPY);
+  end
+  else
+    Result := False;
+end;
+
 constructor TMapOverlay.Create;
 begin
   inherited;
@@ -51,17 +70,20 @@ begin
   inherited;
 end;
 
-procedure TMapOverlay.DrawModules(DrawPort: PDrawPort);
+procedure TMapOverlay.DrawModules();
 var
   i: Integer;
   Module: IMapOverlayModule;
 begin
-  for i := 0 to FModulesList.Count - 1 do
+  if FDrawPort.DrawInfo.DeviceContext <> 0 then
   begin
-    Module := IMapOverlayModule(FModulesList.Items[i]);
-    Module.Draw(DrawPort);
+    for i := 0 to FModulesList.Count - 1 do
+    begin
+      Module := IMapOverlayModule(FModulesList.Items[i]);
+      Module.Draw(@FDrawPort);
+    end;
+    Dec(FTimesToDraw);
   end;
-  Dec(FTimesToDraw);
 end;
 
 function TMapOverlay.HasSomethingToDraw: Boolean;
@@ -91,14 +113,20 @@ begin
   begin
     if MapDrawPort.DrawInfo.DeviceContext <> 0 then
     begin
-      if MapDeviceContext <> MapDrawPort.DrawInfo.DeviceContext then
+      if FMapDeviceContext <> MapDrawPort.DrawInfo.DeviceContext then
       begin
-        MapDeviceContext := MapDrawPort.DrawInfo.DeviceContext;
-        Civ2.DrawPort_Reset(@DrawPort, MapDrawPort.Width, MapDrawPort.Height);
-        Civ2.SetDIBColorTableFromPalette(DrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.Palette);
+        FMapDeviceContext := MapDrawPort.DrawInfo.DeviceContext;
+        Civ2.DrawPort_Reset(@FDrawPort, MapDrawPort.Width, MapDrawPort.Height);
+        Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.Palette);
       end;
     end;
   end;
+end;
+
+procedure TMapOverlay.SetDIBColorTableFromPalette(Palette: Pointer);
+begin
+  if FDrawPort.DrawInfo <> nil then
+    Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Palette);
 end;
 
 procedure TMapOverlay.UpdateModules;
