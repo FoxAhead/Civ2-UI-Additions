@@ -62,6 +62,7 @@ type
     UnitSelected: ^LongBool;
     UnitTypes: ^TUnitTypes;
     WonderCity: PWordArray;
+    DlgParams_SetNumber: procedure(NumberIndex, Value: Integer); cdecl;
     constructor Create();
     destructor Destroy; override;
     procedure ClearPopupActive;
@@ -219,6 +220,9 @@ begin
   UnitSelected := Pointer($006D1DA8);
   UnitTypes := Pointer($0064B1B8);
   WonderCity := Pointer($00655BE6);
+
+  // Functions
+  @DlgParams_SetNumber := Pointer($00402FE5);
 
   // Check structure sizes
   if SizeOf(TWindowInfo) <> $C5 then
@@ -668,6 +672,15 @@ asm
     mov   @Result, eax
 end;
 
+//procedure TCiv2.DlgParams_SetNumber(NumberIndex, Value: Integer);
+//asm
+//    push  Value;
+//    push  NumberIndex;
+//    mov   eax, $00402FE5
+//    call  eax
+//    add   esp, 8
+//end;
+
 procedure TCiv2.ListItemProcLButtonUp(Code: Integer);
 asm
     push  Code
@@ -1075,6 +1088,5 @@ asm
     call  eax
     mov   @Result, eax
 end;
-
 
 end.

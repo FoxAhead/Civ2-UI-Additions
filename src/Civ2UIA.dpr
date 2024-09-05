@@ -1444,10 +1444,10 @@ begin
   end
   else
     asm
-       push Gold
-       mov  eax, $00401F37 // j_Q_StrcatGold_sub_43C8A0
-       call eax
-       add  esp, 4
+    push  Gold
+    mov   eax, $00401F37 // j_Q_StrcatGold_sub_43C8A0
+    call  eax
+    add   esp, 4
     end;
 end;
 
@@ -3436,6 +3436,71 @@ asm
     ret
 end;
 
+procedure PatchGetCityObjectivesValueEx(var ObjectiveValue: Integer; CityIndex: Integer); stdcall;
+begin
+  if (Civ2.Cities[CityIndex].Attributes and $04000000) = 0 then
+  begin
+    if (Civ2.Cities[CityIndex].Attributes and $10000000) <> 0 then
+      ObjectiveValue := 3;
+  end
+  else
+    ObjectiveValue := 1;
+end;
+
+procedure PatchGetCityObjectivesValue(); register;
+asm
+    push  eax              // int aCity
+    lea   eax, [ebp - $08] // int v2
+    push  eax
+    call  PatchGetCityObjectivesValueEx
+    push  $0043CF25
+    ret
+end;
+
+procedure PatchCityEditDialog1Ex(CityAttributes: Cardinal); stdcall;
+begin
+  Civ2.DlgParams_SetNumber(0, (CityAttributes and $04000000) shr 26);
+  Civ2.DlgParams_SetNumber(1, (CityAttributes and $10000000) shr 28);
+end;
+
+procedure PatchCityEditDialog1(); register;
+asm
+    push  eax                     // CityAttributes
+    call  PatchCityEditDialog1Ex
+    push  $00556ACC
+    ret
+end;
+
+function PatchCityEditDialog2Ex(Option, CityIndex: Integer): Pointer; stdcall;
+begin
+  Result := Pointer($00556AA4);
+  case Option of
+    6:
+      begin
+        Civ2.Cities[CityIndex].Attributes := Civ2.Cities[CityIndex].Attributes xor $04000000;
+        if (Civ2.Cities[CityIndex].Attributes and $04000000) <> 0 then
+          Civ2.Cities[CityIndex].Attributes := Civ2.Cities[CityIndex].Attributes and not $10000000;
+      end;
+    7:
+      begin
+        Civ2.Cities[CityIndex].Attributes := Civ2.Cities[CityIndex].Attributes xor $10000000;
+        if (Civ2.Cities[CityIndex].Attributes and $10000000) <> 0 then
+          Civ2.Cities[CityIndex].Attributes := Civ2.Cities[CityIndex].Attributes and not $04000000;
+      end;
+  else
+    Result := Pointer($00556F1F);
+  end;
+end;
+
+procedure PatchCityEditDialog2(); register;
+asm
+    push  [ebp - $318]    // CityIndex
+    push  [ebp - $31C]    // Choosen dialog option
+    call  PatchCityEditDialog2Ex
+    push  eax
+    ret
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -3513,7 +3578,7 @@ begin
   end;
   // CDCheck
   WriteMemory(HProcess, $00402BE9, [OP_JMP], @PatchCDCheckAuto);
-  
+
   // Color correction
   WriteMemory(HProcess, $005DEAD1, [OP_JMP], @PatchPaletteGamma);
 
@@ -3650,6 +3715,11 @@ begin
 
   // Patch AI Attitude
   WriteMemory(HProcess, $00560DA6, [OP_JMP], @PatchAIAttitude);
+
+  // Patch Scenario x3 Major Objective
+  WriteMemory(HProcess, $0043CF0C, [OP_JMP], @PatchGetCityObjectivesValue);
+  WriteMemory(HProcess, $00556AB9, [OP_JMP], @PatchCityEditDialog1);
+  WriteMemory(HProcess, $00556EF4, [OP_JMP], @PatchCityEditDialog2);
 
   // Tests
   // HookImportedFunctions(HProcess);

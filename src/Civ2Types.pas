@@ -949,20 +949,35 @@ type
 
   TUnitType = packed record               // Size = 0x14
     StringIndex: Cardinal;
-    dword_64B1BC: Cardinal;
-    byte_64B1C0: Byte;
+    Flags: Cardinal;
+    // 0000 0000 0000 0001 - 0x0001 Two space visibility
+    // 0000 0000 0000 0010 - 0x0002 Ignore zones of control
+    // 0000 0000 0000 0100 - 0x0004 Can make amphibious assaults
+    // 0000 0000 0000 1000 - 0x0008 Submarine advantages/disadvantages
+    // 0000 0000 0001 0000 - 0x0010 Can attack air units (fighter)
+    // 0000 0000 0010 0000 - 0x0020 Ship must stay near land (trireme)
+    // 0000 0000 0100 0000 - 0x0040 Negates city walls (howitzer)
+    // 0000 0000 1000 0000 - 0x0080 Can carry air units (carrier)
+    // 0000 0001 0000 0000 - 0x0100 Can make paradrops
+    // 0000 0010 0000 0000 - 0x0200 Alpine (treats all squares as road)
+    // 0000 0100 0000 0000 - 0x0400 x2 on defense versus horse (pikemen)
+    // 0000 1000 0000 0000 - 0x0800 Free support for fundamentalism (fanatics)
+    // 0001 0000 0000 0000 - 0x1000 Destroyed after attacking (missiles)
+    // 0010 0000 0000 0000 - 0x2000 x2 on defense versus air (AEGIS)
+    // 0100 0000 0000 0000 - 0x4000 Unit can spot submarines
+    Until_: Byte;
     Domain: Byte;
     // 0 = Ground
     // 1 = Air
     // 2 = Sea
-    byte_64B1C2: Byte;
-    byte_64B1C3: Byte;
+    Move: Byte;
+    Range: Byte;
     Att: Byte;
     Def: Byte;
-    byte_64B1C6: Byte;
-    byte_64B1C7: Byte;
+    HitPoints: Byte;
+    FirePower: Byte;
     Cost: Byte;
-    byte_64B1C9: Byte;
+    Hold: Byte;
     Role: Byte;                           // 0x64B1CA
     // 0 = Attack
     // 1 = Defend
@@ -972,7 +987,7 @@ type
     // 5 = Settle
     // 6 = Diplomacy
     // 7 = Trade
-    byte_64B1CB: Byte;
+    Preq: Byte;
   end;
 
   TUnitTypes = array[0..$3D] of TUnitType; // 64B1B8
@@ -982,6 +997,7 @@ type
     Y: Word;                              // Y
     Attributes: Word;
     // 0000 0000 0000 0010 - 0x0002 ?Flag checked in UnitCanMove
+    // 0000 0000 0001 0000 - 0x0010 Paradropped
     // 0000 0100 0000 0000 - 0x0400 Unit causes discontent
     // 0000 1000 0000 0000 - 0x0800 Unit is supported
     // 0010 0000 0000 0000 - 0x2000 Veteran
@@ -1029,6 +1045,8 @@ type
     // 0000 0000 0000 0000 0000 0000 0000 0100 - 0x00000004 Improvement sold
     // 0000 0000 0000 0001 0000 0000 0000 0000 - 0x00010000 Airlifted
     // 0000 0000 0100 0000 0000 0000 0000 0000 - 0x00400000 Investigated by spy
+    // 0000 0100 0000 0000 0000 0000 0000 0000 - 0x04000000 x1 Objective
+    // 0001 0000 0000 0000 0000 0000 0000 0000 - 0x10000000 x3 Major Objective
     Owner: Byte;                          // + 0x08
     Size: Byte;                           // + 0x09
     Founder: Byte;                        // + 0x0A
@@ -1044,7 +1062,7 @@ type
     BuildProgress: Smallint;
     BaseTrade: Smallint;
     Name: array[0..15] of Char;
-    dword_64F370: Integer;
+    Workers: Integer;
     Improvements: array[1..5] of Byte;
     Building: Shortint;
     TradeRoutes: Shortint;
