@@ -669,11 +669,11 @@ type
     ControlInfoScroll: PControlInfoScroll; //
   end;
 
-  TCityGlobals = packed record
+  TCityGlobals = packed record            // Size = 0x140
     BuildProgress: Integer;
     field_4: array[1..4] of char;
     field_8: array[1..28] of char;
-    field_24: Integer;
+    CitizensNotWorking: Integer;
     HappyCitizens: Integer;
     Tax: Integer;
     field_30: Integer;
@@ -681,17 +681,17 @@ type
     RowsInFoodBox: Integer;
     field_3C: Integer;
     Support: Integer;
-    field_44: Integer;
+    ProdCorruption: Integer;
     field_48: Integer;
-    field_4C: Integer;
+    LinkToCapital: Integer;
     field_50: Integer;
     ShieldsInRow: Integer;
     TradeCorruption: Integer;
-    field_5C: Integer;
+    Pollution: Integer;
     DistanceToCapital: Integer;
     field_64: array[1..4] of char;
     TradeRevenue: array[0..2] of Integer;
-    field_74: Integer;
+    AngryCitizens: Integer;
     field_78: Integer;
     BuildingType: Integer;
     UnhappyCitizens: Integer;
@@ -701,7 +701,7 @@ type
     field_90: Integer;
     field_94: Integer;
     field_98: Integer;
-    field_9C: Integer;
+    TechPollution: Integer;
     TotalRes: array[0..2] of Integer;
     field_AC: Integer;
     Settlers: Integer;
@@ -710,13 +710,9 @@ type
     AttUnitsOfDiscontent: Integer;
     field_C0: Integer;
     field_C4: array[1..4] of char;
-    field_C8: char;
-    field_C9: char;
-    gapCA: BYTE;
-    field_CB: char;
-    field_CC: char;
+    UnhappyArray: array[0..4] of Byte;
     field_CD: array[1..3] of char;
-    field_D0: Integer;
+    EnvLevel: Integer;
     Lux: Integer;
     Capital: Integer;
     FreeCitizens: Integer;
@@ -726,13 +722,10 @@ type
     field_EC: array[1..4] of char;
     field_F0: Integer;
     PrevFoodDelta: Integer;
-    field_F8: char;
-    field_F9: char;
-    gapFA: BYTE;
-    field_FB: char;
-    field_FC: char;
+    HappyArray: array[0..4] of Byte;
     field_FD: array[1..3] of char;
-    field_100: array[1..64] of char;
+    AngryArray: array[0..4] of Byte;
+    field_100: array[1..59] of char;
   end;
 
   TAdvisorWindow = packed record          // Size = 0x4A4
@@ -823,7 +816,7 @@ type
   end;
 
   TGameParameters = packed record
-    word_655AE8: Word;
+    CustomFeatures: Word;
     GraphicAndGameOptions: Integer;
     // 0x0020 - Show Map Grid
     // 0x0100 - Tutorial help.
@@ -837,7 +830,7 @@ type
     // 0x0040 - ?Scenario
     // 0x0080 - ?Scenario started
     word_655AF2: Word;
-    word_655AF4: Word;
+    TutorialsShown: Word;
     word_655AF6: Word;
     Turn: Word;
     Year: Word;
@@ -849,7 +842,7 @@ type
     // 1 - Hot Seat
     // 3 - Network Game
     // 4 - Internet
-    byte_655B03: Byte;                    // PlayerTribeNumber?
+    HumanCivIndex: Byte;                  // PlayerTribeNumber?
     byte_655B04: Byte;
     SomeCivIndex: Shortint;               // Active Unit Civ index?
     byte_655B06: Byte;
@@ -870,7 +863,7 @@ type
     byte_655B0F: Byte;
     word_655B10: Word;
     word_655B12: Word;
-    word_655B14: Word;
+    PeaceTurns: Word;
     TotalUnits: Word;
     TotalCities: Word;
     word_655B1A: Word;
@@ -926,6 +919,7 @@ type
     Visibility: Byte;
     OwnershipAndFertility: Byte;
   end;
+
   TMapSquares = array[0..32000] of TMapSquare;
 
   TPFData = packed record
@@ -1008,7 +1002,7 @@ type
     Visibility: Byte;
     HPLost: Byte;                         // + 0x0A
     MoveDirection: Byte;                  // 0x6560FB
-    byte_6560FC: Byte;
+    DebugSymbol: Char;
     Counter: Byte;                        // 0x6560FD Settlers work / Caravan commodity / Air turn
     MoveIteration: Byte;
     Orders: Shortint;                     // 0x6560FF

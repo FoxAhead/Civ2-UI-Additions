@@ -518,7 +518,7 @@ begin
   begin
     if ChangeMapZoom(Sign(Delta)) then
     begin
-      Civ2.RedrawMap();
+      Civ2.RedrawMap(Civ2.MapWindow, Civ2.HumanCivIndex^, True);
       Result := False;
       goto EndOfFunction;
     end;
@@ -550,7 +550,7 @@ begin
       begin
         if ChangeMapZoom(-Civ2.MapWindow.MapZoom) then
         begin
-          Civ2.RedrawMap();
+          Civ2.RedrawMap(Civ2.MapWindow, Civ2.HumanCivIndex^, True);
           Result := False;
         end
       end
@@ -607,7 +607,7 @@ begin
             begin
               Inc(MouseDrag.Moved, 5);
               PInteger($0062BCB0)^ := 1;  // Don't flush messages
-              Civ2.CenterView(Xc, Yc);
+              Civ2.CenterView(Civ2.MapWindow, Xc, Yc);
               PInteger($0062BCB0)^ := 0;
               Result := False;
             end;
@@ -623,12 +623,12 @@ begin
               MouseDrag.Active := False;
               if MouseDrag.Moved < 5 then
               begin
-                if not Civ2.ScreenToMap(Xc, Yc, MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y) then
+                if not Civ2.ScreenToMap(Civ2.MapWindow, Xc, Yc, MouseDrag.StartScreen.X, MouseDrag.StartScreen.Y) then
                 begin
                   if ((Civ2.MapWindow.MapCenter.X <> Xc) or (Civ2.MapWindow.MapCenter.Y <> Yc)) then
                   begin
                     PInteger($0062BCB0)^ := 1; // Don't flush messages
-                    Civ2.CenterView(Xc, Yc);
+                    Civ2.CenterView(Civ2.MapWindow, Xc, Yc);
                     PInteger($0062BCB0)^ := 0;
                   end;
                 end;
@@ -3420,6 +3420,7 @@ begin
         if (Civ2.UnitTypes[Unit1.UnitType].Domain = 0) and (Unit1.Orders = -1) and (Civ2.UnitCanMove(i)) then
         begin
           Unit1.Orders := 3;
+          Unit1.GotoX := $FFFF;
         end;
         i := Civ2.GetNextUnitInStack(i);
       end;
