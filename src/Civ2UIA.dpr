@@ -849,7 +849,7 @@ var
 begin
   TextOut := Format('%s %d', [GetLabelString($2D), Civ2.GameParameters.Turn]);
   StrCopy(Civ2.ChText, PChar(TextOut));
-  Top := Civ2.SideBarClientRect^.Top + (Civ2.SideBarFontInfo^.Height - 1) * 2;
+  Top := Civ2.SideBarClientRect^.Top + (Civ2.SideBar.FontInfo.Height - 1) * 2;
   Civ2.DrawStringRight(Civ2.ChText, Civ2.SideBarClientRect^.Right, Top, 0);
 end;
 
@@ -863,6 +863,7 @@ asm
     ret
 end;
 
+// TODO: Move to Q_UpdateAdvisorScience_sub_42AD8F
 function PatchDrawProgressBar(GraphicsInfo: PGraphicsInfo; A2: Pointer; Left, Top, Current, Total, Height, Width, A9: Integer): Integer; cdecl;
 var
   DC: HDC;
@@ -888,7 +889,7 @@ begin
     add   esp, $24
     mov   Result, eax
   end;
-  if GraphicsInfo = Civ2.ScienceAdvisorGraphicsInfo then
+  if GraphicsInfo = @Civ2.AdvisorWindow.MSWindow.GraphicsInfo then
   begin
     TextOut := IntToStr(Current) + ' / ' + IntToStr(Total);
     DC := GraphicsInfo^.DrawPort.DrawInfo^.DeviceContext;

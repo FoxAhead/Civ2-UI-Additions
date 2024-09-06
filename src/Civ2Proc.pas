@@ -25,7 +25,6 @@ type
     Civs: ^TCivs;
     Commodities: PIntegerArray;
     Cosmic: PCosmic;
-    CurrCivIndex: PInteger;
     CurrPopupInfo: PPDialogWindow;
     CursorX: PSmallInt;
     CursorY: PSmallInt;
@@ -48,20 +47,16 @@ type
     PFData: PPFData;
     PrevWindowInfo: PWindowInfo;
     ScreenRectSize: PSize;
-    ScienceAdvisorClientRect: PRect;
-    ScienceAdvisorGraphicsInfo: PGraphicsInfo;
     ShieldFontInfo: ^TFontInfo;
     ShieldLeft: ^TShieldLeft;
     ShieldTop: ^TShieldTop;
+    SideBar: PSideBarWindow;
     SideBarClientRect: PRect;
-    SideBarFontInfo: ^TFontInfo;
-    SideBarGraphicsInfo: PGraphicsInfo;
     TimesBigFontInfo: ^TFontInfo;
     TimesFontInfo: ^TFontInfo;
     Units: ^TUnits;
     UnitSelected: ^LongBool;
     UnitTypes: ^TUnitTypes;
-    WonderCity: PWordArray;
 
     // Functions
     AfterActiveUnitChanged: procedure(A1: Integer); cdecl;
@@ -193,9 +188,9 @@ begin
   inherited;
   // For inline ASM all TCiv2 fileds can be referenced directly only inside TCiv2 class, and as Self.FieldName
   // Important: by default EAX register contains Self reference
+{(*}
 
   // Variables
-{(*}
   AdvisorWindow              := Pointer($0063EB10);
   CDRoot                     := Pointer($006AB680);
   ChText                     := Pointer($00679640);
@@ -205,7 +200,6 @@ begin
   Civs                       := Pointer($0064C6A0);
   Commodities                := Pointer($0064B168);
   Cosmic                     := Pointer($0064BCC8);
-  CurrCivIndex               := Pointer($0063EF6C);
   CurrPopupInfo              := Pointer($006CEC84);
   CursorX                    := Pointer($0064B1B4);
   CursorY                    := Pointer($0064B1B0);
@@ -228,14 +222,11 @@ begin
   PFData                     := Pointer($0062D03C);
   PrevWindowInfo             := Pointer($00637EA4);
   ScreenRectSize             := Pointer($006AB198);
-  ScienceAdvisorClientRect   := Pointer($0063EC34);
-  ScienceAdvisorGraphicsInfo := Pointer($0063EB10);
   ShieldFontInfo             := Pointer($006AC090);
   ShieldLeft                 := Pointer($00642C48);
   ShieldTop                  := Pointer($00642B48);
+  SideBar                    := Pointer($006ABC68);
   SideBarClientRect          := Pointer($006ABC28);
-  SideBarFontInfo            := Pointer($006ABF98);
-  SideBarGraphicsInfo        := Pointer($006ABC68);
   TimesBigFontInfo           := Pointer($0063EAC0);
   TimesFontInfo              := Pointer($0063EAB8);
   if ANewUnitsAreaAddress <> nil then
@@ -244,11 +235,8 @@ begin
     Units                    := Pointer(AUnits);
   UnitSelected               := Pointer($006D1DA8);
   UnitTypes                  := Pointer($0064B1B8);
-  WonderCity                 := Pointer($00655BE6);
-{*)}
 
   // Functions
-{(*}
   @AfterActiveUnitChanged         := Pointer($004016EF);
   @ArrangeWindows                 := Pointer($004039F4);
   @CalcCityGlobals                := Pointer($00402603);

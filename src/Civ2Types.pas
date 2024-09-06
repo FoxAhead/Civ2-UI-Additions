@@ -69,6 +69,8 @@ type
 
   PAdvisorWindow = ^TAdvisorWindow;
 
+  PSideBarWindow = ^TSideBarWindow;
+
   PCosmic = ^TCosmic;
 
   PGameParameters = ^TGameParameters;
@@ -766,6 +768,39 @@ type
     Popup: Integer;
   end;
 
+  TSideBarWindow = packed record          // Size = 0x350
+    MSWindow: TMSWindow;
+    Unknown_2D8: Byte;
+    Unknown_2D9: ShortInt;
+    Unknown_2DA: ShortInt;
+    Unknown_2DB: ShortInt;
+    Unknown_2DC: Integer;
+    Unknown_2E0: Integer;
+    Unknown_2E4: Integer;
+    Unknown_2E8: Integer;
+    Unknown_2EC: Integer;
+    Unknown_2F0: Integer;
+    Unknown_2F4: Integer;
+    Unknown_2F8: Integer;
+    Unknown_2FC: Integer;
+    Unknown_300: Integer;
+    Unknown_304: Integer;
+    Unknown_308: Integer;
+    Unknown_30C: Integer;
+    Unknown_310: Integer;
+    Unknown_314: Integer;
+    Unknown_318: Integer;
+    Unknown_31C: Integer;
+    Unknown_320: Integer;
+    Unknown_324: Integer;
+    Unknown_328: Integer;
+    Unknown_32C: Integer;
+    FontInfo: TFontInfo;
+    Unknown_338: Integer;
+    Unknown_33C: Integer;
+    Rect: TRect;
+  end;
+
   TTaxWindow = packed record              // Size = 0x4D0
     MSWindow: TMSWindow;
     CivIndex: Integer;                    // + 0x2D8
@@ -844,7 +879,7 @@ type
     // 4 - Internet
     HumanCivIndex: Byte;                  // PlayerTribeNumber?
     byte_655B04: Byte;
-    SomeCivIndex: Shortint;               // Active Unit Civ index?
+    SomeCivIndex: ShortInt;               // Active Unit Civ index?
     byte_655B06: Byte;
     RevealMap: Boolean;
     DifficultyLevel: Byte;
@@ -858,7 +893,7 @@ type
     TribesLeftInPlay: Byte;
     HumanPlayers: Byte;
     byte_655B0C: Byte;
-    byte_655B0D: Byte;
+    Enemies: Byte;
     byte_655B0E: Byte;
     byte_655B0F: Byte;
     word_655B10: Word;
@@ -868,10 +903,14 @@ type
     TotalCities: Word;
     word_655B1A: Word;
     word_655B1C: Word;
-    byte_655B1E: array[1..34] of Byte;
-    byte_655B40: Byte;
-    byte_655B41: array[1..3] of Byte;
-    byte_655B44: Byte;
+    byte_655B1E: array[0..99] of Byte;
+    TechsDiscovered: array[0..99] of Byte;
+    WonderCities: array[0..27] of SmallInt;
+    field_136: SmallInt;
+    field_138: Byte;
+    field_139: Char;
+    CivsRating: array[0..7] of Byte;
+    field_142: array[0..7] of Byte;
   end;
 
   TMapHeader = packed record
@@ -1121,17 +1160,16 @@ type
     Attack: Byte;
     Expand: Byte;
     Civilize: Byte;
-    Female: Byte;
-    byte_6554FC: Byte;
+    Unknown1: Byte;
+    Gender: Byte;
     CitiesBuilt: Byte;
     Color: Word;
     Style: Word;
-    word_655502: Word;
-    word_655504: Word;
-    word_655506: Word;
-    word_655508: Word;
-    word_65550A: Word;
-    word_65550C: array[1..14] of Word;
+    NameIndex: Word;
+    NationPlural: Word;
+    NationAdjective: Word;
+    NameIndexes: array[0..1] of Word;
+    GovernorName: array[0..6, 0..1] of Word; 
   end;
 
   TLeaders = array[1..21] of TLeader;     // 6554F8

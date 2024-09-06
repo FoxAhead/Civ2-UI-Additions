@@ -331,7 +331,7 @@ begin
         // Wonders
         WondersCount := 0;
         for i := 0 to 27 do
-          if Civ2.WonderCity[i] = FCityIndex then
+          if Civ2.GameParameters.WonderCities[i] = FCityIndex then
             Inc(WondersCount);
         if WondersCount > 0 then
         begin
@@ -340,7 +340,7 @@ begin
           WondersCount := Ceil(WondersCount / ((WondersCount + MaxWondersInRow - 1) div MaxWondersInRow));
           for i := 0 to 27 do
           begin
-            if Civ2.WonderCity[i] = FCityIndex then
+            if Civ2.GameParameters.WonderCities[i] = FCityIndex then
             begin
               Canvas.CopySprite(@PSprites($645160)^[i + 39], 2, 2);
               Inc(j);
