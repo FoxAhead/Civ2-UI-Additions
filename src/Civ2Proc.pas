@@ -21,6 +21,10 @@ type
     ChText: PChar;
     Cities: ^TCities;
     CityGlobals: PCityGlobals;
+    CitySpiralDX: PShortIntArray;
+    CitySpiralDY: PShortIntArray;
+    CityDX: PShortIntArray;
+    CityDY: PShortIntArray;
     CityWindow: PCityWindow;
     Civs: ^TCivs;
     Commodities: PIntegerArray;
@@ -93,6 +97,8 @@ type
     DrawStringRight: procedure(ChText: PChar; Right, Top, Shift: Integer); cdecl;
     DrawUnit: function(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer; cdecl;
     ExtractSprite64x48: procedure(Sprite: PSprite; Left, Top: Integer); cdecl;
+    FontPrepare: procedure(Zoom: Integer); cdecl;
+    FontRecreate: procedure(FontInfo: PFontInfo; FontFaceNum, Height: Integer; Style: Byte); stdcall;
     GetCityIndexAtXY: function(X, Y: Integer): Integer; cdecl;
     GetCivColor1: function(CivIndex: Integer): Integer; cdecl;
     GetFontHeightWithExLeading: function(thisFont: Pointer): Integer; stdcall;
@@ -103,6 +109,7 @@ type
     GetStringInList: function(StringIndex: Integer): PChar; cdecl;
     GetTextExtentX: function(A1: PFontInfo; A2: PChar): Integer; stdcall;
     GetTopUnitInStack: function(UnitIndex: Integer): Integer; cdecl;
+    GetUpkeep: function(CivIndex, Improvement: Integer): Integer; cdecl;
     Heap_Add: function(Heap: PHeap; Size: Integer): Pointer; cdecl;
     HumanTurn: function: Integer; cdecl;
     InitControlScrollRange: procedure(ControlInfoScroll: PControlInfoScroll; MinPos, MaxPos: Integer); stdcall;
@@ -126,6 +133,7 @@ type
     RecreateBrush: procedure(WindowInfo: PWindowInfo; Color: Integer); stdcall;
     RedrawMap: procedure(MapWindow: PMapWindow; CivIndex: Integer; CopyToScreen: LongBool); stdcall;
     ResetSpriteZoom: procedure(); cdecl;
+    ScaleByZoom: function(Value, Zoom: Integer): Integer; cdecl;
     ScreenToMap: function(MapWindow: PMapWindow; var MapX, MapY: Integer; ScreenX, ScreenY: Integer): LongBool; stdcall;
     Scroll_Ctr: function(ControlInfoScroll: PControlInfoScroll): PControlInfoScroll; stdcall;
     SetCurrFont: procedure(A1: Integer); cdecl;
@@ -197,6 +205,10 @@ begin
   Cities                     := Pointer($0064F340);
   CityWindow                 := Pointer($006A91B8);
   CityGlobals                := Pointer($006A6528);
+  CitySpiralDX               := Pointer($00628370);
+  CitySpiralDY               := Pointer($006283A0);
+  CityDX                     := Pointer($00630D38);
+  CityDY                     := Pointer($00630D50);
   Civs                       := Pointer($0064C6A0);
   Commodities                := Pointer($0064B168);
   Cosmic                     := Pointer($0064BCC8);
@@ -271,6 +283,8 @@ begin
   @DrawStringRight                := Pointer($00403607);
   @DrawUnit                       := Pointer($0056BAFF);
   @ExtractSprite64x48             := Pointer($0044AC07);
+  @FontPrepare                    := Pointer($00401C12);
+  @FontRecreate                   := PThisCall($004027B1);
   @GetCityIndexAtXY               := Pointer($0043CF76);
   @GetCivColor1                   := Pointer($00401F8C);
   @GetFontHeightWithExLeading     := PThisCall($00403819);
@@ -281,6 +295,7 @@ begin
   @GetStringInList                := Pointer($00403387);
   @GetTextExtentX                 := PThisCall($00402B21);
   @GetTopUnitInStack              := Pointer($00403391);
+  @GetUpkeep                      := Pointer($004014DD);  
   @Heap_Add                       := Pointer($0040389B);
   @HumanTurn                      := Pointer($00402BA8);
   @InitControlScrollRange         := PThisCall($00402121);
@@ -304,6 +319,7 @@ begin
   @RecreateBrush                  := PThisCall($00402045);
   @RedrawMap                      := PThisCall($00401F32);
   @ResetSpriteZoom                := Pointer($004023D3);
+  @ScaleByZoom                    := Pointer($00401E83);
   @ScreenToMap                    := PThisCall($00402B2B);
   @Scroll_Ctr                     := PThisCall($004031E3);
   @SetCurrFont                    := Pointer($0040233D);

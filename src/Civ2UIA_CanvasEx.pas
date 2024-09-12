@@ -25,7 +25,7 @@ type
     constructor Create(DC: HDC); reintroduce; overload;
     constructor Create(DrawPort: PDrawPort); reintroduce; overload;
     destructor Destroy; override;
-    function ColorFromIndex(Index: Integer): TColor;
+    function ColorFromIndex(Index: Integer): TColor; // Index = Palette index + 10
     function SetTextColors(MainColorIndex, ShadowColorIndex: Integer): TCanvasEx;
     function SetSpriteZoom(Zoom: Integer): TCanvasEx;
     function CopySprite(Sprite: PSprite; DX: Integer = 0; DY: Integer = 0): TCanvasEx;

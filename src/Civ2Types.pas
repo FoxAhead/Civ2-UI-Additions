@@ -647,17 +647,17 @@ type
     Unknown3: Integer;
     Unknown4: Integer;
     Unknown5: Integer;
-    Unknown6: Integer;
+    CentralInfo: Integer;
     ImproveListStart: Integer;
     ImproveCount: Integer;
     Unknown7: array[$15BC..$15D3] of Byte; // + 15B8
     WindowSize: Integer;                  // + 15D4 = 6AA78C  // 1, 2, 3
     Zoom: Integer;                        //
     RectCitizens: TRect;                  //
-    Rect1: TRect;                         // + 15EC
+    RectResources: TRect;                 // + 15EC
     RectFoodStorage: TRect;               //
-    Rect3: TRect;                         //
-    Rect4: TRect;                         //
+    RectBuilding: TRect;                  //
+    RectButtons: TRect;                   //
     RectSupportOut: TRect;                //
     RectImproveOut: TRect;                //
     RectInfoOut: TRect;                   //
@@ -675,6 +675,10 @@ type
     BuildProgress: Integer;
     field_4: array[1..4] of char;
     field_8: array[1..28] of char;
+    // 0000 0001 - 0x01 Not valid
+    // 0000 0100 - 0x04 Foreign offensive unit
+    // 0000 1000 - 0x08 City
+    // 0010 0000 - 0x20 Foreign offensive unit (human)
     CitizensNotWorking: Integer;
     HappyCitizens: Integer;
     Tax: Integer;
@@ -700,11 +704,9 @@ type
     field_84: Integer;
     field_88: Integer;
     field_8C: array[1..4] of char;
-    field_90: Integer;
-    field_94: Integer;
-    field_98: Integer;
+    TileRes: array[0..2] of Integer;
     TechPollution: Integer;
-    TotalRes: array[0..2] of Integer;
+    TotalRes: array[0..2] of Integer; // 0 - Food, 1 - Production, 2 - Trade
     field_AC: Integer;
     Settlers: Integer;
     field_B4: Integer;
@@ -917,13 +919,13 @@ type
     SizeX: SmallInt;
     SizeY: SmallInt;
     Area: SmallInt;
-    Flat: SmallInt;
-    Seed: SmallInt;
+    Flat: SmallInt;                       // (0=round, 1=flat). Really determined by byte 13 at the start of the savegame, instead of here.
+    Seed: SmallInt;                       // seed (can be anything, but there are only 64 patterns)
     ArrayW: SmallInt;
     ArrayH: SmallInt;
   end;
 
-  TMapCivData = array[0..7] of PByteArray;
+  TMapCivData = array[0..7] of PByteArray; // Known tile Improvements for the civilization in question
 
   TMapSquare = packed record
     TerrainType: Byte;
@@ -947,16 +949,34 @@ type
     // 0000 0010 - 0x02 City Present
     // 0000 0100 - 0x04 Irrigation
     // 0000 1000 - 0x08 Mining
-    // 0000 1100 - 0x0C Farmland
+    // 0000 1100 - 0x0C Farmland (Irrigation + Mining)
     // 0001 0000 - 0x10 Road
     // 0011 0000 - 0x30 Railroad (+ Road)
     // 0100 0000 - 0x40 Fortress
-    // 0100 0010 - 0x42 Airbase
+    // 0100 0010 - 0x42 Airbase (Fortress + City)
     // 1000 0000 - 0x80 Pollution
     CityRadii: Byte;
+    // 0000 0000 - None or Barbarians
+    // 0010 0000 - Tribe 1
+    // 0100 0000 - Tribe 2
+    // 0110 0000 - Tribe 3
+    // 1000 0000 - Tribe 4
+    // 1010 0000 - Tribe 5
+    // 1100 0000 - Tribe 6
+    // 1110 0000 - Tribe 7
     MassIndex: Byte;
     Visibility: Byte;
+    // 0000 0000 - Unexplored by all
+    // 0000 0001 - Visible to tribe 0
+    // ...
+    // 1000 0000 - Visible to tribe 7
     OwnershipAndFertility: Byte;
+    // .... XXXX - Fertility 0x0 - 0xF
+    // 0000 .... - Owned by tribe 0 (barbarians)
+    // 0001 .... - Owned by tribe 1
+    // ...
+    // 0111 .... - Owned by tribe 7
+    // 1111 .... - No ownership - Can have goody hut (based on seed)
   end;
 
   TMapSquares = array[0..32000] of TMapSquare;
@@ -1150,7 +1170,7 @@ type
     Unknown10: array[$192..$593] of Byte;
   end;
 
-  TCivs = array[1..8] of TCiv;            // 64C6A0
+  TCivs = array[0..7] of TCiv;            // 64C6A0
 
   TShieldLeft = array[0..$3E] of Integer; // 642C48
 
@@ -1169,7 +1189,7 @@ type
     NationPlural: Word;
     NationAdjective: Word;
     NameIndexes: array[0..1] of Word;
-    GovernorName: array[0..6, 0..1] of Word; 
+    GovernorName: array[0..6, 0..1] of Word;
   end;
 
   TLeaders = array[1..21] of TLeader;     // 6554F8

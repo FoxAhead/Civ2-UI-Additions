@@ -20,6 +20,7 @@ uses
   MMSystem,
   ShellAPI,
   SysUtils,
+  Types,
   Windows,
   WinSock,
   Civ2Types in 'Civ2Types.pas',
@@ -311,12 +312,13 @@ end;
 
 procedure PatchDebugDrawCityWindowEx(CityWindow: PCityWindow); stdcall;
 var
-  Canvas: TCanvas;
+  Canvas: TCanvasEx;
   i: Integer;
   CitySprite: TCitySprite;
   DeltaX: Integer;
+  R: TRect;
 begin
-  Canvas := Ex.CanvasGrab(CityWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo.DeviceContext);
+  Canvas := TCanvasEx.Create(@CityWindow.MSWindow.GraphicsInfo.DrawPort);
 
   Canvas.Pen.Color := RGB(255, 0, 255);
   Canvas.Brush.Style := bsClear;
@@ -350,7 +352,34 @@ begin
       Result := v6;
     end;}
 
-  Ex.CanvasRelease();
+  Canvas.Pen.Color := RGB(0, 255, 255);
+  Canvas.Font.Color := RGB(0, 255, 255);
+
+  R := CityWindow.RectCitizens;
+  Canvas.Rectangle(R);
+  Canvas.TextOut(R.Left, R.Top, 'RectCitizens');
+
+  R := CityWindow.RectResources;
+  Canvas.Rectangle(R);
+  Canvas.TextOut(R.Left, R.Top, 'RectResources');
+
+  R := CityWindow.RectFoodStorage;
+  Canvas.Rectangle(R);
+  Canvas.TextOut(R.Left, R.Top, 'RectFoodStorage');
+
+  R := CityWindow.RectBuilding;
+  Canvas.Rectangle(R);
+  Canvas.TextOut(R.Left, R.Top, 'RectBuilding');
+
+  R := CityWindow.RectButtons;
+  Canvas.Rectangle(R);
+  Canvas.TextOut(R.Left, R.Top, 'RectButtons');
+
+  R := CityWindow.RectResourceMap;
+  Canvas.Rectangle(R);
+  Canvas.TextOut(R.Left, R.Top, 'RectResourceMap');
+
+  Canvas.Free();
 end;
 
 procedure PatchDebugDrawCityWindow(); register;
@@ -1383,12 +1412,13 @@ asm
     ret
 end;
 
-procedure PatchCityChangeListImprovementMaintenanceEx(j: Integer); stdcall;
+procedure PatchCityChangeListImprovementMaintenanceEx(CivIndex, j: Integer); stdcall;
 var
   Upkeep: Integer;
   Text: string;
 begin
-  Upkeep := Civ2.Improvements[j].Upkeep;
+  //  Upkeep := Civ2.Improvements[j].Upkeep;
+  Upkeep := Civ2.GetUpkeep(CivIndex, j);
   if Upkeep >= 0 then
   begin
     Text := string(Civ2.ChText);
@@ -1401,6 +1431,7 @@ end;
 procedure PatchCityChangeListImprovementMaintenance(); register;
 asm
     push  [ebp - $958] // int j
+    push  [ebp - $95C] // int vOwner
     call  PatchCityChangeListImprovementMaintenanceEx
     push  $0050AD85
     ret
@@ -1620,14 +1651,85 @@ end;
 
 procedure PatchDrawCityWindowTopWLTKD(); register;
 asm
-    mov   eax, [ebp - $2C]
-    push  [eax + $159C] // CityIndex
+    mov   eax, [ebp - $2C] // P_CityWindow
+    push  [eax + $159C]    // T_CityWindow->CityIndex
     call  PatchDrawCityWindowTopWLTKDEx
-    push  $01
+    push  $01        // 0x00502109 - Restore overwritten call
     push  $01
     push  $12
     push  eax
-    push  $00502111
+    push  $00502111  // call    Q_SetFontColorWithShadow_sub_403BB6
+    ret
+end;
+
+procedure PatchDrawCityWindowTop2Ex(CityWindow: PCityWindow); stdcall;
+var
+  Canvas: TCanvasEx;
+  City: PCity;
+  TextOut: string;
+  Color1: Integer;
+  R1: TRect;
+  P1: TPoint;
+  Height: Integer;
+begin
+  City := @Civ2.Cities[CityWindow.CityIndex];
+  TextOut := IntToStr(City.Size);
+  Color1 := Civ2.GetCivColor1(City.Owner);
+  R1 := CityWindow.RectCitizens;
+  R1 := Bounds(R1.Left, R1.Top, 17, 16);
+
+  Height := 11;
+  case CityWindow.WindowSize of
+    1: Height := 7;
+    2: Height := 11;
+    3: Height := 16;
+  end;
+
+  Canvas := TCanvasEx.Create(@CityWindow.MSWindow.GraphicsInfo.DrawPort);
+
+  //  if Height > 7 then
+  //    Canvas.Font.Name := 'Arial'
+  //  else
+  //    Canvas.Font.Name := 'Small Fonts';
+
+  Canvas.Font.Name := 'Arial';
+  Canvas.Font.Height := -Height;
+
+  Canvas.Pen.Style := psSolid;
+  Canvas.Pen.Color := Canvas.ColorFromIndex(10);
+  Canvas.Brush.Style := bsClear;
+  Canvas.Brush.Color := Canvas.ColorFromIndex(Color1);
+  //R1 := Bounds(R1.Left, R1.Top, Canvas.TextWidth(TextOut) + 4, Canvas.TextHeight(TextOut));
+  R1 := Bounds(R1.Left, R1.Top, Canvas.TextWidth(TextOut) + 4, Height + 3);
+  Canvas.Rectangle(R1);
+
+  Canvas.Pen.Style := psClear;
+  Canvas.Brush.Style := bsClear;
+
+  P1 := CenterPoint(R1);
+  Canvas.MoveTo(P1.X, P1.Y);
+  Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER);
+  //  if Height > 7 then
+  //  begin
+  Canvas.MoveTo(P1.X + 1, P1.Y);
+  Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER);
+  //  end;
+
+  Canvas.Free;
+end;
+
+procedure PatchDrawCityWindowTop2(); register;
+asm
+    mov   eax, [ebp - $2C] // P_CityWindow
+    push  eax
+    call  PatchDrawCityWindowTop2Ex
+    cmp   [ebp + 8], 0               // cmp     [ebp+aCopyToScreen], 0
+    jz    @@LABEL_loc_5022B4         // jz      loc_5022B4
+    push  $005022A3
+    ret
+
+@@LABEL_loc_5022B4:
+    push  $005022B4
     ret
 end;
 
@@ -3586,8 +3688,11 @@ begin
 
   // Celebrating city yellow color instead of white in Attitude Advisor (F4)
   WriteMemory(HProcess, $0042DE86, [WLTDKColorIndex]); // (Color index = Idx + 10)
+  // CityWindow:
   // Change color in City Window for We Love The King Day
   WriteMemory(HProcess, $00502109, [OP_JMP], @PatchDrawCityWindowTopWLTKD);
+  //
+  WriteMemory(HProcess, $00502299, [OP_JMP], @PatchDrawCityWindowTop2);
 
   // Show Cost shields and Maintenance coins in City Change list and fix Turns calculation for high production numbers
   WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListBuildingCost);
