@@ -18,6 +18,9 @@ procedure OffsetPoint(var Point: TPoint; DX, DY: Integer);
 function CopyFont(SourceFont: HFONT): HFONT;
 //function ColorFromIndex(DC: HDC; Index: Integer): TColor;
 function GetLabelString(StringIndex: Integer): string;
+function GetProduction(): Integer;
+function GetTurnsToComplete(RealCost, Done: Integer): Integer;
+function GetTradeConnectionLevel(aCity, i: Integer): Integer;
 
 implementation
 
@@ -135,6 +138,64 @@ end;}
 function GetLabelString(StringIndex: Integer): string;
 begin
   Result := string(Civ2.GetStringInList(PIntegerArray(Pointer($00628420)^)[StringIndex]));
+end;
+
+function GetProduction(): Integer;
+begin
+  Result := Min(Max(0, Civ2.CityGlobals.TotalRes[1] - Civ2.CityGlobals.Support), 1000);
+end;
+
+function GetTurnsToComplete(RealCost, Done: Integer): Integer;
+var
+  LeftToDo, Production: Integer;
+begin
+  // Code from Q_StrcatBuildingCost_sub_509AC0
+  LeftToDo := RealCost - 1 - Done;
+  Production := Max(1, GetProduction());
+  Result := Min(Max(1, LeftToDo div Production + 1), 999)
+    {  Production := GetProduction();
+      if Production > 0 then
+        Result := Min(Max(1, LeftToDo div Production + 1), 999)
+      else if LeftToDo <= 0 then
+        Result := 1
+      else
+        Result := -1;}
+end;
+
+function GetTradeConnectionLevel(aCity, i: Integer): Integer;
+var
+  vPartner, vTrade, vCommodity, v1: Integer;
+begin
+  vCommodity := Civ2.Cities[aCity].CommodityTraded[i];
+  if vCommodity < 0 then
+  begin
+    Result := 0;
+    Exit;
+  end;
+  vPartner := Civ2.Cities[aCity].TradePartner[i];
+  vTrade := (Civ2.Cities[vPartner].BaseTrade + Civ2.Cities[aCity].BaseTrade + 4) shr 3;
+  Result := Civ2.PFFindConnection(
+    Civ2.Cities[aCity].Owner,
+    Civ2.Cities[aCity].X,
+    Civ2.Cities[aCity].Y,
+    Civ2.Cities[vPartner].X,
+    Civ2.Cities[vPartner].Y);
+  if Civ2.CityHasImprovement(aCity, $20) then // Airport
+  begin
+    if Civ2.CityHasImprovement(vPartner, $20) then // Airport
+    begin
+      v1 := Result;
+      if Result <= 1 then
+      begin
+        v1 := 1;
+      end;
+      Result := v1;
+    end;
+  end;
+  if Civ2.CityHasImprovement(aCity, $19) then // Superhighways
+  begin
+    Inc(Result);
+  end;
 end;
 
 end.

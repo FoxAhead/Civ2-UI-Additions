@@ -118,7 +118,7 @@ begin
       begin
         FMapDeviceContext := MapDrawPort.DrawInfo.DeviceContext;
         Civ2.DrawPort_Reset(@FDrawPort, MapDrawPort.Width, MapDrawPort.Height);
-        Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.Palette);
+        Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.Palette);
       end;
     end;
   end;

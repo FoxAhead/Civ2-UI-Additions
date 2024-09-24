@@ -21,6 +21,8 @@ type
 
   PMenuInfo = ^TMenuInfo;
 
+  PWindowInfo1 = ^TWindowInfo1;
+
   PWindowInfo = ^TWindowInfo;
 
   PFontInfo = ^TFontInfo;
@@ -163,19 +165,19 @@ type
   // WindowProc1        - GetWindowLongA(hWnd, 8)
   // WindowProcCommon   - GetWindowLongA(hWnd, 4)
   // WindowProcMSWindow - GetWindowLongA(hWnd, 0)
-  TWindowInfo = packed record             // Size = 0xC5
+  TWindowInfo1 = packed record             // Size = 0xB8
     Style: Integer;                       //
     Palette: Pointer;                     // + 0x04
     WindowStructure: PWindowStructure;    // + 0x08
     Unknown_0C: Integer;                  // + 0x0C
     WindowProcs: TWindowProcs;            // + 0x10
-    Unknown_78: Integer;                  // + 0x78
+    MenuBar: PMenuBar;                    // + 0x78
     MinTrackSize: TPoint;                 // + 0x7C
     MaxTrackSize: TPoint;                 // + 0x84
     PopupActive: Cardinal;                // + 0x8C
     Unknown_90: Integer;                  // + 0x90
     Unknown_94: Integer;                  // + 0x94
-    Unknown_98: Integer;                  // + 0x98
+    ProcMenuExec: Pointer;                // + 0x98
     Unknown_9C: Integer;                  // + 0x9C
     Unknown_A0: Integer;                  // + 0xA0
     Unknown_A4: Integer;                  // + 0xA4
@@ -183,6 +185,10 @@ type
     RButtonDown: Integer;                 // + 0xAC
     HScrollPos: Integer;                  // + 0xB0
     VScrollPos: Integer;                  // + 0xB4
+  end;
+
+  TWindowInfo = packed record             // Size = 0xC5
+    WindowInfo1: TWindowInfo1;
     ControlInfo: PControlInfo;            // + 0xB8
     ButtonInfoOK: PControlInfoButton;     // + 0xBC
     ButtonInfoCANCEL: PControlInfoButton; // + 0xC0
@@ -1116,6 +1122,7 @@ type
     BaseTrade: Smallint;
     Name: array[0..15] of Char;
     Workers: Integer;
+    // 0000 0000 000X XXXX XXXX XXXX XXXX XXXX - Bit number equals index in CitySpiral (20 - center tile)
     Improvements: array[1..5] of Byte;
     Building: Shortint;
     TradeRoutes: Shortint;
@@ -1163,7 +1170,9 @@ type
     // 0x00000008 Alliance
     // 0x00000010 Vendetta
     // 0x00000080 Embassy
+    // 0x00000100 They talked about nukes with us
     // 0x00002000 War
+    // 0x00020000 We nuked them
     // 0x00040000 Accepted tribute
     Unknown9: array[$40..$153] of Byte;
     DefMinUnitBuilding: array[0..61] of Byte;
@@ -1195,18 +1204,7 @@ type
   TLeaders = array[1..21] of TLeader;     // 6554F8
 
 const
-  //AThisCitySprites = $006A9490;
   AUnits = $6560F0;
-  //A_j_Q_GetInfoOfClickedCitySprite_sub_46AD85 = $00403D00;
-  //A_j_Q_ScreenToMap_sub_47A540 = $00402B2B;
-  //A_j_Q_RedrawMap_sub_47CD51 = $00401F32;
-  //A_Q_GetFontHeightWithExLeading_sub_403819 = $00403819;
-  //A_Q_On_WM_TIMER_sub_5D47D0 = $005D47D0;
-  A_Q_LoadMainIcon_sub_408050 = $00408050;
-  A_j_Q_GetNumberOfUnitsInStack_sub_5B50AD = $004029E1;
-  A_Q_PopupListOfUnits_sub_5B6AEA = $005B6AEA;
-  //A_Q_CreateScrollbar_sub_40FC50 = $0040FC50;
-  A_Q_InitNewGameParameters_sub_4AA9C0 = $004AA9C0;
   CST_RESOURCES: Integer = 1;
   CST_CITIZENS: Integer = 2;
   CST_UNITS_PRESENT: Integer = 3;

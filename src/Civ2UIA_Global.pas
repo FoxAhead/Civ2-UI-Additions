@@ -28,6 +28,7 @@ var
   MCITextSizeX: Integer;
   //
   CityWindowEx: TCityWindowEx;
+  CityGlobalsEx: TCityGlobalsEx;
   AdvisorWindowEx: TAdvisorWindowEx;
   UIASettings: TUIASettings;
   //

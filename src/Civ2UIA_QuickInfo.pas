@@ -114,7 +114,7 @@ begin
   begin
     GetCursorPos(MousePoint);
     WindowHandle := WindowFromPoint(MousePoint);
-    if WindowHandle = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure.HWindow then
+    if WindowHandle = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow then
     begin
       ScreenToClient(WindowHandle, MousePoint);
       Civ2.ScreenToMap(Civ2.MapWindow, NewMapPoint.X, NewMapPoint.Y, MousePoint.X, MousePoint.Y);
@@ -163,7 +163,7 @@ var
   ColorGray: Integer;
 begin
   Civ2.DrawPort_Reset(@FDrawPort, RectWidth(FRect), RectHeight(FRect));
-  Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.Palette);
+  Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.Palette);
 
   if FBgTile.DrawInfo = nil then
   begin
@@ -260,6 +260,8 @@ var
   FoodDelta: Integer;
   FoodDeltaString: string;
   TradeString: string;
+  RealCost, TurnsToComplete: Integer;
+  TradeConnectionLevel: Integer;
 begin
   SetFromCursor();
   if FChanged then
@@ -376,7 +378,9 @@ begin
           DY := 2;
         end;
         Canvas.Font.Style := [];
-        TextOut := ' ' + string(Civ2.GetStringInList(StringIndex)) + Format(' (%d/%d)', [City.BuildProgress, Cost * Civ2.Cosmic.RowsInShieldBox]);
+        RealCost := Cost * Civ2.Cosmic.RowsInShieldBox;
+        TurnsToComplete := GetTurnsToComplete(RealCost, City.BuildProgress);
+        TextOut := ' ' + string(Civ2.GetStringInList(StringIndex)) + Format(' (%d+%d/%d) %d', [City.BuildProgress, GetProduction(), RealCost, TurnsToComplete]);
         Canvas.TextOutWithShadows(TextOut).PenBR.PenDY(DY);
       end;
 
@@ -437,9 +441,22 @@ begin
               end
               else
               begin
+                //TradeConnectionLevel := GetTradeConnectionLevel(FCityIndex, i);
                 TextOut := TextOut + string(Civ2.GetStringInList(Civ2.Commodities[TradeItem]));
                 TextOut := TextOut + Format(': +%d', [Civ2.CityGlobals.TradeRevenue[i]]);
-                Canvas.TextOutWithShadows(TextOut).CopySprite(@PSprites($645068)^[2], 2, 3).PenBR;
+                Canvas.TextOutWithShadows(TextOut).CopySprite(@PSprites($645068)^[2], 2, 3);
+                //TradeConnectionLevel := GetTradeConnectionLevel(FCityIndex, i);
+                TradeConnectionLevel := CityGlobalsEx.TradeRouteLevel[i];
+                for j := 1 to TradeConnectionLevel do
+                begin
+                  Canvas.TextOutWithShadows('+');
+//                  Canvas.CopySprite(@PSprites($645068)^[2], 2, 3);
+//                  if j > 0 then
+//                    Canvas.PenDX(-7);
+                end;
+                Canvas.PenBR;
+
+
               end;
             end;
           end;

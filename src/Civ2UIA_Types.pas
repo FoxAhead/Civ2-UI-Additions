@@ -50,6 +50,11 @@ type
     Support: TCityWindowSupport;
   end;
 
+  TCityGlobalsEx = record
+    TotalMapRes: array[0..2] of Integer;
+    TradeRouteLevel: array[0..2] of Integer;
+  end;
+
   TAdvisorWindowEx = record
     Rects: array[1..16] of TRect;
     SortedCitiesList: TSortedCitiesList;

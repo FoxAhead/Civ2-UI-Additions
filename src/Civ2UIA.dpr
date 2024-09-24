@@ -211,7 +211,7 @@ begin
   Canvas.Handle := 0;
   Canvas.Free;
   RestoreDC(DC, SavedDC);
-  InvalidateRect(Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure^.HWindow, @R, True);
+  InvalidateRect(Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure^.HWindow, @R, True);
 end;
 
 procedure GammaCorrection(var Value: Byte; Gamma, Exposure: Double);
@@ -267,7 +267,7 @@ begin
     HandleWindow := WindowFromPoint(CursorPoint)
   else
     HandleWindow := 0;
-  HandleWindow2 := PGraphicsInfo^.WindowInfo.WindowStructure^.HWindow;
+  HandleWindow2 := PGraphicsInfo^.WindowInfo.WindowInfo1.WindowStructure^.HWindow;
 
   //SendMessageToLoader(HandleWindow, HandleWindow2);
   //  Canvas := Graphics.TBitmap.Create();    // In VM Windows 10 disables city window redraw
@@ -1120,30 +1120,34 @@ begin
   PatchCheckCDStatus();
 end;
 
-procedure PatchLoadMainIcon(IconName: PChar); stdcall;
-var
-  ThisWindowInfo: PWindowInfo;
+procedure PatchLoadMainIconEx(WindowInfo1: PWindowInfo1); stdcall;
 begin
-  asm
-    mov   ThisWindowInfo, ecx
-    push  IconName
-    mov   eax, A_Q_LoadMainIcon_sub_408050
-    call  eax
-  end;
-  SetClassLong(ThisWindowInfo^.WindowStructure^.HWindow, GCL_HICON, ThisWindowInfo^.WindowStructure^.Icon);
+  SetClassLong(WindowInfo1.WindowStructure.HWindow, GCL_HICON, WindowInfo1.WindowStructure.Icon);
 end;
 
-function PatchInitNewGameParameters(): Integer; stdcall;
+procedure PatchLoadMainIcon(); register;
+asm
+    push  [ebp - 4] // P_WindowInfo1 a1
+    call  PatchLoadMainIconEx
+    push  $00408074
+    ret
+end;
+
+procedure PatchInitNewGameParametersEx(); stdcall;
 var
   i: Integer;
 begin
   for i := 1 to 21 do
     Civ2.Leaders[i].CitiesBuilt := 0;
-  asm
-    mov   eax, A_Q_InitNewGameParameters_sub_4AA9C0
+end;
+
+procedure PatchInitNewGameParameters(); register;
+asm
+    call  PatchInitNewGameParametersEx;
+    mov   eax, $401A46  // Restore overwritten call to sub_401A46
     call  eax
-    mov   Result, eax
-  end;
+    push  $004AA9CE
+    ret
 end;
 
 function PatchSocketBuffer(af, Struct, protocol: Integer): TSocket; stdcall;
@@ -1375,14 +1379,15 @@ asm
     ret
 end;
 
-function GetTurnsToComplete(RealCost, Done: Integer): Integer; stdcall;
-var
-  LeftToDo, Production: Integer;
-begin
-  LeftToDo := RealCost - 1 - Done;
-  Production := Min(Max(1, Civ2.CityGlobals.TotalRes[1] - Civ2.CityGlobals.Support), 1000);
-  Result := Min(Max(1, LeftToDo div Production + 1), 999);
-end;
+//function GetTurnsToComplete(RealCost, Done: Integer): Integer; stdcall;
+//var
+//  LeftToDo, Production: Integer;
+//begin
+//  // Code from Q_StrcatBuildingCost_sub_509AC0
+//  LeftToDo := RealCost - 1 - Done;
+//  Production := Min(Max(1, Civ2.CityGlobals.TotalRes[1] - Civ2.CityGlobals.Support), 1000);
+//  Result := Min(Max(1, LeftToDo div Production + 1), 999);
+//end;
 
 //
 // Return number of turns
@@ -1440,8 +1445,8 @@ end;
 procedure PatchCitywinCityButtonChangeBeforeEx(); stdcall;
 begin
   // Reset City window mouse buttons flags
-  Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.LButtonDown := 0;
-  Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.RButtonDown := 0;
+  Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.LButtonDown := 0;
+  Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.RButtonDown := 0;
 end;
 
 procedure PatchCitywinCityButtonChangeBefore(); register;
@@ -1526,7 +1531,7 @@ procedure PatchOnActivateUnit(); register;
 asm
     push  [ebp - 4] // int vUnitIndex
     call  PatchOnActivateUnitEx
-    mov   eax, $004016EF
+    mov   eax, $004016EF  // Civ2.AfterActiveUnitChanged
     call  eax
     push  $0058D5D4
     ret
@@ -1602,7 +1607,7 @@ end;
 procedure PatchResetMoveIteration; register;
 asm
     call  PatchResetMoveIterationEx
-    mov   eax, $00401145
+    mov   eax, $00401145  // Civ2.ProcessOrdersGoTo
     call  eax
     push  $0041141E
     ret
@@ -1733,6 +1738,87 @@ asm
     ret
 end;
 
+procedure PatchDrawCityWindowResources2Ex(CityWindow: PCityWindow); stdcall;
+var
+  Canvas: TCanvasEx;
+begin
+  Canvas := TCanvasEx.Create(@CityWindow.MSWindow.GraphicsInfo.DrawPort);
+  Canvas.MoveTo(CityWindow.RectResourceMap.Left, CityWindow.RectResourceMap.Top);
+  //  Canvas.TextOutWithShadows(Format('%d, %d, %d', [Civ2.CityGlobals.TotalRes[0], Civ2.CityGlobals.TotalRes[1], Civ2.CityGlobals.TotalRes[2]]));
+  //Canvas.TextOutWithShadows(Format('%d, %d, %d', [CityGlobalsEx.TotalMapRes[0], CityGlobalsEx.TotalMapRes[1], CityGlobalsEx.TotalMapRes[2]]));
+  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[0])).CopySprite(@PSprites($644F00)^[1], 1, 2).PenDX(3);
+  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[1])).CopySprite(@PSprites($644F00)^[3], -1, 2).PenDX(1);
+  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[2])).CopySprite(@PSprites($644F00)^[5], 1, 2);
+
+  Canvas.Free();
+end;
+
+procedure PatchDrawCityWindowResources2(); register;
+asm
+    mov   eax, Civ2
+    call  TCiv2[eax].ResetSpriteZoom
+    push  [ebp - $20C] // vCityWindow
+    call  PatchDrawCityWindowResources2Ex
+    push  $00504BD8
+    ret
+end;
+
+procedure PatchCalcCityGlobalsResourcesEx(); stdcall;
+begin
+  CityGlobalsEx.TotalMapRes[0] := Civ2.CityGlobals.TotalRes[0];
+  CityGlobalsEx.TotalMapRes[1] := Civ2.CityGlobals.TotalRes[1];
+  CityGlobalsEx.TotalMapRes[2] := Civ2.CityGlobals.TotalRes[2];
+end;
+
+procedure PatchCalcCityGlobalsResources(); register;
+asm
+    call  PatchCalcCityGlobalsResourcesEx
+    push  $004E9714
+    ret
+end;
+
+procedure PatchCalcCityEconomicsTradeRouteLevelEx(i, Level: Integer); stdcall;
+begin
+  CityGlobalsEx.TradeRouteLevel[i] := Level;
+end;
+
+procedure PatchCalcCityEconomicsTradeRouteLevel(); register;
+asm
+    push  [ebp - $10] // vLevel
+    push  [ebp - $04] // i
+    call  PatchCalcCityEconomicsTradeRouteLevelEx
+    push  $004EA9AE
+    ret
+end;
+
+procedure PatchDrawCityWindowUnitsPresentEx(i, X, Y: Integer); stdcall;
+var
+  j: Integer;
+begin
+  Civ2.ChText^ := #00;
+  if CityGlobalsEx.TradeRouteLevel[i] > 0 then
+  begin
+    for j := 0 to CityGlobalsEx.TradeRouteLevel[i] - 1 do
+    begin
+      StrCat(Civ2.ChText, '+');
+    end;
+    Civ2.DrawString(Civ2.ChText, X, Y);
+  end;
+end;
+
+procedure PatchDrawCityWindowUnitsPresent(); register;
+asm
+   push  [ebp - $70]  // yTop
+//   push  [ebp - $48]  // xLeft
+   push  TRect[ebp - $84].Right  // xLeft
+   push  [ebp - $2C]  // i
+   call  PatchDrawCityWindowUnitsPresentEx
+   mov   eax, Civ2                   // Restore
+   call  TCiv2[eax].ResetSpriteZoom
+   push  $00507ACA
+   ret
+end;
+
 // Tests
 
 procedure PatchOnWmTimerDrawEx1(); stdcall;
@@ -1821,7 +1907,7 @@ begin
     mov   eax, $004085F0
     call  eax
   end;
-  HWindow := ACityWindow^.MSWindow.GraphicsInfo.WindowInfo.WindowStructure.HWindow;
+  HWindow := ACityWindow^.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow;
   if GuessWindowType(HWindow) = wtCityWindow then
   begin
     SetFocus(HWindow);
@@ -1923,7 +2009,7 @@ procedure PatchPrepareAdvisorWindow3Ex(This: PAdvisorWindow); stdcall;
 begin
   if This.AdvisorType in ResizableAdvisorWindows then
   begin
-    This.MSWindow.GraphicsInfo.WindowInfo.MinTrackSize.Y := 415;
+    This.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.MinTrackSize.Y := 415;
   end;
 end;
 
@@ -1966,7 +2052,7 @@ begin
       SetWindowPos(Civ2.AdvisorWindow.ControlInfoScroll.ControlInfo.HWindow, 0, 0, 0, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOMOVE or SWP_NOREDRAW);
     end;
   end;
-  RedrawWindow(Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure.HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
+  RedrawWindow(Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
   UIASettings.AdvisorHeights[Civ2.AdvisorWindow.AdvisorType] := S.cy;
 end;
 
@@ -1997,11 +2083,11 @@ var
   IsSizableDialog: Boolean;
   DialogWindowStructure: PWindowStructure;
 begin
-  IsSizableAdvisor := (WindowStructure = Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure);
+  IsSizableAdvisor := (WindowStructure = Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure);
   IsSizableDialog := False;
   if Civ2.CurrPopupInfo^ <> nil then
   begin
-    DialogWindowStructure := Civ2.CurrPopupInfo^^.GraphicsInfo.WindowInfo.WindowStructure;
+    DialogWindowStructure := Civ2.CurrPopupInfo^^.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure;
     IsSizableDialog := (WindowStructure = DialogWindowStructure) and (DialogWindowStructure.Sizeable = 1);
   end;
   if IsSizableAdvisor then
@@ -2095,7 +2181,7 @@ begin
   Dialog := Civ2.CurrPopupInfo^;
   if Dialog <> nil then
   begin
-    if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
+    if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.Sizeable = 1) then
     begin
       DialogIndex := Dialog._Extra.DialogIndex;
 
@@ -2238,13 +2324,13 @@ begin
       AStyle := AStyle or $1000;          // Make resizable
       if Dialog._Extra.DialogIndex in ResizableDialogListbox then
       begin
-        Dialog.GraphicsInfo.WindowInfo.MinTrackSize.Y := Dialog.ClientSize.cy - (Dialog.ListboxHeight[0] - Dialog._Extra.OriginalListboxHeight) - 1;
+        Dialog.GraphicsInfo.WindowInfo.WindowInfo1.MinTrackSize.Y := Dialog.ClientSize.cy - (Dialog.ListboxHeight[0] - Dialog._Extra.OriginalListboxHeight) - 1;
       end
       else if Dialog._Extra.DialogIndex in ResizableDialogList then
       begin
         Dialog._Extra.NonListHeight := Dialog.ClientSize.cy - Dialog._Extra.OriginalListHeight;
-        Dialog.GraphicsInfo.WindowInfo.MinTrackSize.Y := 9 * (Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing) - Dialog.LineSpacing + Dialog._Extra.NonListHeight - 1;
-        Dialog.GraphicsInfo.WindowInfo.MaxTrackSize.Y := Dialog.NumListItems * (Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing) - Dialog.LineSpacing + Dialog._Extra.NonListHeight - 1;
+        Dialog.GraphicsInfo.WindowInfo.WindowInfo1.MinTrackSize.Y := 9 * (Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing) - Dialog.LineSpacing + Dialog._Extra.NonListHeight - 1;
+        Dialog.GraphicsInfo.WindowInfo.WindowInfo1.MaxTrackSize.Y := Dialog.NumListItems * (Dialog._Extra.ListItemMaxHeight + Dialog.LineSpacing) - Dialog.LineSpacing + Dialog._Extra.NonListHeight - 1;
       end;
     end;
   end;
@@ -2332,11 +2418,11 @@ var
   ScrollInfo: TScrollInfo;
 begin
   Result := 0;
-  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.Sizeable = 1) then
   begin
     if Dialog._Extra.DialogIndex in ResizableDialogList then
     begin
-      ShowWindow(Dialog.GraphicsInfo.WindowInfo.WindowStructure.HWindow, SW_SHOW);
+      ShowWindow(Dialog.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow, SW_SHOW);
       // Set scrollbar
       ZeroMemory(@ScrollInfo, SizeOf(ScrollInfo));
       ScrollInfo.cbSize := SizeOf(ScrollInfo);
@@ -2408,7 +2494,7 @@ var
   ScrollInfo: TScrollInfo;
 begin
   IsResizableDialog := False;
-  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.Sizeable = 1) then
     IsResizableDialog := Dialog._Extra.DialogIndex in ResizableDialogList;
   if IsResizableDialog then
   begin
@@ -2431,7 +2517,7 @@ begin
         ShowWindow(Control.HWindow, SW_HIDE);
       end;
     end;
-    RedrawWindow(Dialog.GraphicsInfo.WindowInfo.WindowStructure.HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
+    RedrawWindow(Dialog.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
   end
   else
     // Original code
@@ -2583,7 +2669,7 @@ var
 begin
   Result := 0;
   Dialog := Civ2.CurrPopupInfo^;
-  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowStructure.Sizeable = 1) then
+  if (Dialog._Extra <> nil) and (Dialog.ScrollOrientation = 0) and (Dialog.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.Sizeable = 1) then
   begin
     if Dialog._Extra.DialogIndex in ResizableDialogList then
     begin
@@ -2783,7 +2869,7 @@ begin
     begin
       Row := ListIndex - Civ2.AdvisorWindow.ScrollPosition;
       Y1 := Civ2.AdvisorWindow.ListTop + Row * Civ2.AdvisorWindow.LineHeight;
-      Canvas := TCanvasEx.Create(MSWindow.GraphicsInfo.WindowInfo.WindowStructure.DeviceContext);
+      Canvas := TCanvasEx.Create(MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.DeviceContext);
       Canvas.Brush.Color := TColor($C0C0C0); // Canvas.ColorFromIndex(34);
       R := Rect(AdvisorWindowEx.Rects[6].Left - 10, Y1, MSWindow.ClientSize.cx - 11, Y1 + Civ2.AdvisorWindow.LineHeight);
       Canvas.FrameRect(R);
@@ -2985,8 +3071,8 @@ begin
   end;
   if Civ2.AdvisorWindow.ControlsInitialized = 0 then
   begin
-    MSWindow.GraphicsInfo.WindowInfo.WindowProcs.ProcRButtonUp := @PatchWndProcAdvisorCityStatusRButtonUp;
-    MSWindow.GraphicsInfo.WindowInfo.WindowProcs.ProcMouseMove := @PatchWndProcAdvisorCityStatusMouseMove;
+    MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowProcs.ProcRButtonUp := @PatchWndProcAdvisorCityStatusRButtonUp;
+    MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowProcs.ProcMouseMove := @PatchWndProcAdvisorCityStatusMouseMove;
   end;
   Civ2.CityGlobals^ := SavedCityGlobals;
   Result := 1;
@@ -3408,6 +3494,47 @@ begin
   Civ2.CopySprite(@Ex.UnitSpriteSentry[UnitType], ARect, DrawPort, ALeft, ATop);
 end;
 
+procedure PatchDrawUnitVeteranBadgeEx(DrawPort: PDrawPort; UnitIndex: Integer; R: PRect); stdcall;
+var
+  Canvas: TCanvasEx;
+  H, H2: Integer;
+begin
+  if (Civ2.Units[UnitIndex].Attributes and $2000 <> 0) and (Civ2.Units[UnitIndex].CivIndex = Civ2.HumanCivIndex^) then
+  begin
+    Canvas := TCanvasEx.Create(DrawPort);
+    Canvas.Brush.Color := Canvas.ColorFromIndex(122);
+    Canvas.Pen.Color := Canvas.ColorFromIndex(114);
+    H := R.Bottom - R.Top;
+    H2 := (H + 1) div 2;
+    Canvas.MoveTo(R.Right - H2 - 1, R.Top);
+    Canvas.LineTo(Canvas.PenPos.X + H2, Canvas.PenPos.Y + H2);
+    Canvas.PenDXDY(-1, -1);
+    Canvas.LineTo(Canvas.PenPos.X - H2, Canvas.PenPos.Y + H2);
+    Canvas.MoveTo(R.Right - H2 - 3, R.Top);
+    Canvas.LineTo(Canvas.PenPos.X + H2, Canvas.PenPos.Y + H2);
+    Canvas.PenDXDY(-1, -1);
+    Canvas.LineTo(Canvas.PenPos.X - H2, Canvas.PenPos.Y + H2);
+    //Canvas.MoveTo(R.Right - H - 2, R.Top);
+    //Canvas.LineTo(R.Right - 2, R.Bottom);
+    //Canvas.Polygon([Point(R.Left + 2, R.Top + 4), Point(R.Left + 9, R.Top + 4), Point(R.Left + 6, R.Top + 7), Point(R.Left + 5, R.Top + 7)]);
+    //Canvas.Polygon([Point(R.Right - 2, R.Top), Point(R.Right - 4, R.Top), Point(R.Right - 3, R.Top + 1)]);
+    //Canvas.FrameRect(R^);
+    Canvas.Free();
+  end;
+end;
+
+procedure PatchDrawUnitVeteranBadge(); register;
+asm
+    mov   [ebp - $D4], eax  // Restore overwritten  mov     [ebp+vOrder], eax
+    lea   eax, [ebp - $10]  // vRect3
+    push  eax
+    push  [ebp - $C4]        // vUnitIndex
+    push  [ebp + $08]        // aDrawPort
+    call  PatchDrawUnitVeteranBadgeEx
+    push  $0056C1A4
+    ret
+end;
+
 procedure PatchDrawMapSquareOwnershipEx(MapWindow: PMapWindow; Left, Top, MapX, MapY, CivIndex: Integer); stdcall;
 var
   Canvas: TCanvasEx;
@@ -3634,8 +3761,8 @@ begin
 
     WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchWindowProcMsMrTimerAfter);
     WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
-    WriteMemory(HProcess, $00402662, [OP_JMP], @PatchLoadMainIcon);
-    WriteMemory(HProcess, $0040284C, [OP_JMP], @PatchInitNewGameParameters);
+    WriteMemory(HProcess, $0040806F, [OP_JMP], @PatchLoadMainIcon);
+    WriteMemory(HProcess, $004AA9C9, [OP_JMP], @PatchInitNewGameParameters);
     WriteMemory(HProcess, $0042C107, [$00, $00, $00, $00]); // Show buildings even with zero maintenance cost in Trade Advisor
     // CityWindow
     WriteMemory(HProcess, $004013A2, [OP_JMP], @PatchCityWindowInitRectangles);
@@ -3688,11 +3815,19 @@ begin
 
   // Celebrating city yellow color instead of white in Attitude Advisor (F4)
   WriteMemory(HProcess, $0042DE86, [WLTDKColorIndex]); // (Color index = Idx + 10)
+
   // CityWindow:
   // Change color in City Window for We Love The King Day
   WriteMemory(HProcess, $00502109, [OP_JMP], @PatchDrawCityWindowTopWLTKD);
-  //
+  // Draw city size
   WriteMemory(HProcess, $00502299, [OP_JMP], @PatchDrawCityWindowTop2);
+  // Draw total tiles resources
+  WriteMemory(HProcess, $00504BD3, [OP_JMP], @PatchDrawCityWindowResources2);
+  // Remember total tiles resources
+  WriteMemory(HProcess, $004E970A, [OP_JMP], @PatchCalcCityGlobalsResources);
+  // Trade Route Level
+  WriteMemory(HProcess, $004EAB58, [OP_JMP], @PatchCalcCityEconomicsTradeRouteLevel);
+  WriteMemory(HProcess, $00507AC5, [OP_JMP], @PatchDrawCityWindowUnitsPresent);
 
   // Show Cost shields and Maintenance coins in City Change list and fix Turns calculation for high production numbers
   WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListBuildingCost);
@@ -3819,6 +3954,9 @@ begin
   // Draw Unit Sentry
   WriteMemory(HProcess, $0044B48F, [OP_CALL], @PatchLoadSpritesUnits);
   WriteMemory(HProcess, $0056C4EF, [OP_CALL], @PatchDrawUnitSentry);
+
+  // Draw Veteran badge
+  WriteMemory(HProcess, $0056C19E, [OP_JMP], @PatchDrawUnitVeteranBadge);
 
   // Patch AI Attitude
   WriteMemory(HProcess, $00560DA6, [OP_JMP], @PatchAIAttitude);

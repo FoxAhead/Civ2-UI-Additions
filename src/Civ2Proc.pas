@@ -38,7 +38,7 @@ type
     Leaders: ^TLeaders;
     LoadedTxtSectionName: PChar;
     MenuBar: PMenuBar;
-    MainWindowInfo: PWindowInfo;
+    MainWindowInfo: PWindowInfo1;
     MapCivData: PMapCivData;
     MapData: ^PMapSquares;
     MapHeader: PMapHeader;
@@ -63,6 +63,7 @@ type
     UnitTypes: ^TUnitTypes;
 
     // Functions
+    // (All THISCALLs are described as STDCALLs, then assigned with PThisCall())
     AfterActiveUnitChanged: procedure(A1: Integer); cdecl;
     ArrangeWindows: procedure; cdecl;
     CalcCityGlobals: function(CityIndex: Integer; Calc: LongBool): Integer; cdecl;
@@ -86,6 +87,7 @@ type
     Crt_OperatorNew: function(Size: Integer): Pointer; cdecl;
     DestroyScrollBar: procedure(ControlInfoScroll: PControlInfoScroll; Flag: LongBool); stdcall;
     DisposeSprite: procedure(Sprite: PSprite); stdcall;
+    Distance: function(X1, Y1, X2, Y2: Integer): Integer; cdecl;
     DlgDrawTextLine: procedure(Dialog: PDialogWindow; Text: PChar; X, Y, A5: Integer); stdcall;
     DlgParams_SetNumber: procedure(NumberIndex, Value: Integer); cdecl;
     DrawCitySprite: procedure(DrawPort: PDrawPort; CityIndex, A3, Left, Top, Zoom: Integer); cdecl;
@@ -113,8 +115,10 @@ type
     Heap_Add: function(Heap: PHeap; Size: Integer): Pointer; cdecl;
     HumanTurn: function: Integer; cdecl;
     InitControlScrollRange: procedure(ControlInfoScroll: PControlInfoScroll; MinPos, MaxPos: Integer); stdcall;
+    InitNewGameParameters: procedure(); cdecl;
     IsInMapBounds: function(X, Y: Integer): LongBool; cdecl;
     ListItemProcLButtonUp: procedure(Code: Integer); cdecl;
+    LoadMainIcon: procedure(WindowInfo1: PWindowInfo1; IconName: Integer); stdcall;
     MapGetCivData: function(X, Y, CivIndex: Integer): PByte; cdecl;
     MapGetOwnership: function(X, Y: Integer): Integer; cdecl;
     MapGetSquare: function(X, Y: Integer): PMapSquare; cdecl;
@@ -125,12 +129,13 @@ type
     MenuBarAddSubMenu: function(MenuBar: PMenuBar; Num, SubNum: Integer; Text: PChar; Len: Integer): PMenu; stdcall;
     MenuBarGetSubMenu: function(MenuBar: PMenuBar; Num: Integer): PMenu; stdcall;
     Palette_SetRandomID: procedure(Palette: Pointer); stdcall;
+    PFFindConnection: function(CivIndex, X1, Y1, X2, Y2: Integer): Integer; cdecl;
     PFFindUnitDir: function(UnitIndex: Integer): Integer; cdecl;
     PFMove: function(X, Y, A3: Integer): Integer; cdecl;
     PopupSimpleGameMessage: procedure(A1, A2, A3: Integer); cdecl;
     ProcessOrdersGoTo: procedure(UnitIndex: Integer); cdecl;
     ProcessUnit: function: Integer; cdecl;
-    RecreateBrush: procedure(WindowInfo: PWindowInfo; Color: Integer); stdcall;
+    RecreateBrush: procedure(WindowInfo1: PWindowInfo1; Color: Integer); stdcall;
     RedrawMap: procedure(MapWindow: PMapWindow; CivIndex: Integer; CopyToScreen: LongBool); stdcall;
     ResetSpriteZoom: procedure(); cdecl;
     ScaleByZoom: function(Value, Zoom: Integer): Integer; cdecl;
@@ -272,6 +277,7 @@ begin
   @Crt_OperatorNew                := Pointer($005F2470);
   @DestroyScrollBar               := PThisCall($004BB4F0);
   @DisposeSprite                  := PThisCall($005CDF50);
+  @Distance                       := Pointer($0040377E);
   @DlgDrawTextLine                := PThisCall($00401640);
   @DlgParams_SetNumber            := Pointer($00402FE5);
   @DrawCitySprite                 := Pointer($00402A45);
@@ -295,12 +301,14 @@ begin
   @GetStringInList                := Pointer($00403387);
   @GetTextExtentX                 := PThisCall($00402B21);
   @GetTopUnitInStack              := Pointer($00403391);
-  @GetUpkeep                      := Pointer($004014DD);  
+  @GetUpkeep                      := Pointer($004014DD);
   @Heap_Add                       := Pointer($0040389B);
   @HumanTurn                      := Pointer($00402BA8);
   @InitControlScrollRange         := PThisCall($00402121);
+  @InitNewGameParameters          := Pointer($0040284C);   
   @IsInMapBounds                  := Pointer($004012D0);
   @ListItemProcLButtonUp          := Pointer($005A3CCA);
+  @LoadMainIcon                   := PThisCall($00402662);
   @MapGetCivData                  := Pointer($00403823);
   @MapGetOwnership                := Pointer($004029BE);
   @MapGetSquare                   := Pointer($00401BB3);
@@ -311,6 +319,7 @@ begin
   @MenuBarAddSubMenu              := PThisCall($00402D10);
   @MenuBarGetSubMenu              := PThisCall($004039EF);
   @Palette_SetRandomID            := PThisCall($005C6A42);
+  @PFFindConnection               := Pointer($00403481);
   @PFFindUnitDir                  := Pointer($00402FA9);
   @PFMove                         := Pointer($004028B0);
   @PopupSimpleGameMessage         := Pointer($00410030);
