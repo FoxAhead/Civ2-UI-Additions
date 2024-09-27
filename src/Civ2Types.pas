@@ -605,7 +605,10 @@ type
     Rectangle1: TRect;
     Rectangle2: TRect;
     Rectangle3: TRect;
-    Unknown1: Integer;
+    Color: Byte;
+    Unknown_31: Byte;
+    Unknown_32: Byte;
+    Unknown_33: Byte;
     hMem: HGLOBAL;
     pMem: Pointer;
   end;

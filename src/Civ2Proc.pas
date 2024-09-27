@@ -56,6 +56,9 @@ type
     ShieldTop: ^TShieldTop;
     SideBar: PSideBarWindow;
     SideBarClientRect: PRect;
+    SprRes: PSprites;
+    SprEco: PSprites;
+    SprResS: PSprites;
     TimesBigFontInfo: ^TFontInfo;
     TimesFontInfo: ^TFontInfo;
     Units: ^TUnits;
@@ -91,6 +94,8 @@ type
     DlgDrawTextLine: procedure(Dialog: PDialogWindow; Text: PChar; X, Y, A5: Integer); stdcall;
     DlgParams_SetNumber: procedure(NumberIndex, Value: Integer); cdecl;
     DrawCitySprite: procedure(DrawPort: PDrawPort; CityIndex, A3, Left, Top, Zoom: Integer); cdecl;
+    DrawCityWindowBuilding: procedure(CityWindow: PCityWindow; A2: Integer); stdcall;
+    DrawCityWindowResources: procedure(CityWindow: PCityWindow; A2: Integer); stdcall;
     DrawCityWindowSupport: function(CityWindow: PCityWindow; Flag: LongBool): PCityWindow; stdcall;
     DrawFrame: procedure(DrawPort: PDrawPort; Rect: PRect; Color: Integer); cdecl;
     DrawInfoCreate: function(A1: PRect): PDrawInfo; cdecl;
@@ -141,7 +146,7 @@ type
     ScaleByZoom: function(Value, Zoom: Integer): Integer; cdecl;
     ScreenToMap: function(MapWindow: PMapWindow; var MapX, MapY: Integer; ScreenX, ScreenY: Integer): LongBool; stdcall;
     Scroll_Ctr: function(ControlInfoScroll: PControlInfoScroll): PControlInfoScroll; stdcall;
-    SetCurrFont: procedure(A1: Integer); cdecl;
+    SetCurrFont: procedure(A1: PFontInfo); cdecl;
     SetDIBColorTableFromPalette: procedure(DrawInfo: PDrawInfo; Palette: Pointer); cdecl;
     SetFocusAndBringToTop: procedure(WindowInfo: PWindowInfo); stdcall;
     SetFontColorWithShadow: procedure(A1, A2, A3, A4: Integer); cdecl;
@@ -244,6 +249,9 @@ begin
   ShieldTop                  := Pointer($00642B48);
   SideBar                    := Pointer($006ABC68);
   SideBarClientRect          := Pointer($006ABC28);
+  SprRes                     := Pointer($644F00);
+  SprEco                     := Pointer($648860);  
+  SprResS                    := Pointer($645068);
   TimesBigFontInfo           := Pointer($0063EAC0);
   TimesFontInfo              := Pointer($0063EAB8);
   if ANewUnitsAreaAddress <> nil then
@@ -281,6 +289,8 @@ begin
   @DlgDrawTextLine                := PThisCall($00401640);
   @DlgParams_SetNumber            := Pointer($00402FE5);
   @DrawCitySprite                 := Pointer($00402A45);
+  @DrawCityWindowBuilding         := PThisCall($00403CB5);
+  @DrawCityWindowResources        := PThisCall($004028C9);
   @DrawCityWindowSupport          := PThisCall($004011A9);
   @DrawFrame                      := Pointer($00401DB1);
   @DrawInfoCreate                 := Pointer($005E35B0);

@@ -302,12 +302,12 @@ begin
 
         // Draw city values
         Canvas.SetSpriteZoom(0);
-        Canvas.TextOutWithShadows(Format('%d%s', [City.TotalFood, FoodDeltaString])).CopySprite(@PSprites($644F00)^[1], 1, 2).PenDX(3);
-        Canvas.TextOutWithShadows(IntToStr(City.TotalShield)).CopySprite(@PSprites($644F00)^[3], -1, 2).PenDX(1);
-        Canvas.TextOutWithShadows(TradeString).CopySprite(@PSprites($644F00)^[5], 1, 2).PenDX(3);
-        Canvas.TextOutWithShadows(IntToStr(City.Tax)).CopySprite(@PSprites($648860)^[1], 0, 2).PenDX(3);
-        Canvas.TextOutWithShadows(IntToStr(Civ2.CityGlobals.Lux)).CopySprite(@PSprites($648860)^[0], -1, 1).PenDX(1);
-        Canvas.TextOutWithShadows(IntToStr(City.Science)).CopySprite(@PSprites($648860)^[2], -2, 2);
+        Canvas.TextOutWithShadows(Format('%d%s', [City.TotalFood, FoodDeltaString])).CopySprite(@Civ2.SprRes[1], 1, 2).PenDX(3);
+        Canvas.TextOutWithShadows(IntToStr(City.TotalShield)).CopySprite(@Civ2.SprRes[3], -1, 2).PenDX(1);
+        Canvas.TextOutWithShadows(TradeString).CopySprite(@Civ2.SprRes[5], 1, 2).PenDX(3);
+        Canvas.TextOutWithShadows(IntToStr(City.Tax)).CopySprite(@Civ2.SprEco[1], 0, 2).PenDX(3);
+        Canvas.TextOutWithShadows(IntToStr(Civ2.CityGlobals.Lux)).CopySprite(@Civ2.SprEco[0], -1, 1).PenDX(1);
+        Canvas.TextOutWithShadows(IntToStr(City.Science)).CopySprite(@Civ2.SprEco[2], -2, 2);
         Canvas.PenBR;
 
         // Main city improvements

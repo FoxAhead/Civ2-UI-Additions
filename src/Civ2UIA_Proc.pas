@@ -20,6 +20,7 @@ function CopyFont(SourceFont: HFONT): HFONT;
 function GetLabelString(StringIndex: Integer): string;
 function GetProduction(): Integer;
 function GetTurnsToComplete(RealCost, Done: Integer): Integer;
+function GetTurnsToCompleteInCity(CityIndex: Integer): Integer;
 function GetTradeConnectionLevel(aCity, i: Integer): Integer;
 
 implementation
@@ -27,6 +28,7 @@ implementation
 uses
   Math,
   Messages,
+  Civ2Types,
   Civ2Proc,
   Civ2UIA_Types;
 
@@ -160,6 +162,20 @@ begin
         Result := 1
       else
         Result := -1;}
+end;
+
+function GetTurnsToCompleteInCity(CityIndex: Integer): Integer;
+var
+  City: PCity;
+  Cost, RealCost: Integer;
+begin
+  City := @Civ2.Cities[CityIndex];
+  if City.Building < 0 then
+    Cost := Civ2.Improvements[-City.Building].Cost
+  else
+    Cost := Civ2.UnitTypes[City.Building].Cost;
+  RealCost := Cost * Civ2.Cosmic.RowsInShieldBox;
+  Result := GetTurnsToComplete(RealCost, City.BuildProgress);
 end;
 
 function GetTradeConnectionLevel(aCity, i: Integer): Integer;

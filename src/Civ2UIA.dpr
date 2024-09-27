@@ -1220,6 +1220,16 @@ begin
 
   CityWindowEx.Support.ListStart := 0;
 
+  // CaptionHeight
+  case ACityWindow.WindowSize of
+    1:
+      ACityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.CaptionHeight := 19;
+    3:
+      ACityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.CaptionHeight := 37;
+  else
+    ACityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.CaptionHeight := 25;
+  end;
+
   Result := ThisResult;
 end;
 
@@ -1685,9 +1695,12 @@ begin
 
   Height := 11;
   case CityWindow.WindowSize of
-    1: Height := 7;
-    2: Height := 11;
-    3: Height := 16;
+    1:
+      Height := 7;
+    2:
+      Height := 11;
+    3:
+      Height := 16;
   end;
 
   Canvas := TCanvasEx.Create(@CityWindow.MSWindow.GraphicsInfo.DrawPort);
@@ -1743,13 +1756,16 @@ var
   Canvas: TCanvasEx;
 begin
   Canvas := TCanvasEx.Create(@CityWindow.MSWindow.GraphicsInfo.DrawPort);
-  Canvas.MoveTo(CityWindow.RectResourceMap.Left, CityWindow.RectResourceMap.Top);
-  //  Canvas.TextOutWithShadows(Format('%d, %d, %d', [Civ2.CityGlobals.TotalRes[0], Civ2.CityGlobals.TotalRes[1], Civ2.CityGlobals.TotalRes[2]]));
-  //Canvas.TextOutWithShadows(Format('%d, %d, %d', [CityGlobalsEx.TotalMapRes[0], CityGlobalsEx.TotalMapRes[1], CityGlobalsEx.TotalMapRes[2]]));
-  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[0])).CopySprite(@PSprites($644F00)^[1], 1, 2).PenDX(3);
-  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[1])).CopySprite(@PSprites($644F00)^[3], -1, 2).PenDX(1);
-  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[2])).CopySprite(@PSprites($644F00)^[5], 1, 2);
-
+  Canvas.PenOrigin := Point(CityWindow.RectResourceMap.Left + 1, CityWindow.RectResourceMap.Top);
+  Canvas.PenReset();
+  Canvas.SetSpriteZoom(4 * CityWindow.WindowSize - 8);
+  Canvas.Font.Handle := CopyFont(CityWindow.FontInfo.Handle^^);
+  Canvas.Brush.Style := bsClear;
+  Canvas.SetTextColors(124, 57);
+  Canvas.FontShadows := SHADOW_BR;
+  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[0])).CopySprite(@Civ2.SprResS[0], 1, 3).PenDX(2 + CityWindow.WindowSize * 2);
+  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[1])).CopySprite(@Civ2.SprResS[1], -1, 3).PenDX(1 + CityWindow.WindowSize * 2);
+  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[2])).CopySprite(@Civ2.SprResS[2], 1, 3);
   Canvas.Free();
 end;
 
@@ -1808,18 +1824,96 @@ end;
 
 procedure PatchDrawCityWindowUnitsPresent(); register;
 asm
-   push  [ebp - $70]  // yTop
+    push  [ebp - $70]  // yTop
 //   push  [ebp - $48]  // xLeft
-   push  TRect[ebp - $84].Right  // xLeft
-   push  [ebp - $2C]  // i
-   call  PatchDrawCityWindowUnitsPresentEx
-   mov   eax, Civ2                   // Restore
-   call  TCiv2[eax].ResetSpriteZoom
-   push  $00507ACA
-   ret
+    push  TRect[ebp - $84].Right  // xLeft
+    push  [ebp - $2C]  // i
+    call  PatchDrawCityWindowUnitsPresentEx
+    mov   eax, Civ2                   // Restore
+    call  TCiv2[eax].ResetSpriteZoom
+    push  $00507ACA
+    ret
 end;
 
-// Tests
+procedure PatchWndProcCityWindowMouseMove(X, Y: Integer); cdecl;
+var
+  Canvas: TCanvasEx;
+begin
+  //Inc(CityGlobalsEx.TotalMapRes[0]);
+  //Civ2.UpdateCityWindow(@Civ2.CityWindow, 0);
+  //Civ2.DrawCityWindowResources(@Civ2.CityWindow, 0);
+
+{
+  Civ2.CopyToScreenAndValidate(@Civ2.CityWindow.MSWindow.GraphicsInfo);
+  Canvas := TCanvasEx.Create(MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.DeviceContext);
+
+  Canvas := TCanvasEx.Create(@CityWindow.MSWindow.GraphicsInfo.DrawPort);
+  Canvas.PenOrigin := Point(CityWindow.RectResourceMap.Left + 1, CityWindow.RectResourceMap.Top);
+  Canvas.PenReset();
+  Canvas.SetSpriteZoom(4 * CityWindow.WindowSize - 8);
+  Canvas.Font.Handle := CopyFont(CityWindow.FontInfo.Handle^^);
+  Canvas.Brush.Style := bsClear;
+  Canvas.SetTextColors(124, 57);
+  Canvas.FontShadows := SHADOW_BR;
+  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[0])).CopySprite(@Civ2.SprResS[0], 1, 3).PenDX(2+CityWindow.WindowSize*2);
+  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[1])).CopySprite(@Civ2.SprResS[1], -1, 3).PenDX(1+CityWindow.WindowSize*2);
+  Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[2])).CopySprite(@Civ2.SprResS[2], 1, 3);
+  Canvas.Free();
+}
+end;
+
+procedure PatchCreateCityWindowEx(CityWindow: PCityWindow); stdcall;
+begin
+  //CityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowProcs.ProcMouseMove := @PatchWndProcCityWindowMouseMove;
+end;
+
+procedure PatchCreateCityWindow(); register;
+asm
+    push  [ebp - $04] // CityWindow
+    call  PatchCreateCityWindowEx
+    push  $0050DEA3
+    ret
+end;
+
+procedure PatchDrawCityWindowBuildingEx(CityWindow: PCityWindow; Rect: PRect); stdcall;
+var
+  Canvas: TCanvasEx;
+  TurnsToComplete: Integer;
+  Text: string;
+begin
+  TurnsToComplete := GetTurnsToCompleteInCity(CityWindow.CityIndex);
+  Canvas := TCanvasEx.Create(@CityWindow.MSWindow.GraphicsInfo.DrawPort);
+  Canvas.Font.Handle := CopyFont(CityWindow.FontInfo.Handle^^);
+  Canvas.Brush.Style := bsClear;
+  Canvas.SetTextColors(74, 10);
+  Canvas.FontShadows := SHADOW_ALL;
+  Canvas.MoveTo(Rect.Right, Rect.Bottom);
+  Text := Format('%s: %d', [GetLabelString(44), TurnsToComplete]); // 'Turns'
+  Canvas.TextOutWithShadows(Text, 0, 0, DT_RIGHT or DT_BOTTOM);
+  Canvas.Free();
+end;
+
+procedure PatchDrawCityWindowBuilding(); register;
+asm
+    mov   eax, Civ2
+    call  TCiv2[eax].ResetSpriteZoom  // Restore
+    lea   eax, [ebp - $10] // vRect
+    push  eax
+    push  [ebp - $6C] // vCityWindow
+    call  PatchDrawCityWindowBuildingEx
+    push  $005055B1
+    ret
+end;
+
+procedure PatchCityResourcesClicked(); register;
+asm
+    mov   eax, Civ2
+    push  1
+    push  TCiv2[eax].CityWindow
+    call  TCiv2[eax].DrawCityWindowBuilding
+    push  $005025D0
+    ret
+end;
 
 procedure PatchOnWmTimerDrawEx1(); stdcall;
 begin
@@ -2924,7 +3018,7 @@ begin
   if Cities > 0 then
   begin
     X1 := MSWindow.ClientTopLeft.X + 150;
-    Civ2.SetCurrFont($0063EAB8);          // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
+    Civ2.SetCurrFont(Pointer($0063EAB8)); // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
     Civ2.SetFontColorWithShadow($25, $12, -1, -1);
     Text := Format('%s: %d', [GetLabelString($C5), Cities]);
     Civ2.DrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 12, Y1 - 3, 0);
@@ -2979,7 +3073,7 @@ begin
       //Civ2.DrawString(PChar(Text), X1, Y1);
       // End Debug CityIndex
 
-      Civ2.SetCurrFont($0063EAB8);        // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
+      Civ2.SetCurrFont(Pointer($0063EAB8)); // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
       Civ2.SetFontColorWithShadow($25, $12, 1, 1);
 
       Y2 := Y1 + 9;
@@ -3119,7 +3213,7 @@ begin
       if (A20 <> 0) and (Civ2.Civs[CivIndex].Government >= 5) then
         Civ2.CalcCityGlobals(i, True);
       Civ2.DrawCitySprite(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort, i, 0, Civ2.AdvisorWindow.MSWindow.ClientTopLeft.X + ((j and 1) shl 6) + 2, Top1, 0);
-      Civ2.SetCurrFont($0063EAB8);
+      Civ2.SetCurrFont(Pointer($0063EAB8));
       Civ2.SetFontColorWithShadow($25, $12, 1, 1);
       // Etc... May be... TODO
       Top1 := Top1 + 32;
@@ -3732,6 +3826,46 @@ asm
     ret
 end;
 
+procedure PatchDialogWaitProcEx(); stdcall;
+var
+  Canvas: TCanvasEx;
+  Dlg: PDialogWindow;
+  HWindow: HWND;
+  i, j: Integer;
+  TextOut: string;
+begin
+  Dlg := PDialogWindow(Pointer($6AD678)^);
+  if Dlg.Flags and $400 = 0 then
+  begin
+    i := 1200 - (6 * GetTickCount() div 100 - PCardinal($006CEC80)^);
+    if i mod 60 = 0 then
+    begin
+      TextOut := IntToStr(i div 60);
+      HWindow := Dlg.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow;
+      Canvas := TCanvasEx.Create(@Dlg.GraphicsInfo.DrawPort);
+      //Canvas.Brush.Style := bsClear;
+      Canvas.MoveTo(10, 10);
+      Canvas.TextOutWithShadows(TextOut);
+      //Civ2.DrawString(PAnsiChar(IntToStr(i)),0,0);
+      //HWindow := Dlg.ButtonControls[0].ControlInfo.HWindow;
+      //SetWindowText(HWindow, PAnsiChar(IntToStr(i)));
+      InvalidateRect(HWindow, nil, True);
+      UpdateWindow(HWindow);
+
+      //j := GetDlgCtrlID(HWindow);
+      //SendMessageToLoader(HWindow, j);
+      Canvas.Free();
+    end;
+  end;
+end;
+
+procedure PatchDialogWaitProc(); register;
+asm
+    call  PatchDialogWaitProcEx
+    push  $004823D1
+    ret
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -3765,7 +3899,7 @@ begin
     WriteMemory(HProcess, $004AA9C9, [OP_JMP], @PatchInitNewGameParameters);
     WriteMemory(HProcess, $0042C107, [$00, $00, $00, $00]); // Show buildings even with zero maintenance cost in Trade Advisor
     // CityWindow
-    WriteMemory(HProcess, $004013A2, [OP_JMP], @PatchCityWindowInitRectangles);
+    WriteMemory(HProcess, $004013A2, [OP_JMP], @PatchCityWindowInitRectangles); // Init ScrollBars and CaptionHeight
     WriteMemory(HProcess, $00505987, [OP_JMP], @PatchDrawCityWindowSupport1); // Add scrollbar, sort units list
     WriteMemory(HProcess, $005059B2, [OP_JMP], @PatchDrawCityWindowSupport1a);
     WriteMemory(HProcess, $005059D7, [OP_JMP], @PatchDrawCityWindowSupport1a);
@@ -3828,6 +3962,12 @@ begin
   // Trade Route Level
   WriteMemory(HProcess, $004EAB58, [OP_JMP], @PatchCalcCityEconomicsTradeRouteLevel);
   WriteMemory(HProcess, $00507AC5, [OP_JMP], @PatchDrawCityWindowUnitsPresent);
+  // After CreateCityWindow - add ProcMouseMove
+  WriteMemory(HProcess, $0050DE9E, [OP_JMP], @PatchCreateCityWindow);
+  // Show turns left to complete building
+  WriteMemory(HProcess, $005055AC, [OP_JMP], @PatchDrawCityWindowBuilding);
+  // Update RectangleBuilding are after CityResourcesClicked
+  WriteMemory(HProcess, $005025CB, [OP_JMP], @PatchCityResourcesClicked);
 
   // Show Cost shields and Maintenance coins in City Change list and fix Turns calculation for high production numbers
   WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListBuildingCost);
@@ -3980,6 +4120,9 @@ begin
   // Draw Map
   //WriteMemory(HProcess, $0047A8D5, [OP_JMP], Pointer($0047BA16));
   //WriteMemory(HProcess, $0047C2E6, [OP_JMP], @PatchDrawMapSquareOwnership);
+
+  // Dialog wait proc
+  //WriteMemory(HProcess, $004823CC, [OP_JMP], @PatchDialogWaitProc);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then
