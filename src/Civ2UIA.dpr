@@ -876,7 +876,7 @@ var
   TextOut: string;
   Top: Integer;
 begin
-  TextOut := Format('%s %d', [GetLabelString($2D), Civ2.GameParameters.Turn]);
+  TextOut := Format('%s %d', [GetLabelString($2D), Civ2.GameParameters.Turn]); // 'Turn'
   StrCopy(Civ2.ChText, PChar(TextOut));
   Top := Civ2.SideBarClientRect^.Top + (Civ2.SideBar.FontInfo.Height - 1) * 2;
   Civ2.DrawStringRight(Civ2.ChText, Civ2.SideBarClientRect^.Right, Top, 0);
@@ -892,47 +892,44 @@ asm
     ret
 end;
 
-// TODO: Move to Q_UpdateAdvisorScience_sub_42AD8F
-function PatchDrawProgressBar(GraphicsInfo: PGraphicsInfo; A2: Pointer; Left, Top, Current, Total, Height, Width, A9: Integer): Integer; cdecl;
+procedure PatchUpdateAdvisorScienceEx(CivIndex, AdvanceCost, TotalScience: Integer); stdcall;
 var
-  DC: HDC;
-  Canvas: TCanvas;
-  SavedDC: Integer;
+  Canvas: TCanvasEx;
   TextOut: string;
-  vLeft: Integer;
-  vTop: Integer;
-  R: TRect;
+  X, Y, FontHeight: Integer;
+  Beakers: Integer;
 begin
-  asm
-    push  A9
-    push  Width
-    push  Height
-    push  Total
-    push  Current
-    push  Top
-    push  Left
-    push  A2
-    push  GraphicsInfo
-    mov   eax, $00548C78 // Call Q_DrawProgressBar_sub_548C78
-    call  eax
-    add   esp, $24
-    mov   Result, eax
-  end;
-  if GraphicsInfo = @Civ2.AdvisorWindow.MSWindow.GraphicsInfo then
-  begin
-    TextOut := IntToStr(Current) + ' / ' + IntToStr(Total);
-    DC := GraphicsInfo^.DrawPort.DrawInfo^.DeviceContext;
-    SavedDC := SaveDC(DC);
-    Canvas := TCanvas.Create();
-    Canvas.Handle := DC;
-    Canvas.Font.Handle := CopyFont(Civ2.TimesFontInfo^.Handle^^);
-    Canvas.Brush.Style := bsClear;
-    vLeft := Left + 8;
-    vTop := Top - Civ2.GetFontHeightWithExLeading(Civ2.TimesFontInfo) - 1;
-    TextOutWithShadows(Canvas, TextOut, vLeft, vTop, TColor($E7E7E7), TColor($565656), SHADOW_BR);
-    Canvas.Free;
-    RestoreDC(DC, SavedDC);
-  end;
+  if Civ2.Civs[CivIndex].ResearchingTech < 0 then
+    Exit;
+  Beakers := Civ2.Civs[CivIndex].Beakers;
+  TextOut := Format('%d + %d / %d', [Beakers, TotalScience, AdvanceCost]);
+  FontHeight := Civ2.GetFontHeightWithExLeading(Civ2.FontTimes18);
+  X := Civ2.AdvisorWindow.MSWindow.RectClient.Left + 5;
+  Y := Civ2.AdvisorWindow.MSWindow.ClientTopLeft.Y + 2;
+  Y := Y + FontHeight * 4 + 6 + 9;
+  Canvas := TCanvasEx.Create(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort);
+  Canvas.Font.Handle := CopyFont(Civ2.FontTimes14b^.Handle^^);
+  Canvas.Brush.Style := bsClear;
+  Canvas.SetTextColors(41, 18);
+  Canvas.FontShadows := SHADOW_BR;
+  Canvas.MoveTo(X + 8, Y - 2);
+  Canvas.TextOutWithShadows(TextOut, 0, 0, DT_BOTTOM);
+  TextOut := ConvertTurnsToString(GetTurnsToComplete(Beakers, TotalScience, AdvanceCost), $21);
+  X := Civ2.AdvisorWindow.MSWindow.RectClient.Right - 5;
+  Canvas.MoveTo(X - 8, Y);
+  Canvas.TextOutWithShadows(TextOut, 0, 0, DT_RIGHT);
+  Canvas.Free();
+end;
+
+procedure PatchUpdateAdvisorScience(); register;
+asm
+    push  [ebp - $64] // vTotalScience
+    push  [ebp - $30] // vAdvanceCost
+    push  [ebp - $6C] // vCivIndex
+    call  PatchUpdateAdvisorScienceEx
+    mov   ecx, $0063EB10 // Restore: mov     ecx, offset V_AdvisorWindow_stru_63EB10
+    push  $0042B531
+    ret
 end;
 
 //
@@ -1415,7 +1412,7 @@ begin
   Text := string(Civ2.ChText);
   Text := Text + IntToStr(RealCost) + '#644F00:3# (';
   StrPCopy(Civ2.ChText, Text);
-  Result := GetTurnsToComplete(RealCost, Done);
+  Result := GetTurnsToBuild(RealCost, Done);
 end;
 
 procedure PatchCityChangeListBuildingCost; register;
@@ -1425,6 +1422,21 @@ asm
     call  PatchCityChangeListBuildingCostEx
     push  $00509B07
     ret
+end;
+
+procedure PatchStrcatBuildingCost(Cost, Done: Integer); cdecl;
+var
+  P: PChar;
+  Text, TurnsToBuildString: string;
+  RealCost: Integer;
+begin
+  RealCost := Cost * Civ2.CityGlobals.ShieldsInRow;
+  P := StrEnd(Civ2.ChText) - 1;
+  if P^ = '(' then
+    P^ := #00;
+  TurnsToBuildString := ConvertTurnsToString(GetTurnsToBuild2(RealCost, Done), $22);
+  Text := Format('%s%d#644F00:3# (%s', [Civ2.ChText, RealCost, TurnsToBuildString]);
+  StrPCopy(Civ2.ChText, Text);
 end;
 
 procedure PatchCityChangeListImprovementMaintenanceEx(CivIndex, j: Integer); stdcall;
@@ -1878,17 +1890,17 @@ end;
 procedure PatchDrawCityWindowBuildingEx(CityWindow: PCityWindow; Rect: PRect); stdcall;
 var
   Canvas: TCanvasEx;
-  TurnsToComplete: Integer;
+  CityBuildInfo: TCityBuildInfo;
   Text: string;
 begin
-  TurnsToComplete := GetTurnsToCompleteInCity(CityWindow.CityIndex);
+  GetCityBuildInfo(CityWindow.CityIndex, CityBuildInfo);
+  Text := ConvertTurnsToString(CityBuildInfo.TurnsToBuild, $21);
   Canvas := TCanvasEx.Create(@CityWindow.MSWindow.GraphicsInfo.DrawPort);
   Canvas.Font.Handle := CopyFont(CityWindow.FontInfo.Handle^^);
   Canvas.Brush.Style := bsClear;
   Canvas.SetTextColors(74, 10);
   Canvas.FontShadows := SHADOW_ALL;
   Canvas.MoveTo(Rect.Right, Rect.Bottom);
-  Text := Format('%s: %d', [GetLabelString(44), TurnsToComplete]); // 'Turns'
   Canvas.TextOutWithShadows(Text, 0, 0, DT_RIGHT or DT_BOTTOM);
   Canvas.Free();
 end;
@@ -2989,7 +3001,7 @@ var
   SortCriteria, SortSign: Integer;
   Improvements: array[0..1] of Integer;
   SavedCityGlobals: TCityGlobals;
-  RealCost, TurnsToComplete: Integer;
+  RealCost, TurnsToBuild: Integer;
 begin
   Result := 0;                            // Return 1 if processed
   SavedCityGlobals := Civ2.CityGlobals^;
@@ -3117,7 +3129,7 @@ begin
             end;
         end;
         Civ2.DrawStringRight(PChar(Text), X2, Y2, DX);
-        Civ2.CopySprite(@PSprites($644F00)^[2 * j + 1], @R, DrawPort, X2, Y2 + 2);
+        Civ2.CopySprite(@Civ2.SprRes[2 * j + 1], @R, DrawPort, X2, Y2 + 2);
         X2 := X2 + 42;
       end;
       //
@@ -3151,10 +3163,10 @@ begin
       // Build progress
       RealCost := Cost * Civ2.Cosmic.RowsInShieldBox;
       Civ2.CalcCityGlobals(CityIndex, True);
-      TurnsToComplete := GetTurnsToComplete(RealCost, City.BuildProgress);
+      TurnsToBuild := GetTurnsToBuild2(RealCost, City.BuildProgress);
 
       X2 := Civ2.DrawString(PChar(Text), X2, Y2) + 4;
-      Text := Format('%d (%d/%d)', [TurnsToComplete, City.BuildProgress, RealCost]);
+      Text := Format('%s (%d/%d)', [ConvertTurnsToString(TurnsToBuild, $20), City.BuildProgress, RealCost]);
       Civ2.SetFontColorWithShadow($21, $12, -1, -1);
       Civ2.DrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 12, Y2, 0);
 
@@ -3247,9 +3259,9 @@ begin
     Canvas := TCanvasEx.Create(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort);
     Canvas.MoveTo(Civ2.AdvisorWindow.MSWindow.ClientTopLeft.X + $8C - 16, Top1 + 11);
     if FoodDelta > 0 then
-      Canvas.CopySprite(@PSprites($644F00)^[1])
+      Canvas.CopySprite(@Civ2.SprRes[1])
     else
-      Canvas.CopySprite(@PSprites($644F00)^[0]);
+      Canvas.CopySprite(@Civ2.SprRes[0]);
     Canvas.Free();
   end;
   Civ2.CityGlobals^ := SavedCityGlobals;
@@ -3826,6 +3838,69 @@ asm
     ret
 end;
 
+procedure PatchUpdateTaxWindowEx(TaxWindow: PTaxWindow); stdcall;
+var
+  Civ: PCiv;
+  Canvas: TCanvasEx;
+  Xc, Y: Integer;
+  Text, Text1, Text2: string;
+  Beakers, AdvanceCost: Integer;
+  i: Integer;
+  Discoveries, TaxRate, ScienceRate: Integer;
+begin
+  Civ := @Civ2.Civs[TaxWindow.CivIndex];
+  Beakers := Civ.Beakers;
+  AdvanceCost := Civ2.GetAdvanceCost(TaxWindow.CivIndex);
+
+  Canvas := TCanvasEx.Create(@TaxWindow.MSWindow.GraphicsInfo.DrawPort);
+  Canvas.Font.Handle := CopyFont(Civ2.FontTimes16.Handle^^);
+  Canvas.Brush.Style := bsClear;
+  Canvas.SetTextColors(37, 18);
+  Xc := (TaxWindow.x0 + TaxWindow.ScrollW) div 2;
+  Y := TaxWindow.yDis;                    //+ TaxWindow.FontHeight;
+
+  Canvas.MoveTo(Xc, Y);
+  Text1 := GetLabelString(368) + ': ' + ConvertTurnsToString(GetTurnsToComplete(0, TaxWindow.TotalScience, AdvanceCost), $22); // Discoveries Every
+  Canvas.TextOutWithShadows(Text1, 0, 0, DT_CENTER);
+
+  Canvas.MoveTo(Xc, Y + TaxWindow.FontHeight);
+  Text := string(Civ2.GetStringInList(Civ2.RulesCivilizes[Civ.ResearchingTech].TextIndex)); // Advance name
+  Text2 := ConvertTurnsToString(GetTurnsToComplete(Beakers, TaxWindow.TotalScience, AdvanceCost), $22);
+  Text := '(' + Text + ': ' + Text2 + ')';
+  Canvas.TextOutWithShadows(Text, 0, 0, DT_CENTER);
+  Canvas.Free();
+
+  Civ2.CopyToScreenAndValidate(@TaxWindow.MSWindow.GraphicsInfo);
+
+  // Update advisors
+  //TaxRate := Civ2.Civs[TaxWindow.CivIndex].TaxRate;
+  //ScienceRate := Civ2.Civs[TaxWindow.CivIndex].ScienceRate;
+  Civ.TaxRate := TaxWindow.TaxRateF;
+  Civ.ScienceRate := TaxWindow.ScienceRateF;
+
+  Civ2.GameParameters.word_655AEE := Civ2.GameParameters.word_655AEE and $FFFB;
+  for i := 0 to Civ2.GameParameters.TotalCities - 1 do
+  begin
+    if (Civ2.Cities[i].ID <> 0) and (Civ2.Cities[i].Owner = TaxWindow.CivIndex) then
+      Civ2.CalcCityGlobals(i, True);
+  end;
+  Civ2.UpdateCityWindow(Civ2.CityWindow, 0);
+  case Civ2.AdvisorWindow.AdvisorType of
+    4, 5, 6:
+      Civ2.UpdateCopyValidateAdvisor(Civ2.AdvisorWindow.AdvisorType);
+  end;
+  //Civ2.Civs[TaxWindow.CivIndex].TaxRate := TaxRate;
+  //Civ2.Civs[TaxWindow.CivIndex].ScienceRate := ScienceRate;
+end;
+
+procedure PatchUpdateTaxWindow(); register;
+asm
+    push  [ebp - $0C] // pTaxWindow
+    call  PatchUpdateTaxWindowEx
+    push  $0040CD52
+    ret
+end;
+
 procedure PatchDialogWaitProcEx(); stdcall;
 var
   Canvas: TCanvasEx;
@@ -3866,6 +3941,17 @@ asm
     ret
 end;
 
+procedure PatchCVCopyToPort(var lprc: TRect; xLeft, yTop, xRight, yBottom: Integer); stdcall;
+var
+  CityViewXPos: Integer;
+begin
+  CityViewXPos := PInteger($626A00)^;
+  if CityViewXPos < 0 then
+    SetRect(lprc, -CityViewXPos, yTop, 1280 - CityViewXPos, yBottom)
+  else
+    SetRect(lprc, xLeft, yTop, xRight, yBottom);
+end;
+
 {$O+}
 
 //--------------------------------------------------------------------------------------------------
@@ -3888,7 +3974,7 @@ begin
     WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
     WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
     WriteMemory(HProcess, $0056954A, [OP_JMP], @PatchDrawSideBar);
-    WriteMemory(HProcess, $00401FBE, [OP_JMP], @PatchDrawProgressBar);
+    WriteMemory(HProcess, $0042B52C, [OP_JMP], @PatchUpdateAdvisorScience); // Science Advisor: show numbers
 
     WriteMemory(HProcess, $004E4C38, [OP_JMP], @PatchBuildMenuBar);
     WriteMemory(HProcess, $004E3A72, [OP_CALL], @PatchMenuExecDefaultCase);
@@ -3970,7 +4056,8 @@ begin
   WriteMemory(HProcess, $005025CB, [OP_JMP], @PatchCityResourcesClicked);
 
   // Show Cost shields and Maintenance coins in City Change list and fix Turns calculation for high production numbers
-  WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListBuildingCost);
+  //WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListBuildingCost);
+  WriteMemory(HProcess, $00401041, [OP_JMP], @PatchStrcatBuildingCost);
   WriteMemory(HProcess, $0050AD80, [OP_JMP], @PatchCityChangeListImprovementMaintenance);
 
   // Reset mouse buttons flags of City window before City Change list
@@ -4106,6 +4193,13 @@ begin
   WriteMemory(HProcess, $00556AB9, [OP_JMP], @PatchCityEditDialog1);
   WriteMemory(HProcess, $00556EF4, [OP_JMP], @PatchCityEditDialog2);
 
+  // Tax Window
+  WriteMemory(HProcess, $0040CC9A, [OP_JMP], @PatchUpdateTaxWindow);
+
+  // City View
+  // Center image on the screen wider than 1280
+  WriteMemory(HProcess, $0045608B, [OP_NOP, OP_CALL], @PatchCVCopyToPort);
+
   // Tests
   // HookImportedFunctions(HProcess);
   //WriteMemory(HProcess, $005DBC7B, [$18]); // MSWindowClass cbWndExtra
@@ -4123,6 +4217,9 @@ begin
 
   // Dialog wait proc
   //WriteMemory(HProcess, $004823CC, [OP_JMP], @PatchDialogWaitProc);
+
+  // V_WideScreen_dword_633584 = 0
+  //WriteMemory(HProcess, $00552048+6, [0]);
 
   // civ2patch
   if UIAOPtions.civ2patchEnable then

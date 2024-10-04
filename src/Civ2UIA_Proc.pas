@@ -6,21 +6,49 @@ uses
   Windows,
   Graphics;
 
+type
+  TCityBuildInfo = record
+    Production: Integer;
+    RealCost: Integer;
+    TurnsToBuild: Integer;
+  end;
+
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
+
 procedure WriteMemory(HProcess: THandle; Address: Integer; Opcodes: array of Byte; ProcAddress: Pointer = nil; Abs: Boolean = False);
+
 function FastSwap(Value: Cardinal): Cardinal; register;
+
 function Clamp(Value, MinV, MaxV: Integer): Integer;
+
 procedure TextOutWithShadows(var Canvas: TCanvas; var TextOut: string; Left, Top: Integer; const MainColor, ShadowColor: TColor; Shadows: Cardinal);
+
 function ScaleByZoom(Value, Zoom: Integer): Integer;
+
 function RectWidth(const R: TRect): Integer;
+
 function RectHeight(const R: TRect): Integer;
+
 procedure OffsetPoint(var Point: TPoint; DX, DY: Integer);
+
 function CopyFont(SourceFont: HFONT): HFONT;
-//function ColorFromIndex(DC: HDC; Index: Integer): TColor;
+
 function GetLabelString(StringIndex: Integer): string;
+
 function GetProduction(): Integer;
-function GetTurnsToComplete(RealCost, Done: Integer): Integer;
-function GetTurnsToCompleteInCity(CityIndex: Integer): Integer;
+
+function GetTurnsToComplete(Done, Increment, Total: Integer): Integer;
+
+function ConvertTurnsToString(Turns: Integer; Options: Cardinal = 0): string;
+
+function GetTurnsToBuild(RealCost, Done: Integer): Integer;
+
+function GetTurnsToBuild2(RealCost, Done: Integer): Integer;
+
+function GetTurnsToBuildInCity(CityIndex: Integer): Integer;
+
+procedure GetCityBuildInfo(CityIndex: Integer; var CityBuildInfo: TCityBuildInfo);
+
 function GetTradeConnectionLevel(aCity, i: Integer): Integer;
 
 implementation
@@ -28,6 +56,7 @@ implementation
 uses
   Math,
   Messages,
+  SysUtils,
   Civ2Types,
   Civ2Proc,
   Civ2UIA_Types;
@@ -129,14 +158,6 @@ begin
   Result := CreateFontIndirect(LFont);
 end;
 
-{function ColorFromIndex(DC: HDC; Index: Integer): TColor;
-var
-  RGBQuad: Cardinal;
-begin
-  GetDIBColorTable(DC, Index, 1, RGBQuad);
-  Result := TColor(FastSwap(RGBQuad) shr 8);
-end;}
-
 function GetLabelString(StringIndex: Integer): string;
 begin
   Result := string(Civ2.GetStringInList(PIntegerArray(Pointer($00628420)^)[StringIndex]));
@@ -147,7 +168,53 @@ begin
   Result := Min(Max(0, Civ2.CityGlobals.TotalRes[1] - Civ2.CityGlobals.Support), 1000);
 end;
 
-function GetTurnsToComplete(RealCost, Done: Integer): Integer;
+function GetTurnsToComplete(Done, Increment, Total: Integer): Integer;
+var
+  LeftToDo: Integer;
+begin
+  Result := 0;
+  LeftToDo := Total - Done;
+  if LeftToDo <= 0 then
+    Result := 1
+  else if Increment > 0 then
+    Result := (LeftToDo - 1) div Increment + 1;
+end;
+
+// Options:
+// 0x00000000 - Format: 'N'
+// 0x00000001 - Format: 'Turns: N'
+// 0x00000002 - Format: 'N Turn(s)'
+// 0x00000010 - ''      when Turns <= 0
+// 0x00000020 - 'Never' when Turns <= 0
+// 0x00000100 - Add 'Every' if Turns > 0 (for science)
+function ConvertTurnsToString(Turns: Integer; Options: Cardinal): string;
+var
+  StringIndex: Integer;
+begin
+  Result := '';
+  if Turns > 0 then
+  begin
+    if Options and $01 <> 0 then
+      Result := Format('%s: %d', [GetLabelString(44), Turns]) // 'Turns'
+    else if Options and $02 <> 0 then
+      Result := Format('%d %s', [Turns, GetLabelString(44 + Integer(Turns = 1))]) // 'Turns' / 'Turn'
+    else
+      Result := IntToStr(Turns);
+    if Options and $100 <> 0 then
+      Result := GetLabelString(44) + ' ' + Result; // 'Every'
+  end
+  else
+  begin
+    if Options and $10 <> 0 then
+      Result := ''
+    else if Options and $20 <> 0 then
+      Result := GetLabelString(498)       // 'Never'
+    else
+      Result := IntToStr(Turns);
+  end;
+end;
+
+function GetTurnsToBuild(RealCost, Done: Integer): Integer;
 var
   LeftToDo, Production: Integer;
 begin
@@ -164,18 +231,33 @@ begin
         Result := -1;}
 end;
 
-function GetTurnsToCompleteInCity(CityIndex: Integer): Integer;
+// Correct version
+function GetTurnsToBuild2(RealCost, Done: Integer): Integer;
+begin
+  Result := GetTurnsToComplete(Done, GetProduction(), RealCost);
+end;
+
+function GetTurnsToBuildInCity(CityIndex: Integer): Integer;
+var
+  CityBuildInfo: TCityBuildInfo;
+begin
+  GetCityBuildInfo(CityIndex, CityBuildInfo);
+  Result := CityBuildInfo.TurnsToBuild;
+end;
+
+procedure GetCityBuildInfo(CityIndex: Integer; var CityBuildInfo: TCityBuildInfo);
 var
   City: PCity;
-  Cost, RealCost: Integer;
+  Cost: Integer;
 begin
   City := @Civ2.Cities[CityIndex];
   if City.Building < 0 then
     Cost := Civ2.Improvements[-City.Building].Cost
   else
     Cost := Civ2.UnitTypes[City.Building].Cost;
-  RealCost := Cost * Civ2.Cosmic.RowsInShieldBox;
-  Result := GetTurnsToComplete(RealCost, City.BuildProgress);
+  CityBuildInfo.Production := GetProduction();
+  CityBuildInfo.RealCost := Cost * Civ2.Cosmic.RowsInShieldBox;
+  CityBuildInfo.TurnsToBuild := GetTurnsToComplete(City.BuildProgress, CityBuildInfo.Production, CityBuildInfo.RealCost);
 end;
 
 function GetTradeConnectionLevel(aCity, i: Integer): Integer;
@@ -215,3 +297,4 @@ begin
 end;
 
 end.
+

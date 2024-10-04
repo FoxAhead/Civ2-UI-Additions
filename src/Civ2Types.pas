@@ -73,6 +73,8 @@ type
 
   PSideBarWindow = ^TSideBarWindow;
 
+  PTaxWindow = ^TTaxWindow;
+
   PCosmic = ^TCosmic;
 
   PGameParameters = ^TGameParameters;
@@ -96,6 +98,8 @@ type
   PUnit = ^TUnit;
 
   PCity = ^TCity;
+
+  PCiv = ^TCiv;
 
   TWindowProcs = packed record            // Size = 0x68
     ProcMouseMove: Pointer;
@@ -165,7 +169,7 @@ type
   // WindowProc1        - GetWindowLongA(hWnd, 8)
   // WindowProcCommon   - GetWindowLongA(hWnd, 4)
   // WindowProcMSWindow - GetWindowLongA(hWnd, 0)
-  TWindowInfo1 = packed record             // Size = 0xB8
+  TWindowInfo1 = packed record            // Size = 0xB8
     Style: Integer;                       //
     Palette: Pointer;                     // + 0x04
     WindowStructure: PWindowStructure;    // + 0x08
@@ -260,6 +264,15 @@ type
   end;
 
   TControlInfoListItems = array[0..0] of TControlInfoListItem;
+
+  // ControlType = 2
+  TControlInfoCheckbox = packed record
+    ControlInfo: TControlInfo;
+    Proc: Pointer;
+    Checked: Integer;
+    Enabled: Integer;
+    FontInfo: PFontInfo;
+  end;
 
   TControlInfoRadio = packed record       // Size = $A4
     HWindow: HWND;
@@ -615,15 +628,33 @@ type
 
   TSprites = array[0..255] of TSprite;
 
+  TWinButton = packed record
+    Code: Integer;
+    Unknown_04: Integer;
+    Unknown_08: Integer;
+    Width: Integer;
+    Height: Integer;
+    Sprite: PSprite;
+    ListItem: PControlInfoListItem;
+  end;
+
   TMSWindow = packed record               // Size = 0x2D8
     GraphicsInfo: TGraphicsInfo;
     Unknown_114: Integer;
     _CaptionHeight: Integer;
-    Unknown_11C: Integer;
+    Border: Integer;
     _ResizeBorderWidth: Integer;
     ClientTopLeft: TPoint;
     ClientSize: TSize;
-    Unknown1b: array[1..105] of Integer;
+    Unknown_134: array[1..50] of Integer;
+    WinButtonCount: Integer;
+    WinButtons: array[0..5] of TWinButton;
+    WinButtonProc: Pointer;
+    RectDrawPort: TRect;
+    RectClient: TRect;
+    FontInfo1: PFontInfo;
+    FontInfo2: PFontInfo;
+    FontInfo3: PFontInfo;
   end;
 
   TMapWindow = packed record              // Size = 0x3F0
@@ -715,7 +746,7 @@ type
     field_8C: array[1..4] of char;
     TileRes: array[0..2] of Integer;
     TechPollution: Integer;
-    TotalRes: array[0..2] of Integer; // 0 - Food, 1 - Production, 2 - Trade
+    TotalRes: array[0..2] of Integer;     // 0 - Food, 1 - Production, 2 - Trade
     field_AC: Integer;
     Settlers: Integer;
     field_B4: Integer;
@@ -812,28 +843,43 @@ type
     Rect: TRect;
   end;
 
-  TTaxWindow = packed record              // Size = 0x4D0
+  TTaxWindow = packed record              // Size = 0x508
     MSWindow: TMSWindow;
-    CivIndex: Integer;                    // + 0x2D8
-    MaxRate: Integer;                     // + 0x2DC
-    TaxRateF: Integer;                    // + 0x2E0
-    LuxuryRateF: Integer;                 // + 0x2E4
-    ScienceRateF: Integer;                // + 0x2E8
-    TaxRate: Integer;                     // + 0x2EC
-    LuxuryRate: Integer;                  // + 0x2F0
-    ScienceRate: Integer;                 // + 0x2F4
-    ClientWidth: Integer;                 // + 0x2F8
-    ClientHeight: Integer;                // + 0x2FC
-    Unknown_300: Integer;
-    Unknown_304: Integer;
-    Unknown_308: Integer;
-    Unknown_30C: Integer;
-    Unknown_310: Integer;
-    Unknown_314: Integer;
-    Unknown_318: Integer;
-    Unknown_31C: Integer;
+    CivIndex: Integer;
+    MaxRate: Integer;
+    TaxRateF: Integer;
+    LuxuryRateF: Integer;
+    ScienceRateF: Integer;
+    TaxRate: Integer;
+    LuxuryRate: Integer;
+    ScienceRate: Integer;
+    ClientWidth: Integer;
+    ClientHeight: Integer;
+    x0: Integer;
+    y0: Integer;
+    TotalIncome: Integer;
+    TotalScience: Integer;
+    TotalCost: Integer;
+    PadX: Integer;
+    PadY: Integer;
+    ScrollW: Integer;
     ScrollBarHeight: Integer;
-    Unknown_324: array[1..107] of Integer;
+    ButtonW: Integer;
+    ButtonH: Integer;
+    FontHeight: Integer;
+    yT: Integer;
+    yL: Integer;
+    yS: Integer;
+    yGov: Integer;
+    yTot: Integer;
+    yDis: Integer;
+    RateExceeded: Integer;
+    Locks: array[0..2] of Integer;
+    ScrollTax: TControlInfoScroll;
+    ScrollLuxury: TControlInfoScroll;
+    ScrollScience: TControlInfoScroll;
+    Checkbox: array[0..2] of TControlInfoCheckbox;
+    Button: TControlInfoButton;
   end;
 
   TCosmic = packed record                 // Size = 0x16
@@ -999,6 +1045,20 @@ type
     NeedDebug: Integer;
   end;
 
+  TRulesCivilize = packed record          // Size = 0x10
+    Name: array[0..3] of Char;
+    TextIndex: Integer;
+    Unknown_08: ShortInt;
+    PreqNotNO: ShortInt;
+    AiValue: ShortInt;
+    Modifier: ShortInt;
+    Category: ShortInt;
+    Epoch: ShortInt;
+    Preq: array[0..1] of ShortInt;
+  end;
+
+  TRulesCivilizes = array[0..99] of TRulesCivilize; // 0x00627680
+
   TImprovement = packed record            // Size = 0x08
     StringIndex: Cardinal;
     Cost: Byte;
@@ -1105,6 +1165,8 @@ type
     // 0000 0000 0000 0000 0000 0000 0000 0001 - 0x00000001 Disorder
     // 0000 0000 0000 0000 0000 0000 0000 0010 - 0x00000002 We Love the King Day
     // 0000 0000 0000 0000 0000 0000 0000 0100 - 0x00000004 Improvement sold
+    // 0000 0000 0000 0000 0000 0000 0000 1000 - 0x00000008 Technology stolen
+    // 0000 0000 0000 0000 0000 0000 1000 0000 - 0x00000080 Coastal
     // 0000 0000 0000 0001 0000 0000 0000 0000 - 0x00010000 Airlifted
     // 0000 0000 0100 0000 0000 0000 0000 0000 - 0x00400000 Investigated by spy
     // 0000 0100 0000 0000 0000 0000 0000 0000 - 0x04000000 x1 Objective
@@ -1156,7 +1218,15 @@ type
     Gold: Integer;                        // + 0x02 = 64C6A2
     Leader: Word;                         // + 0x06 = 64C6A6
     Beakers: Word;                        // + 0x08 = 64C6A8
-    Unknown3: array[$A..$14] of Byte;
+    ResearchingTech: Smallint;
+    Unknown5: ShortInt;
+    _Turn: SmallInt;
+    Unknown_F: ShortInt;
+    Techs: Byte;
+    FutureTechs: Byte;
+    Unknown_12: ShortInt;
+    ScienceRate: Byte;
+    TaxRate: Byte;
     Government: Byte;
     // 0 - Anarchy
     // 1 - Despotism

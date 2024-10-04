@@ -32,6 +32,9 @@ type
     CurrPopupInfo: PPDialogWindow;
     CursorX: PSmallInt;
     CursorY: PSmallInt;
+    FontTimes14b: ^TFontInfo;
+    FontTimes16: ^TFontInfo;
+    FontTimes18: ^TFontInfo;
     GameParameters: PGameParameters;
     HumanCivIndex: PInteger;
     Improvements: ^TImprovements;
@@ -50,17 +53,16 @@ type
     PFStopY: PInteger;
     PFData: PPFData;
     PrevWindowInfo: PWindowInfo;
+    RulesCivilizes: ^TRulesCivilizes;
     ScreenRectSize: PSize;
     ShieldFontInfo: ^TFontInfo;
     ShieldLeft: ^TShieldLeft;
     ShieldTop: ^TShieldTop;
     SideBar: PSideBarWindow;
     SideBarClientRect: PRect;
-    SprRes: PSprites;
     SprEco: PSprites;
+    SprRes: PSprites;
     SprResS: PSprites;
-    TimesBigFontInfo: ^TFontInfo;
-    TimesFontInfo: ^TFontInfo;
     Units: ^TUnits;
     UnitSelected: ^LongBool;
     UnitTypes: ^TUnitTypes;
@@ -106,6 +108,7 @@ type
     ExtractSprite64x48: procedure(Sprite: PSprite; Left, Top: Integer); cdecl;
     FontPrepare: procedure(Zoom: Integer); cdecl;
     FontRecreate: procedure(FontInfo: PFontInfo; FontFaceNum, Height: Integer; Style: Byte); stdcall;
+    GetAdvanceCost: function(CivIndex: Integer): Integer; cdecl;
     GetCityIndexAtXY: function(X, Y: Integer): Integer; cdecl;
     GetCivColor1: function(CivIndex: Integer): Integer; cdecl;
     GetFontHeightWithExLeading: function(thisFont: Pointer): Integer; stdcall;
@@ -225,6 +228,9 @@ begin
   CurrPopupInfo              := Pointer($006CEC84);
   CursorX                    := Pointer($0064B1B4);
   CursorY                    := Pointer($0064B1B0);
+  FontTimes14b               := Pointer($0063EAB8);
+  FontTimes16                := Pointer($006AB1A0);
+  FontTimes18                := Pointer($0063EAC0);
   GameParameters             := Pointer($00655AE8);
   HumanCivIndex              := Pointer($006D1DA0);
   Improvements               := Pointer($0064C488);
@@ -243,17 +249,16 @@ begin
   PFStopY                    := Pointer($00673FA4);
   PFData                     := Pointer($0062D03C);
   PrevWindowInfo             := Pointer($00637EA4);
+  RulesCivilizes             := Pointer($00627680);
   ScreenRectSize             := Pointer($006AB198);
   ShieldFontInfo             := Pointer($006AC090);
   ShieldLeft                 := Pointer($00642C48);
   ShieldTop                  := Pointer($00642B48);
   SideBar                    := Pointer($006ABC68);
   SideBarClientRect          := Pointer($006ABC28);
-  SprRes                     := Pointer($644F00);
-  SprEco                     := Pointer($648860);  
-  SprResS                    := Pointer($645068);
-  TimesBigFontInfo           := Pointer($0063EAC0);
-  TimesFontInfo              := Pointer($0063EAB8);
+  SprEco                     := Pointer($00648860);
+  SprRes                     := Pointer($00644F00);
+  SprResS                    := Pointer($00645068);
   if ANewUnitsAreaAddress <> nil then
     Units                    := ANewUnitsAreaAddress
   else
@@ -301,6 +306,7 @@ begin
   @ExtractSprite64x48             := Pointer($0044AC07);
   @FontPrepare                    := Pointer($00401C12);
   @FontRecreate                   := PThisCall($004027B1);
+  @GetAdvanceCost                 := Pointer($004030E9);
   @GetCityIndexAtXY               := Pointer($0043CF76);
   @GetCivColor1                   := Pointer($00401F8C);
   @GetFontHeightWithExLeading     := PThisCall($00403819);
@@ -364,6 +370,8 @@ begin
 {*)}
 
   // Check structure sizes
+  if SizeOf(TMSWindow) <> $2D8 then
+    raise Exception.Create('Wrong size of TMSWindow');
   if SizeOf(TWindowInfo) <> $C5 then
     raise Exception.Create('Wrong size of TWindowInfo');
   if SizeOf(TCityWindow) <> $16E0 then
@@ -372,6 +380,8 @@ begin
     raise Exception.Create('Wrong size of TGraphicsInfo');
   if SizeOf(TMapWindow) <> $3F0 then
     raise Exception.Create('Wrong size of TMapWindow');
+  if SizeOf(TUnit) <> $20 then
+    raise Exception.Create('Wrong size of TUnit');
   if SizeOf(TCity) <> $58 then
     raise Exception.Create('Wrong size of TCity');
   if SizeOf(TCiv) <> $594 then

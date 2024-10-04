@@ -246,7 +246,7 @@ var
   ColorFrame, ColorShadow, ColorText: TColor;
   City: PCity;
   i, j: Integer;
-  TextOut: string;
+  TextOut, TextOut2: string;
   R: TRect;
   DX, DY: Integer;
   StringIndex: Integer;
@@ -260,7 +260,8 @@ var
   FoodDelta: Integer;
   FoodDeltaString: string;
   TradeString: string;
-  RealCost, TurnsToComplete: Integer;
+  CityBuildInfo: TCityBuildInfo;
+  TurnsToBuildString: string;
   TradeConnectionLevel: Integer;
 begin
   SetFromCursor();
@@ -279,7 +280,7 @@ begin
       Canvas.PenOrigin := Point(3, 3);
       Canvas.PenReset();
       Canvas.LineHeight := 18;
-      Canvas.Font.Handle := CopyFont(Civ2.TimesFontInfo^.Handle^^);
+      Canvas.Font.Handle := CopyFont(Civ2.FontTimes14b^.Handle^^);
       //Canvas.Font.Name := 'Arial';
       Canvas.Font.Size := 11;
       Canvas.Brush.Style := bsClear;
@@ -368,6 +369,7 @@ begin
           StringIndex := Civ2.Improvements[-City.Building].StringIndex;
           Cost := Civ2.Improvements[-City.Building].Cost;
           Canvas.CopySprite(@PSprites($645160)^[-City.Building], 4, 3).PenDY(1);
+          DX := 2;
           DY := 0;
         end
         else
@@ -375,13 +377,14 @@ begin
           StringIndex := Civ2.UnitTypes[City.Building].StringIndex;
           Cost := Civ2.UnitTypes[City.Building].Cost;
           Canvas.CopySprite(@PSprites($641848)^[City.Building], 0, 0).PenDX(-4).PenDY(7);
+          DX := 0;
           DY := 2;
         end;
         Canvas.Font.Style := [];
-        RealCost := Cost * Civ2.Cosmic.RowsInShieldBox;
-        TurnsToComplete := GetTurnsToComplete(RealCost, City.BuildProgress);
-        TextOut := ' ' + string(Civ2.GetStringInList(StringIndex)) + Format(' (%d+%d/%d) %d', [City.BuildProgress, GetProduction(), RealCost, TurnsToComplete]);
-        Canvas.TextOutWithShadows(TextOut).PenBR.PenDY(DY);
+        GetCityBuildInfo(FCityIndex, CityBuildInfo);
+        TurnsToBuildString := ConvertTurnsToString(CityBuildInfo.TurnsToBuild, $20);
+        TextOut := Format('%s (%d+%d/%d) %s', [Civ2.GetStringInList(StringIndex), City.BuildProgress, CityBuildInfo.Production, CityBuildInfo.RealCost, TurnsToBuildString]);
+        Canvas.TextOutWithShadows(TextOut, DX).PenBR.PenDY(DY);
       end;
 
       if FQuickInfoParts and 2 <> 0 then
@@ -437,26 +440,19 @@ begin
               if TradeItem < 0 then
               begin
                 TextOut := TextOut + GetLabelString($C0) + ': -1'; // Food Supplies
-                Canvas.TextOutWithShadows(TextOut).CopySprite(@PSprites($645068)^[0], 2, 3).PenBR;
+                Canvas.TextOutWithShadows(TextOut).CopySprite(@Civ2.SprResS[0], 2, 3).PenBR;
               end
               else
               begin
-                //TradeConnectionLevel := GetTradeConnectionLevel(FCityIndex, i);
                 TextOut := TextOut + string(Civ2.GetStringInList(Civ2.Commodities[TradeItem]));
                 TextOut := TextOut + Format(': +%d', [Civ2.CityGlobals.TradeRevenue[i]]);
-                Canvas.TextOutWithShadows(TextOut).CopySprite(@PSprites($645068)^[2], 2, 3);
-                //TradeConnectionLevel := GetTradeConnectionLevel(FCityIndex, i);
+                Canvas.TextOutWithShadows(TextOut).CopySprite(@Civ2.SprResS[2], 2, 3);
                 TradeConnectionLevel := CityGlobalsEx.TradeRouteLevel[i];
                 for j := 1 to TradeConnectionLevel do
                 begin
                   Canvas.TextOutWithShadows('+');
-//                  Canvas.CopySprite(@PSprites($645068)^[2], 2, 3);
-//                  if j > 0 then
-//                    Canvas.PenDX(-7);
                 end;
                 Canvas.PenBR;
-
-
               end;
             end;
           end;
