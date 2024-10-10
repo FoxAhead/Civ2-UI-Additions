@@ -77,7 +77,7 @@ type
 
   PCosmic = ^TCosmic;
 
-  PGameParameters = ^TGameParameters;
+  PGame = ^TGame;
 
   PMapHeader = ^TMapHeader;
 
@@ -602,7 +602,15 @@ type
     ResizeBorderWidth: Integer;
     Unknown_40: Integer;
     Unknown_44: Integer;
-    Unknown_48: Integer;
+    Style: Integer;
+    // 0x00000008 - Style |= WS_MINIMIZEBOX
+    // 0x00000010 - Style |= WS_MAXIMIZEBOX
+    // 0x00000020 - Style |= WS_SYSMENU
+    // 0x00000040 - Style |= WS_CAPTION
+    // 0x00000080 - Style |= WS_VSCROLL
+    // 0x00000100 - Style |= WS_HSCROLL
+    // 0x00000200 - If aParent: Style |= WS_CHILD | WS_CLIPSIBLINGS, ExStyle = WS_EX_NOPARENTNOTIFY
+    // 0x00000800 - Style |= WS_POPUP
   end;
 
   PHFONT = ^HFONT;
@@ -690,7 +698,12 @@ type
     CentralInfo: Integer;
     ImproveListStart: Integer;
     ImproveCount: Integer;
-    Unknown7: array[$15BC..$15D3] of Byte; // + 15B8
+    Unknown_15BC: Integer;
+    Unknown_15C0: Integer;
+    Unknown_15C4: Integer;
+    Unknown_15C8: Integer;
+    Unknown_15CC: Integer;
+    Unknown_15D0: Integer;
     WindowSize: Integer;                  // + 15D4 = 6AA78C  // 1, 2, 3
     Zoom: Integer;                        //
     RectCitizens: TRect;                  //
@@ -907,8 +920,12 @@ type
     FundamentalismMaxScience: Byte;
   end;
 
-  TGameParameters = packed record
-    CustomFeatures: Word;
+  TGame = packed record                   // 0x655AE8
+    CustomFeatures: Word;                 // Custom Rules
+    // 0x0010 - Simplified Combat
+    // 0x8000 - Flat World
+    // 0x0080 - Bloodlust (No spaceships allowed)
+    // 0x0100 - Don't Restart Eliminated Players
     GraphicAndGameOptions: Integer;
     // 0x0020 - Show Map Grid
     // 0x0100 - Tutorial help.
@@ -960,9 +977,19 @@ type
     TotalCities: Word;
     word_655B1A: Word;
     word_655B1C: Word;
-    byte_655B1E: array[0..99] of Byte;
+    TechsDiscoveredFirst: array[0..99] of Byte;
+    // 0x00 - None
+    // 0x01 - 0x07 - Number of the tribe which first discovered the technology
+    // 0x08 - More than one tribe, eg, starting technologies.
     TechsDiscovered: array[0..99] of Byte;
+    // 0000 0001 - Tribe 0 (Barbarians)
+    // 0000 0010 - Tribe 1
+    // ...
+    // 1000 0000 - Trube 7
     WonderCities: array[0..27] of SmallInt;
+    // 0xXXXX - City Index
+    // 0xFFFE - Lost
+    // 0xFFFF - Not built yet
     field_136: SmallInt;
     field_138: Byte;
     field_139: Char;
@@ -980,7 +1007,7 @@ type
     ArrayH: SmallInt;
   end;
 
-  TMapCivData = array[0..7] of PByteArray; // Known tile Improvements for the civilization in question
+  TMapCivData = array[0..7] of PByteArray; // Known tile TerrainFeatures for the civilization in question
 
   TMapSquare = packed record
     TerrainType: Byte;
@@ -998,7 +1025,7 @@ type
     // 0010 0000 - 0x20 Only used for resource tiles. Indicates that the tile was being animated when the game was saved - no apparent effect.
     // 0100 0000 - 0x40 No resource
     // 1000 0000 - 0x80 River
-    Improvements: Byte;
+    TerrainFeatures: Byte;
     // 0000 0000 - 0x00 Nothing
     // 0000 0001 - 0x01 Unit Present
     // 0000 0010 - 0x02 City Present
@@ -1207,6 +1234,13 @@ type
 
   TCities = array[0..$FF] of TCity;       // 64F340
 
+  TCivSub1 = packed record
+    X: SmallInt;
+    Y: SmallInt;
+    Unknown_4: Byte;
+    Unknown_5: Byte;
+  end;
+
   TCiv = packed record                    // Size = 0x594
     Flags: Word;                          //          64C6A0
     // 0x0001 - Skip next Oedo year (eg, used when falling into anarchy)
@@ -1237,19 +1271,41 @@ type
     // 6 - Democracy
     Unknown4: array[$16..$1F] of Byte;
     Treaties: array[0..7] of Integer;
-    // 0x00000001 Contact
-    // 0x00000002 Cease Fire
-    // 0x00000004 Peace
-    // 0x00000008 Alliance
-    // 0x00000010 Vendetta
-    // 0x00000080 Embassy
-    // 0x00000100 They talked about nukes with us
-    // 0x00002000 War
-    // 0x00020000 We nuked them
-    // 0x00040000 Accepted tribute
+    // 0x00000001 - Contact
+    // 0x00000002 - Cease Fire
+    // 0x00000004 - Peace
+    // 0x00000008 - Alliance
+    // 0x00000010 - Vendetta
+    // 0x00000020 - Their space ship will arrive sooner
+    // 0x00000080 - Embassy
+    // 0x00000100 - They talked about nukes with us
+    // 0x00002000 - War
+    // 0x00020000 - We nuked them
+    // 0x00040000 - Accepted tribute
     Unknown9: array[$40..$153] of Byte;
     DefMinUnitBuilding: array[0..61] of Byte;
-    Unknown10: array[$192..$593] of Byte;
+    //    Unknown10: array[$192..$593] of Byte;
+    Unknown_192: array[0..63] of Word;
+    Unknown_212: array[0..63] of Word;
+    Unknown_292: array[0..63] of Byte;
+    Unknown_2D2: array[0..63] of ShortInt;
+    Unknown_312: array[0..63] of ShortInt;
+    Unknown_352: array[0..63] of ShortInt;
+    Unknown_392: array[0..63] of ShortInt;
+    Unknown_3D2: SmallInt;
+    Unknown_3D4: array[0..6] of SmallInt;
+    Unknown_3E2: array[0..7] of SmallInt;
+    Unknown_3F2: ShortInt;
+    Unknown_3F3: array[0..9] of ShortInt;
+    Unknown_3FD: ShortInt;
+    Unknown_3FE: SmallInt;
+    SpaceFlags: Byte;
+    // 0000 0001 - 0x01 Started construction
+    // 0000 0010 - 0x02 Launched
+    // 0000 1000 - 0x08 Fusion powered
+    Unknown_401: array[0..18] of ShortInt;
+    Unknown_414: array[0..47] of TCivSub1;
+    Unknown_534: array[0..15] of TCivSub1;
   end;
 
   TCivs = array[0..7] of TCiv;            // 64C6A0

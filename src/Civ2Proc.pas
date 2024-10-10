@@ -35,7 +35,7 @@ type
     FontTimes14b: ^TFontInfo;
     FontTimes16: ^TFontInfo;
     FontTimes18: ^TFontInfo;
-    GameParameters: PGameParameters;
+    Game: PGame;
     HumanCivIndex: PInteger;
     Improvements: ^TImprovements;
     Leaders: ^TLeaders;
@@ -72,6 +72,7 @@ type
     AfterActiveUnitChanged: procedure(A1: Integer); cdecl;
     ArrangeWindows: procedure; cdecl;
     CalcCityGlobals: function(CityIndex: Integer; Calc: LongBool): Integer; cdecl;
+    CalcCityGlobalsTileRes: procedure(CityIndex, SpiralIndex, AddTotal: Integer); cdecl;
     CallRedrawAfterScroll: procedure(ControlInfoScroll: PControlInfoScroll; Pos: Integer); stdcall;
     CenterView: procedure(MapWindow: PMapWindow; X, Y: Integer); stdcall;
     CityCitizenClicked: procedure(CitizenIndex: Integer); cdecl;
@@ -114,6 +115,8 @@ type
     GetFontHeightWithExLeading: function(thisFont: Pointer): Integer; stdcall;
     GetInfoOfClickedCitySprite: function(CitySpritesInfo: PCitySpritesInfo; X, Y: Integer; var SIndex, SType: Integer): Integer; stdcall;
     GetNextUnitInStack: function(UnitIndex: Integer): Integer; cdecl;
+    GetPixel: function(DrawPort: PDrawPort; X, Y: Integer): Integer; stdcall;
+    GetResourceInCityTile: function(CityIndex, SpiralIndex, ResIndex: Integer): Integer; cdecl;
     GetSpecialist: function(City, SpecialistIndex: Integer): Integer; cdecl;
     GetSpriteZoom: procedure(var Numerator, Denominator: Integer); cdecl;
     GetStringInList: function(StringIndex: Integer): PChar; cdecl;
@@ -132,7 +135,9 @@ type
     MapGetSquare: function(X, Y: Integer): PMapSquare; cdecl;
     MapGetSquareCityRadii: function(X, Y: Integer): Integer; cdecl;
     MapSquareIsVisibleTo: function(X, Y, CivIndex: Integer): LongBool; cdecl;
+    MapUpdateKnownTerrainFeatures: procedure(X, Y, CivIndex: Integer); cdecl;
     MapToWindow: procedure(MapWindow: PMapWindow; var WindowX, WindowY: Integer; MapX, MapY: Integer); stdcall;
+    MapWrapX: function(X: Integer): Integer; cdecl;
     MenuBarAddMenu: function(MenuBar: PMenuBar; Num: Integer; Text: PChar): PMenu; stdcall;
     MenuBarAddSubMenu: function(MenuBar: PMenuBar; Num, SubNum: Integer; Text: PChar; Len: Integer): PMenu; stdcall;
     MenuBarGetSubMenu: function(MenuBar: PMenuBar; Num: Integer): PMenu; stdcall;
@@ -146,12 +151,14 @@ type
     RecreateBrush: procedure(WindowInfo1: PWindowInfo1; Color: Integer); stdcall;
     RedrawMap: procedure(MapWindow: PMapWindow; CivIndex: Integer; CopyToScreen: LongBool); stdcall;
     ResetSpriteZoom: procedure(); cdecl;
+    RestoreWindow: procedure(WindowInfo1: PWindowInfo1); stdcall;
     ScaleByZoom: function(Value, Zoom: Integer): Integer; cdecl;
+    ScaleWithCityWindowSize: function(CityWindow: PCityWindow; A1: Integer): Integer; stdcall;
     ScreenToMap: function(MapWindow: PMapWindow; var MapX, MapY: Integer; ScreenX, ScreenY: Integer): LongBool; stdcall;
     Scroll_Ctr: function(ControlInfoScroll: PControlInfoScroll): PControlInfoScroll; stdcall;
     SetCurrFont: procedure(A1: PFontInfo); cdecl;
     SetDIBColorTableFromPalette: procedure(DrawInfo: PDrawInfo; Palette: Pointer); cdecl;
-    SetFocusAndBringToTop: procedure(WindowInfo: PWindowInfo); stdcall;
+    SetFocusAndBringToTop: procedure(WindowInfo1: PWindowInfo1); stdcall;
     SetFontColorWithShadow: procedure(A1, A2, A3, A4: Integer); cdecl;
     SetScrollPageSize: procedure(ControlInfoScroll: PControlInfoScroll; PageSize: Integer); stdcall;
     SetScrollPosition: procedure(ControlInfoScroll: PControlInfoScroll; Position: Integer); stdcall;
@@ -159,6 +166,8 @@ type
     SetSpriteZoom: procedure(AZoom: Integer); cdecl;
     SetTextFromLabel: procedure(A1: Integer); cdecl; // A1 + 0x11 = Line # in Labels.txt
     SetTextIntToStr: procedure(A1: Integer); cdecl;
+    SetWinRectCityWindow: procedure(); cdecl;
+    SetWorker: procedure(CityIndex, Worker, Add: Integer); cdecl;
     ShowCityWindow: procedure(CityWindow: PCityWindow; CityIndex: Integer); stdcall;
     ShowWindowInvalidateRect: procedure(ControlInfo: PControlInfo); stdcall;
     sub_401BC7: procedure(A1: PDialogWindow; A2: PChar; A3, A4, A5, A6: Integer); stdcall;
@@ -231,7 +240,7 @@ begin
   FontTimes14b               := Pointer($0063EAB8);
   FontTimes16                := Pointer($006AB1A0);
   FontTimes18                := Pointer($0063EAC0);
-  GameParameters             := Pointer($00655AE8);
+  Game                       := Pointer($00655AE8);
   HumanCivIndex              := Pointer($006D1DA0);
   Improvements               := Pointer($0064C488);
   Leaders                    := Pointer($006554F8);
@@ -270,6 +279,7 @@ begin
   @AfterActiveUnitChanged         := Pointer($004016EF);
   @ArrangeWindows                 := Pointer($004039F4);
   @CalcCityGlobals                := Pointer($00402603);
+  @CalcCityGlobalsTileRes         := Pointer($0040335F);  
   @CallRedrawAfterScroll          := PThisCall($005CD640);
   @CenterView                     := PThisCall($00403404);
   @CityCitizenClicked             := Pointer($0040204A);
@@ -312,6 +322,8 @@ begin
   @GetFontHeightWithExLeading     := PThisCall($00403819);
   @GetInfoOfClickedCitySprite     := PThisCall($00403D00);
   @GetNextUnitInStack             := Pointer($00402E23);
+  @GetPixel                       := PThisCall($005C0BF2);
+  @GetResourceInCityTile          := Pointer($00403968);
   @GetSpecialist                  := Pointer($004013C0);
   @GetSpriteZoom                  := Pointer($005CDA06);
   @GetStringInList                := Pointer($00403387);
@@ -330,7 +342,9 @@ begin
   @MapGetSquare                   := Pointer($00401BB3);
   @MapGetSquareCityRadii          := Pointer($00403A67);
   @MapSquareIsVisibleTo           := Pointer($00403C24);
+  @MapUpdateKnownTerrainFeatures  := Pointer($00402928);
   @MapToWindow                    := PThisCall($0047A6B0);
+  @MapWrapX                       := Pointer($004022ED);
   @MenuBarAddMenu                 := PThisCall($0040117C);
   @MenuBarAddSubMenu              := PThisCall($00402D10);
   @MenuBarGetSubMenu              := PThisCall($004039EF);
@@ -344,7 +358,9 @@ begin
   @RecreateBrush                  := PThisCall($00402045);
   @RedrawMap                      := PThisCall($00401F32);
   @ResetSpriteZoom                := Pointer($004023D3);
+  @RestoreWindow                  := PThisCall($00402C7F);
   @ScaleByZoom                    := Pointer($00401E83);
+  @ScaleWithCityWindowSize        := PThisCall($004016BD);
   @ScreenToMap                    := PThisCall($00402B2B);
   @Scroll_Ctr                     := PThisCall($004031E3);
   @SetCurrFont                    := Pointer($0040233D);
@@ -357,6 +373,8 @@ begin
   @SetSpriteZoom                  := Pointer($00403350);
   @SetTextFromLabel               := Pointer($0040BC10);
   @SetTextIntToStr                := Pointer($00401ED8);
+  @SetWinRectCityWindow           := Pointer($00402A6D);
+  @SetWorker                      := Pointer($00401EF1);  
   @ShowCityWindow                 := PThisCall($00402E78);
   @ShowWindowInvalidateRect       := PThisCall($0040169A);
   @sub_401BC7                     := PThisCall($00401BC7);
@@ -392,6 +410,8 @@ begin
     raise Exception.Create('Wrong size of TDialogWindow');
   if SizeOf(TCityGlobals) <> $140 then
     raise Exception.Create('Wrong size of TCityGlobals');
+  if SizeOf(TGame) <> $14A then
+    raise Exception.Create('Wrong size of TGame');
 end;
 
 destructor TCiv2.Destroy;

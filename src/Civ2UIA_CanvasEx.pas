@@ -80,8 +80,10 @@ function TCanvasEx.ColorFromIndex(Index: Integer): TColor;
 var
   RGBQuad: Cardinal;
 begin
-  GetDIBColorTable(Self.Handle, Index, 1, RGBQuad);
-  Result := TColor(FastSwap(RGBQuad) shr 8);
+  if GetDIBColorTable(Self.Handle, Index, 1, RGBQuad) > 0 then
+    Result := TColor(FastSwap(RGBQuad) shr 8)
+  else
+    Result := clRed;
 end;
 
 function TCanvasEx.SetTextColors(MainColorIndex, ShadowColorIndex: Integer): TCanvasEx;
@@ -206,7 +208,10 @@ end;
 
 function TCanvasEx.PenBR: TCanvasEx;
 begin
-  MoveTo(PenOrigin.X, PenPos.Y + LineHeight);
+  if LineHeight <> 0 then
+    MoveTo(PenOrigin.X, PenPos.Y + LineHeight)
+  else
+    MoveTo(PenOrigin.X, PenPos.Y + TextHeight('8'));
   MaxPen := PenPos;
   Result := Self;
 end;

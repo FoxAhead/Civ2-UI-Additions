@@ -46,8 +46,16 @@ type
     SortedUnitsList: TSortedUnitsList;
   end;
 
+  TCityWindowResourceMap = record
+    ShowTile: Boolean;
+    DX: Integer;
+    DY: Integer;
+    Tile: array[0..2] of Integer;
+  end;
+
   TCityWindowEx = record
     Support: TCityWindowSupport;
+    ResMap: TCityWindowResourceMap;
   end;
 
   TCityGlobalsEx = record
@@ -98,6 +106,7 @@ const
   SHADOW_ALL = $FF;
   IDM_SETTINGS = $A01;
   IDM_ABOUT = $A02;
+  IDM_TEST = $A03;  
   IDA_ARRANGE_S = $329;
   IDA_ARRANGE_L = $32A;
 

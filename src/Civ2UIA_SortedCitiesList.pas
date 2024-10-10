@@ -59,9 +59,9 @@ constructor TSortedCitiesList.Create(CivIndex, SortCriteria: Integer);
 var
   i: Integer;
 begin
-  inherited Create(Civ2.Cities, SizeOf(TCity), Civ2.GameParameters.TotalCities);
+  inherited Create(Civ2.Cities, SizeOf(TCity), Civ2.Game.TotalCities);
   CitiesSortCriteria := SortCriteria;
-  for i := 0 to Civ2.GameParameters.TotalCities - 1 do
+  for i := 0 to Civ2.Game.TotalCities - 1 do
   begin
     if (Civ2.Cities[i].ID <> 0) and (Civ2.Cities[i].Owner = CivIndex) then
     begin

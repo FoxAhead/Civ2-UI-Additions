@@ -68,14 +68,12 @@ end;
 
 procedure TPathLine.SetFromCursor;
 var
-  KeyState: SHORT;
   MousePoint: TPoint;
   WindowHandle: HWND;
   NewUnitIndex: Integer;
   NewCityIndex: Integer;
   NewStartPoint: TPoint;
   NewStopPoint: TPoint;
-  i: Integer;
   Unit1: PUnit;
 begin
   NewUnitIndex := -1;
@@ -90,15 +88,15 @@ begin
     begin
       ScreenToClient(WindowHandle, MousePoint);
       Civ2.ScreenToMap(Civ2.MapWindow, NewStopPoint.X, NewStopPoint.Y, MousePoint.X, MousePoint.Y);
-      if Civ2.MapSquareIsVisibleTo(NewStopPoint.X, NewStopPoint.Y, Civ2.HumanCivIndex^) or Civ2.GameParameters.RevealMap then
+      if Civ2.MapSquareIsVisibleTo(NewStopPoint.X, NewStopPoint.Y, Civ2.HumanCivIndex^) or Civ2.Game.RevealMap then
       begin
         NewStartPoint := Point(Civ2.CursorX^, Civ2.CursorY^);
-        if (Civ2.UnitSelected^) and (Civ2.GameParameters.ActiveUnitIndex >= 0) then
+        if (Civ2.UnitSelected^) and (Civ2.Game.ActiveUnitIndex >= 0) then
         begin
-          Unit1 := @Civ2.Units[Civ2.GameParameters.ActiveUnitIndex];
+          Unit1 := @Civ2.Units[Civ2.Game.ActiveUnitIndex];
           if (Unit1.ID <> 0) and (Unit1.CivIndex = Civ2.HumanCivIndex^) and (Unit1.Orders = -1) then
           begin
-            NewUnitIndex := Civ2.GameParameters.ActiveUnitIndex;
+            NewUnitIndex := Civ2.Game.ActiveUnitIndex;
           end;
         end
         else
@@ -152,16 +150,16 @@ begin
       CopyMemory(SavedMapData, Civ2.MapData^, Size);
       for i := 0 to Civ2.MapHeader.Area - 1 do
       begin
-        Civ2.MapData^^[i].Improvements := (Civ2.MapData^^[i].Improvements or $FE) and Civ2.MapCivData^[CivIndex][i];
+        Civ2.MapData^^[i].TerrainFeatures := (Civ2.MapData^^[i].TerrainFeatures or $FE) and Civ2.MapCivData^[CivIndex][i];
       end;
-      for i := 0 to Civ2.GameParameters.TotalUnits - 1 do
+      for i := 0 to Civ2.Game.TotalUnits - 1 do
       begin
         Unit1 := @Civ2.Units[i];
         if (Unit1.ID <> 0) and ((Unit1.Visibility and (1 shl CivIndex)) = 0) then
         begin
           MapSquare := Civ2.MapGetSquare(Unit1.X, Unit1.Y);
-          if (MapSquare.Improvements and 2) = 0 then
-            MapSquare.Improvements := MapSquare.Improvements and $FE;
+          if (MapSquare.TerrainFeatures and 2) = 0 then
+            MapSquare.TerrainFeatures := MapSquare.TerrainFeatures and $FE;
         end;
       end;
 
@@ -187,7 +185,7 @@ begin
         Y := Y + Civ2.PFDY^[Dir];
         if not Civ2.IsInMapBounds(X, Y) then
           Break;
-        if not (Civ2.MapSquareIsVisibleTo(X, Y, CivIndex) or Civ2.GameParameters.RevealMap) then
+        if not (Civ2.MapSquareIsVisibleTo(X, Y, CivIndex) or Civ2.Game.RevealMap) then
           Break;
         FNodes[0][FCount[0]] := Point(X, Y);
         Inc(FCount[0]);
@@ -236,7 +234,7 @@ begin
           Y := Y + Civ2.PFDY^[Dir];
           if not Civ2.IsInMapBounds(X, Y) then
             Break;
-          if not (Civ2.MapSquareIsVisibleTo(X, Y, CivIndex) or Civ2.GameParameters.RevealMap) then
+          if not (Civ2.MapSquareIsVisibleTo(X, Y, CivIndex) or Civ2.Game.RevealMap) then
             Break;
           FNodes[i][FCount[i]] := Point(X, Y);
           Inc(FCount[i]);

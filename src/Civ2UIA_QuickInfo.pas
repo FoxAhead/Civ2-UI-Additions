@@ -123,7 +123,7 @@ begin
       if (NewCityIndex >= 0) then
       begin
         if (Civ2.Cities[NewCityIndex].Owner = Civ2.HumanCivIndex^)
-          or (Civ2.GameParameters.RevealMap)
+          or (Civ2.Game.RevealMap)
           or (Civ2.Cities[NewCityIndex].Attributes and $400000 <> 0) then
         begin
           NewQuickInfoParts := 1 or 2;
@@ -138,11 +138,11 @@ begin
       // Units Present
       if (NewQuickInfoParts and 2 = 0) then
       begin
-        for i := 0 to Civ2.GameParameters.TotalUnits - 1 do
+        for i := 0 to Civ2.Game.TotalUnits - 1 do
         begin
           Unit1 := @Civ2.Units[i];
           if (Unit1.ID <> 0) and (Unit1.X = NewMapPoint.X) and (Unit1.Y = NewMapPoint.Y) then
-            if (Unit1.CivIndex = Civ2.HumanCivIndex^) or (Civ2.GameParameters.RevealMap) then
+            if (Unit1.CivIndex = Civ2.HumanCivIndex^) or (Civ2.Game.RevealMap) then
             begin
               NewQuickInfoParts := NewQuickInfoParts or 2;
               Break;
@@ -334,7 +334,7 @@ begin
         // Wonders
         WondersCount := 0;
         for i := 0 to 27 do
-          if Civ2.GameParameters.WonderCities[i] = FCityIndex then
+          if Civ2.Game.WonderCities[i] = FCityIndex then
             Inc(WondersCount);
         if WondersCount > 0 then
         begin
@@ -343,7 +343,7 @@ begin
           WondersCount := Ceil(WondersCount / ((WondersCount + MaxWondersInRow - 1) div MaxWondersInRow));
           for i := 0 to 27 do
           begin
-            if Civ2.GameParameters.WonderCities[i] = FCityIndex then
+            if Civ2.Game.WonderCities[i] = FCityIndex then
             begin
               Canvas.CopySprite(@PSprites($645160)^[i + 39], 2, 2);
               Inc(j);

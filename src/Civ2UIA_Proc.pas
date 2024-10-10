@@ -51,6 +51,8 @@ procedure GetCityBuildInfo(CityIndex: Integer; var CityBuildInfo: TCityBuildInfo
 
 function GetTradeConnectionLevel(aCity, i: Integer): Integer;
 
+procedure GetResMapDXDY(X, Y: Integer; var DX, DY: Integer);
+
 implementation
 
 uses
@@ -188,8 +190,6 @@ end;
 // 0x00000020 - 'Never' when Turns <= 0
 // 0x00000100 - Add 'Every' if Turns > 0 (for science)
 function ConvertTurnsToString(Turns: Integer; Options: Cardinal): string;
-var
-  StringIndex: Integer;
 begin
   Result := '';
   if Turns > 0 then
@@ -296,5 +296,38 @@ begin
   end;
 end;
 
-end.
+procedure GetResMapDXDY(X, Y: Integer; var DX, DY: Integer);
+var
+  v11, v10, vX, vY, v15: Integer;
+begin
+  DX := 1000;
+  DY := 1000;
+  v11 := Civ2.ScaleByZoom($40, Civ2.CityWindow.Zoom);
+  v10 := Civ2.ScaleByZoom($20, Civ2.CityWindow.Zoom);
+  vX := X - (Civ2.ScaleWithCityWindowSize(Civ2.CityWindow, 5) + Civ2.CityWindow.RectResources.Left);
+  vY := Y - ((v10 shr 1) + Civ2.ScaleWithCityWindowSize(Civ2.CityWindow, $B) + Civ2.CityWindow.RectResources.Top);
+  if (vX >= 0) and (4 * v11 > vX) and (vY >= 0) and (4 * v10 > vY) then
+  begin
+    DX := 2 * (vX div v11) - 3;
+    DY := 2 * (vY div v10) - 3;
+    vX := vX mod v11;
+    vY := vY mod v10;
 
+    if (vX >= 0) and (vY >= 0) then
+    begin
+      v15 := (Civ2.GetPixel(Pointer($6A9120), vX, vY) - $A) shr 4;
+    end
+    else
+    begin
+      v15 := 0;
+    end;
+
+    if v15 <> 0 then
+    begin
+      DX := DX + PShortIntArray($62833B)[v15];
+      DY := DY + PShortIntArray($628343)[v15];
+    end;
+  end;
+end;
+
+end.
