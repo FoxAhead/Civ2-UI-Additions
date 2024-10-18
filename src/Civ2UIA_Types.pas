@@ -106,7 +106,8 @@ const
   SHADOW_ALL = $FF;
   IDM_SETTINGS = $A01;
   IDM_ABOUT = $A02;
-  IDM_TEST = $A03;  
+  IDM_TEST = $A03;
+  IDM_TEST2 = $A04;    
   IDA_ARRANGE_S = $329;
   IDA_ARRANGE_L = $32A;
 

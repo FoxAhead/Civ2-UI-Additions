@@ -119,9 +119,9 @@ var
 begin
   GraphicsInfo := @Civ2.MapWindow.MSWindow.GraphicsInfo;
   Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.WindowInfo1.Palette);
-  Civ2.UpdateDIBColorTableFromPalette(@GraphicsInfo.DrawPort, GraphicsInfo.WindowInfo.WindowInfo1.Palette);
+  Civ2.DrawPort_UpdateDIBColorTableFromPaletteSafe(@GraphicsInfo.DrawPort, GraphicsInfo.WindowInfo.WindowInfo1.Palette);
   // Also recreate main window brush for background
-  Civ2.RecreateBrush(Civ2.MainWindowInfo, $9E);
+  Civ2.WindowInfo1_RecreateBrush(Civ2.MainWindowInfo, $9E);
   // Also set new palette for map overlay - to be consistent with the game look
   Ex.MapOverlay.SetDIBColorTableFromPalette(GraphicsInfo.WindowInfo.WindowInfo1.Palette);
   // Redraw main window with all subwindows

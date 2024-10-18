@@ -98,7 +98,7 @@ var
   Numerator, Denominator: Integer;
   A1, A2: Integer;
 begin
-  Civ2.GetSpriteZoom(Numerator, Denominator);
+  Civ2.GetSpriteRatios(Numerator, Denominator);
   A1 := Numerator shl 16 div Denominator;
   A2 := (Zoom + 8) shl 13;
   if A1 <> A2 then
@@ -114,7 +114,7 @@ var
 begin
   if FDrawPort <> nil then
   begin
-    Civ2.CopySprite(Sprite, @R, FDrawPort, PenPos.X + DX, PenPos.Y + DY);
+    Civ2.Sprite_CopyToPortNC(Sprite, @R, FDrawPort, PenPos.X + DX, PenPos.Y + DY);
     PenDX(RectWidth(R) + DX);
   end;
   Result := Self;

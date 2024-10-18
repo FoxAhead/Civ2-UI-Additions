@@ -162,13 +162,13 @@ var
   i: Integer;
   ColorGray: Integer;
 begin
-  Civ2.DrawPort_Reset(@FDrawPort, RectWidth(FRect), RectHeight(FRect));
+  Civ2.DrawPort_ResetWH(@FDrawPort, RectWidth(FRect), RectHeight(FRect));
   Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.Palette);
 
   if FBgTile.DrawInfo = nil then
   begin
     BgTile := PDrawPort($00640990);
-    Civ2.DrawPort_Reset(@FBgTile, BgTile.Width, BgTile.Height);
+    Civ2.DrawPort_ResetWH(@FBgTile, BgTile.Width, BgTile.Height);
     Civ2.CopyToPort(BgTile, @FBgTile, 0, 0, 0, 0, BgTile.Width, BgTile.Height);
     for i := 0 to FBgTile.DrawInfo.BmWidth4 * FBgTile.DrawInfo.Height - 1 do
     begin
@@ -280,7 +280,7 @@ begin
       Canvas.PenOrigin := Point(3, 3);
       Canvas.PenReset();
       Canvas.LineHeight := 18;
-      Canvas.Font.Handle := CopyFont(Civ2.FontTimes14b^.Handle^^);
+      Canvas.Font.Handle := CopyFont(Civ2.FontTimes14b.FontDataHandle);
       //Canvas.Font.Name := 'Arial';
       Canvas.Font.Size := 11;
       Canvas.Brush.Style := bsClear;

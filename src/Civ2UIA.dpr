@@ -47,7 +47,8 @@ uses
   Civ2UIA_MapOverlayModule in 'Civ2UIA_MapOverlayModule.pas',
   Civ2UIA_MapMessages in 'Civ2UIA_MapMessages.pas',
   Civ2UIA_PatchCDCheck in 'Civ2UIA_PatchCDCheck.pas',
-  Civ2UIA_FormTest in 'Civ2UIA_FormTest.pas' {FormTest};
+  Civ2UIA_FormTest in 'Civ2UIA_FormTest.pas' {FormTest},
+  Tests in 'Tests.pas';
 
 {$R *.res}
 
@@ -829,14 +830,12 @@ begin
   end;
 end;
 
-function PatchDrawUnit(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer): Integer; cdecl;
+procedure PatchDrawUnitEx(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer); stdcall;
 var
   Canvas: TCanvasEx;
   UnitType: Byte;
   TextOut: string;
 begin
-  Result := 0;
-  Civ2.DrawUnit(DrawPort, UnitIndex, A3, Left, Top, Zoom, WithoutFortress);
   if (UnitIndex < 0) or (UnitIndex > High(Civ2.Units^)) then
     Exit;
   UnitType := Civ2.Units^[UnitIndex].UnitType;
@@ -869,6 +868,20 @@ begin
   Canvas.Free;}
 end;
 
+procedure PatchDrawUnit(); register;
+asm
+    push  [ebp + $20] // WithoutFortress
+    push  [ebp + $1C] // Zoom
+    push  [ebp + $18] // Top
+    push  [ebp + $14] // Left
+    push  [ebp + $10] // A3
+    push  [ebp + $0C] // UnitIndex
+    push  [ebp + $08] // DrawPort
+    call  PatchDrawUnitEx
+    push  $0056C5ED
+    ret
+end;    
+
 procedure PatchDrawSideBarEx; stdcall;
 var
   TextOut: string;
@@ -877,7 +890,7 @@ begin
   TextOut := Format('%s %d', [GetLabelString($2D), Civ2.Game.Turn]); // 'Turn'
   StrCopy(Civ2.ChText, PChar(TextOut));
   Top := Civ2.SideBarClientRect^.Top + (Civ2.SideBar.FontInfo.Height - 1) * 2;
-  Civ2.DrawStringRight(Civ2.ChText, Civ2.SideBarClientRect^.Right, Top, 0);
+  Civ2.DrawStringRightCurrDrawPort2(Civ2.ChText, Civ2.SideBarClientRect^.Right, Top, 0);
 end;
 
 procedure PatchDrawSideBar; register;
@@ -901,12 +914,12 @@ begin
     Exit;
   Beakers := Civ2.Civs[CivIndex].Beakers;
   TextOut := Format('%d + %d / %d', [Beakers, TotalScience, AdvanceCost]);
-  FontHeight := Civ2.GetFontHeightWithExLeading(Civ2.FontTimes18);
+  FontHeight := Civ2.FontInfo_GetHeightWithExLeading(Civ2.FontTimes18);
   X := Civ2.AdvisorWindow.MSWindow.RectClient.Left + 5;
   Y := Civ2.AdvisorWindow.MSWindow.ClientTopLeft.Y + 2;
   Y := Y + FontHeight * 4 + 6 + 9;
   Canvas := TCanvasEx.Create(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.DrawPort);
-  Canvas.Font.Handle := CopyFont(Civ2.FontTimes14b^.Handle^^);
+  Canvas.Font.Handle := CopyFont(Civ2.FontTimes14b.FontDataHandle);
   Canvas.Brush.Style := bsClear;
   Canvas.SetTextColors(41, 18);
   Canvas.FontShadows := SHADOW_BR;
@@ -978,23 +991,24 @@ var
   Text: array[0..255] of Char;
   P: PChar;
 begin
-  Civ2.MenuBarAddMenu(Civ2.MenuBar, $A, '&UI Additions');
-  Civ2.MenuBarAddSubMenu(Civ2.MenuBar, $A, IDM_SETTINGS, '&Settings...', 0);
-  Civ2.MenuBarAddSubMenu(Civ2.MenuBar, $A, 0, nil, 0);
-  Civ2.MenuBarAddSubMenu(Civ2.MenuBar, $A, IDM_ABOUT, '&About...', 0);
-  //Civ2.MenuBarAddSubMenu(Civ2.MenuBar, $A, IDM_TEST, '&Test...', 0);
+  Civ2.MenuBar_AddMenu(Civ2.MenuBar, $A, '&UI Additions');
+  Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, IDM_SETTINGS, '&Settings...', 0);
+  Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, 0, nil, 0);
+  Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, IDM_ABOUT, '&About...', 0);
+  //Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, IDM_TEST, '&Test...', 0);
+  Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, IDM_TEST2, '&Test2...', 0);
 
-  MenuArrange := Civ2.MenuBarGetSubMenu(Civ2.MenuBar, $328);
+  MenuArrange := Civ2.MenuBar_GetSubMenu(Civ2.MenuBar, $328);
   if MenuArrange <> nil then
   begin
     StrCopy(Text, MenuArrange.Text);
     StrCat(Text, ' S');
     P := StrEnd(Text) - 1;
-    Civ2.MenuBarAddSubMenu(Civ2.MenuBar, 3, 0, nil, 0);
-    MenuArrangeS := Civ2.MenuBarAddSubMenu(Civ2.MenuBar, 3, IDA_ARRANGE_S, Text, 0);
+    Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, 3, 0, nil, 0);
+    MenuArrangeS := Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, 3, IDA_ARRANGE_S, Text, 0);
     MoveMenu(MenuArrange, MenuArrangeS, False);
     P^ := 'L';
-    MenuArrangeL := Civ2.MenuBarAddSubMenu(Civ2.MenuBar, 3, IDA_ARRANGE_L, Text, 0);
+    MenuArrangeL := Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, 3, IDA_ARRANGE_L, Text, 0);
   end;
 end;
 
@@ -1016,6 +1030,8 @@ begin
       ShowFormAbout();
     IDM_TEST:
       ShowFormTest();
+    IDM_TEST2:
+      Test2();
     IDA_ARRANGE_S:
       begin
         ArrangeWindowMiniMapWidth := 185;
@@ -1305,7 +1321,7 @@ begin
   CityWindowEx.Support.Columns := Columns;
   Civ2.InitControlScrollRange(@CityWindowEx.Support.ControlInfoScroll, 0, Math.Max(0, (SupportedUnits - 1) div Columns) - Rows + 1);
   Civ2.SetScrollPageSize(@CityWindowEx.Support.ControlInfoScroll, 4);
-  Civ2.SetScrollPosition(@CityWindowEx.Support.ControlInfoScroll, CityWindowEx.Support.ListStart);
+  Civ2.ControlInfoScroll_SetScrollPosition(@CityWindowEx.Support.ControlInfoScroll, CityWindowEx.Support.ListStart);
   if SupportedUnits <= Rows * Columns then
     ShowWindow(CityWindowEx.Support.ControlInfoScroll.ControlInfo.HWindow, SW_HIDE);
 end;
@@ -1778,7 +1794,7 @@ begin
   Canvas.PenOrigin := Point(CityWindow.RectResourceMap.Left + 1, CityWindow.RectResourceMap.Top);
   Canvas.PenReset();
   Canvas.SetSpriteZoom(4 * CityWindow.WindowSize - 8);
-  Canvas.Font.Handle := CopyFont(CityWindow.FontInfo.Handle^^);
+  Canvas.Font.Handle := CopyFont(CityWindow.FontInfo.FontDataHandle);
   Canvas.Brush.Style := bsClear;
   Canvas.SetTextColors(124, 57);
   Canvas.FontShadows := SHADOW_BR;
@@ -1858,7 +1874,7 @@ begin
     begin
       StrCat(Civ2.ChText, '+');
     end;
-    Civ2.DrawString(Civ2.ChText, X, Y);
+    Civ2.DrawStringCurrDrawPort2(Civ2.ChText, X, Y);
   end;
 end;
 
@@ -1880,7 +1896,6 @@ var
   DX, DY: Integer;
   SpiralIndex, i: Integer;
 begin
-  CityWindowEx.ResMap.ShowTile := False;
   GetResMapDXDY(X, Y, DX, DY);
   if (CityWindowEx.ResMap.DX <> DX) or (CityWindowEx.ResMap.DY <> DY) then
   begin
@@ -1926,7 +1941,7 @@ begin
   GetCityBuildInfo(CityWindow.CityIndex, CityBuildInfo);
   Text := ConvertTurnsToString(CityBuildInfo.TurnsToBuild, $21);
   Canvas := TCanvasEx.Create(@CityWindow.MSWindow.GraphicsInfo.DrawPort);
-  Canvas.Font.Handle := CopyFont(CityWindow.FontInfo.Handle^^);
+  Canvas.Font.Handle := CopyFont(CityWindow.FontInfo.FontDataHandle);
   Canvas.Brush.Style := bsClear;
   Canvas.SetTextColors(74, 10);
   Canvas.FontShadows := SHADOW_ALL;
@@ -2080,7 +2095,7 @@ begin
   if Civ2.AdvisorWindow.AdvisorType > 0 then
   begin
     // Then focus and bring it to top
-    Civ2.SetFocusAndBringToTop(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1);
+    Civ2.WindowInfo1_SetFocusAndBringToTop(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1);
   end;
 end;
 
@@ -2533,9 +2548,10 @@ begin
       Rect.Right := Dialog.ClientSize.cx - 9;
       Rect.Bottom := Dialog.ClientSize.cy - 45;
       Dialog.ScrollControls1[0] := Civ2.Scroll_Ctr(Civ2.Crt_OperatorNew(SizeOf(TControlInfoScroll)));
+
       Civ2.CreateScrollbar(Dialog.ScrollControls1[0], @Dialog.GraphicsInfo.WindowInfo, $0B, @Rect, 1);
       Civ2.InitControlScrollRange(Dialog.ScrollControls1[0], 0, Dialog.NumListItems - 1);
-      Civ2.SetScrollPosition(Dialog.ScrollControls1[0], 0);
+      Civ2.ControlInfoScroll_SetScrollPosition(Dialog.ScrollControls1[0], 0);
       Civ2.SetScrollPageSize(Dialog.ScrollControls1[0], Dialog._Extra.ListPageSize);
 
       ZeroMemory(@ScrollInfo, SizeOf(ScrollInfo));
@@ -2589,7 +2605,7 @@ begin
       ScrollInfo.nPos := Dialog._Extra.ListPageStart;
       Dialog._Extra.ListPageStart := SetScrollInfo(Dialog.ScrollControls1[0].ControlInfo.HWindow, SB_CTL, ScrollInfo, True);
       // Draw list items
-      FontHeight := Civ2.GetFontHeightWithExLeading(Dialog.FontInfo1);
+      FontHeight := Civ2.FontInfo_GetHeightWithExLeading(Dialog.FontInfo1);
       Civ2.SetSpriteZoom(Dialog.Zoom);
       ListItemX := Dialog.ListTopLeft.X;
       ListItemY := Dialog.ListTopLeft.Y;
@@ -2611,7 +2627,7 @@ begin
             Civ2.DrawFrame(@Dialog.GraphicsInfo.DrawPort, @R, Dialog.Color4);
           end;
           if ListItem.Text <> nil then
-            Civ2.DlgDrawTextLine(Dialog, ListItem.Text, ListItemX + SpriteW + Dialog.TextIndent, ListItemY + ((SpriteH - FontHeight) div 2), 0);
+            Civ2.Dlg_DrawTextLine(Dialog, ListItem.Text, ListItemX + SpriteW + Dialog.TextIndent, ListItemY + ((SpriteH - FontHeight) div 2), 0);
           ListItemY := ListItemY + SpriteH + Dialog.LineSpacing;
         end
         else
@@ -2727,13 +2743,13 @@ begin
       SLS.Text := StringReplace(SLT[i], ':', #13#10, [rfReplaceAll]);
       Sprite := PSprite(StrToInt('$' + SLS[0]) + StrToInt(SLS[1]) * SizeOf(TSprite));
       DY := (AECX.FontInfo3.Height + 1 - Sprite.Rectangle2.Bottom) div 2;
-      Civ2.CopySprite(Sprite, @R, @AECX.GraphicsInfo^.DrawPort, X, ATop + DY);
+      Civ2.Sprite_CopyToPortNC(Sprite, @R, @AECX.GraphicsInfo^.DrawPort, X, ATop + DY);
       X := X + Sprite.Rectangle2.Right;
     end
     else
     begin
-      Civ2.sub_401BC7(AECX, PChar(SLT[i]), X, ATop, ASelected, ADisabled);
-      X := X + Civ2.GetTextExtentX(AECX.FontInfo3, PChar(SLT[i]));
+      Civ2.Dlg_DrawListboxItemTextPart(AECX, PChar(SLT[i]), X, ATop, ASelected, ADisabled);
+      X := X + Civ2.FontInfo_GetTextExtentX(AECX.FontInfo3, PChar(SLT[i]));
     end;
   end;
   SLS.Free();
@@ -2755,12 +2771,12 @@ begin
         Sprite := PSprite(StrToInt('$' + SLS[0]) + StrToInt(SLS[1]) * SizeOf(TSprite));
         X := X - Sprite.Rectangle2.Right;
         DY := (AECX.FontInfo3.Height + 1 - Sprite.Rectangle2.Bottom) div 2;
-        Civ2.CopySprite(Sprite, @R, @AECX.GraphicsInfo^.DrawPort, X, ATop + DY);
+        Civ2.Sprite_CopyToPortNC(Sprite, @R, @AECX.GraphicsInfo^.DrawPort, X, ATop + DY);
       end
       else
       begin
-        X := X - Civ2.GetTextExtentX(AECX.FontInfo3, PChar(SLT[i]));
-        Civ2.sub_401BC7(AECX, PChar(SLT[i]), X, ATop, ASelected, ADisabled);
+        X := X - Civ2.FontInfo_GetTextExtentX(AECX.FontInfo3, PChar(SLT[i]));
+        Civ2.Dlg_DrawListboxItemTextPart(AECX, PChar(SLT[i]), X, ATop, ASelected, ADisabled);
       end;
     end;
     SLS.Free();
@@ -2805,7 +2821,7 @@ begin
     Inc(i);
   end;
   Text1[j] := #00;
-  Result := Civ2.GetTextExtentX(FontInfo, Text1);
+  Result := Civ2.FontInfo_GetTextExtentX(FontInfo, Text1);
 end;
 
 procedure PatchDlgAddListboxItemGetTextExtentX(); register;
@@ -2961,7 +2977,7 @@ begin
     Civ2.ShowCityWindow(Civ2.CityWindow, AdvisorWindowEx.SortedCitiesList.GetIndexIndex(ListIndex));
     if X > 370 then
     begin
-      Civ2.Citywin_CityButtonChange(0);
+      Civ2.CitywinCityButtonChange(0);
       Civ2.CityWindowExit();
     end;
   end
@@ -3022,7 +3038,7 @@ begin
   begin
     MSWindow := @Civ2.AdvisorWindow.MSWindow;
     AdvisorWindowEx.MouseOver := Point(Part, ListIndex);
-    Civ2.CopyToScreenAndValidate(@MSWindow.GraphicsInfo);
+    Civ2.GraphicsInfo_CopyToScreenAndValidateW(@MSWindow.GraphicsInfo);
     if (ListIndex >= 0) and (Part = 2) then
     begin
       Row := ListIndex - Civ2.AdvisorWindow.ScrollPosition;
@@ -3085,7 +3101,7 @@ begin
     Civ2.SetCurrFont(Pointer($0063EAB8)); // j_Q_SetCurrFont_sub_5BAEC8(&V_FontTimes14b_stru_63EAB8);
     Civ2.SetFontColorWithShadow($25, $12, -1, -1);
     Text := Format('%s: %d', [GetLabelString($C5), Cities]);
-    Civ2.DrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 12, Y1 - 3, 0);
+    Civ2.DrawStringRightCurrDrawPort2(PChar(Text), MSWindow.ClientSize.cx - 12, Y1 - 3, 0);
     // SORT ARROWS
     Canvas := TCanvasEx.Create(DrawPort);
     Canvas.Brush.Color := Canvas.ColorFromIndex(34);
@@ -3142,7 +3158,7 @@ begin
 
       Y2 := Y1 + 9;
       X1 := MSWindow.ClientTopLeft.X + 130;
-      Civ2.DrawString(City.Name, X1, Y2);
+      Civ2.DrawStringCurrDrawPort2(City.Name, X1, Y2);
 
       Improvements[0] := 1;               // Palace
       Improvements[1] := 32;              // Airport
@@ -3152,7 +3168,7 @@ begin
       begin
         if Civ2.CityHasImprovement(CityIndex, Improvements[j]) then
         begin
-          Civ2.CopySprite(@PSprites($645160)^[Improvements[j]], @R, DrawPort, X2, Y2 + 4);
+          Civ2.Sprite_CopyToPortNC(@PSprites($645160)^[Improvements[j]], @R, DrawPort, X2, Y2 + 4);
           X2 := X2 - 19;
         end;
       end;
@@ -3180,8 +3196,8 @@ begin
               DX := -1;
             end;
         end;
-        Civ2.DrawStringRight(PChar(Text), X2, Y2, DX);
-        Civ2.CopySprite(@Civ2.SprRes[2 * j + 1], @R, DrawPort, X2, Y2 + 2);
+        Civ2.DrawStringRightCurrDrawPort2(PChar(Text), X2, Y2, DX);
+        Civ2.Sprite_CopyToPortNC(@Civ2.SprRes[2 * j + 1], @R, DrawPort, X2, Y2 + 2);
         X2 := X2 + 42;
       end;
       //
@@ -3197,7 +3213,7 @@ begin
         end;
         Cost := Civ2.Improvements[Building].Cost;
         Civ2.SetSpriteZoom(-2);
-        Civ2.CopySprite(@PSprites($645160)^[-City.Building], @R, DrawPort, X2, Y2 + 2);
+        Civ2.Sprite_CopyToPortNC(@PSprites($645160)^[-City.Building], @R, DrawPort, X2, Y2 + 2);
         Civ2.ResetSpriteZoom();
         X2 := X2 + RectWidth(R) + 1;
       end
@@ -3208,7 +3224,7 @@ begin
         Text := string(Civ2.GetStringInList(Civ2.UnitTypes[Building].StringIndex)) + ' ';
         Cost := Civ2.UnitTypes[Building].Cost;
         Civ2.SetSpriteZoom(-2);
-        Civ2.CopySprite(@PSprites($641848)^[City.Building], @R, DrawPort, X2 - 10, Y2 - 8);
+        Civ2.Sprite_CopyToPortNC(@PSprites($641848)^[City.Building], @R, DrawPort, X2 - 10, Y2 - 8);
         Civ2.ResetSpriteZoom();
         X2 := X2 + 28;
       end;
@@ -3217,10 +3233,10 @@ begin
       Civ2.CalcCityGlobals(CityIndex, True);
       TurnsToBuild := GetTurnsToBuild2(RealCost, City.BuildProgress);
 
-      X2 := Civ2.DrawString(PChar(Text), X2, Y2) + 4;
+      X2 := Civ2.DrawStringCurrDrawPort2(PChar(Text), X2, Y2) + 4;
       Text := Format('%s (%d/%d)', [ConvertTurnsToString(TurnsToBuild, $20), City.BuildProgress, RealCost]);
       Civ2.SetFontColorWithShadow($21, $12, -1, -1);
-      Civ2.DrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 12, Y2, 0);
+      Civ2.DrawStringRightCurrDrawPort2(PChar(Text), MSWindow.ClientSize.cx - 12, Y2, 0);
 
       AdvisorWindowEx.MouseOver.Y := -2;
 
@@ -3458,12 +3474,11 @@ begin
     Canvas.Font.Name := 'MS Sans Serif';
     Canvas.Font.Size := 8;
     Canvas.Brush.Style := bsClear;
-    Canvas.SetTextColors(10, 31);
+    //Canvas.SetTextColors(10, 31); Doesn't work because drawing directly to screen DC
     Canvas.MoveTo(R.Right - 10, 10);
     Canvas.TextOutWithShadows(TextOut, 0, 0, DT_RIGHT);
     Canvas.Free();
   end;
-
   EndPaint(AHWnd, APaint);
 end;
 
@@ -3560,7 +3575,7 @@ begin
   begin
     X := 1 + (i mod 9) * 65;
     Y := 1 + (i div 9) * 49;
-    Civ2.DisposeSprite(@Ex.UnitSpriteSentry[i]);
+    Civ2.Sprite_Dispose(@Ex.UnitSpriteSentry[i]);
     Civ2.ExtractSprite64x48(@Ex.UnitSpriteSentry[i], X, Y);
   end;
 
@@ -3631,7 +3646,7 @@ begin
     end;
   end;
 
-  Civ2.DrawPort_Reset(DrawPort, 0, 0);
+  Civ2.DrawPort_ResetWH(DrawPort, 0, 0);
 end;
 
 procedure PatchLoadSpritesUnits(); register;
@@ -3649,7 +3664,7 @@ begin
   UnitType := (Integer(AECX) - $641848) div SizeOf(TSprite);
   //Ex.GenerateUnitSpriteSentry();
   //Civ2.CopySprite(AECX, ARect, DrawPort, ALeft, ATop);
-  Civ2.CopySprite(@Ex.UnitSpriteSentry[UnitType], ARect, DrawPort, ALeft, ATop);
+  Civ2.Sprite_CopyToPortNC(@Ex.UnitSpriteSentry[UnitType], ARect, DrawPort, ALeft, ATop);
 end;
 
 procedure PatchDrawUnitVeteranBadgeEx(DrawPort: PDrawPort; UnitIndex: Integer; R: PRect); stdcall;
@@ -3905,7 +3920,7 @@ begin
   AdvanceCost := Civ2.GetAdvanceCost(TaxWindow.CivIndex);
 
   Canvas := TCanvasEx.Create(@TaxWindow.MSWindow.GraphicsInfo.DrawPort);
-  Canvas.Font.Handle := CopyFont(Civ2.FontTimes16.Handle^^);
+  Canvas.Font.Handle := CopyFont(Civ2.FontTimes16.FontDataHandle);
   Canvas.Brush.Style := bsClear;
   Canvas.SetTextColors(37, 18);
   Xc := (TaxWindow.x0 + TaxWindow.ScrollW) div 2;
@@ -3922,7 +3937,7 @@ begin
   Canvas.TextOutWithShadows(Text, 0, 0, DT_CENTER);
   Canvas.Free();
 
-  Civ2.CopyToScreenAndValidate(@TaxWindow.MSWindow.GraphicsInfo);
+  Civ2.GraphicsInfo_CopyToScreenAndValidateW(@TaxWindow.MSWindow.GraphicsInfo);
 
   // Update advisors
   //TaxRate := Civ2.Civs[TaxWindow.CivIndex].TaxRate;
@@ -4025,7 +4040,7 @@ end;
 procedure PatchMenuExecLoadGameEx(); register;
 begin
   Civ2.SetWinRectCityWindow();
-  Civ2.RestoreWindow(@Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1);
+  Civ2.WindowInfo1_RestoreWindow(@Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1);
 end;
 
 procedure PatchMenuExecLoadGame(); register;
@@ -4082,7 +4097,7 @@ end;
 
 procedure PatchWarningCITYMODALEx(); stdcall;
 begin
-  Civ2.SetFocusAndBringToTop(@Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1);
+  Civ2.WindowInfo1_SetFocusAndBringToTop(@Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1);
 end;
 
 procedure PatchWarningCITYMODAL(); register;
@@ -4112,7 +4127,7 @@ begin
     WriteMemory(HProcess, $005EACDE, [], @PatchWindowProc1);
     WriteMemory(HProcess, $00501940, [], @PatchCallChangeSpecialist);
     WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
-    WriteMemory(HProcess, $00402C4D, [OP_JMP], @PatchDrawUnit);
+    WriteMemory(HProcess, $0056C5E8, [OP_JMP], @PatchDrawUnit);
     WriteMemory(HProcess, $0056954A, [OP_JMP], @PatchDrawSideBar);
     WriteMemory(HProcess, $0042B52C, [OP_JMP], @PatchUpdateAdvisorScience); // Science Advisor: show numbers
 

@@ -25,6 +25,8 @@ type
 
   PWindowInfo = ^TWindowInfo;
 
+  PFontData = ^TFontData;
+
   PFontInfo = ^TFontInfo;
 
   PControlBlock = ^TControlBlock;
@@ -146,6 +148,8 @@ type
     Text: PChar;
     Num: Integer;
     Flags: Cardinal;
+    // 0x00000002 - 
+    // 0x00000004 - Checked
     SubCount: Integer;
     Next: PMenu;
     Prev: PMenu;
@@ -157,11 +161,12 @@ type
     Heap: THeap;
     Unknown_16: Word;
     Flags: Cardinal;
+    // 0x00008000 - 
     FirstMenu: PMenu;
   end;
 
   TMenuInfo = packed record
-    WindowInfo: PWindowInfo;
+    WindowInfo1: PWindowInfo1;
     MenuBar: PMenuBar;
     Proc: Pointer;
   end;
@@ -191,6 +196,9 @@ type
     VScrollPos: Integer;                  // + 0xB4
   end;
 
+  // TODO: Rename
+  // TWindowInfo1 -> TWindowInfo
+  // TWindowInfo -> TWindowInfoCtrl (possibliy Control window info)
   TWindowInfo = packed record             // Size = 0xC5
     WindowInfo1: TWindowInfo1;
     ControlInfo: PControlInfo;            // + 0xB8
@@ -384,6 +392,7 @@ type
     // 0x00004000 - Without background
     // 0x00010000 - System popup
     // 0x00040000 - System listbox
+    // 0x00800000 - Sorted listbox
     // 0x01000000 - Force scrollbar for listbox
     // 0x02000000 - Without Ok button (StdType = 0)
     ClientSize: TSize;
@@ -613,12 +622,13 @@ type
     // 0x00000800 - Style |= WS_POPUP
   end;
 
-  PHFONT = ^HFONT;
-
-  PPHFONT = ^PHFONT;
+  TFontData = packed record
+    FontHandle: HFONT;
+    Unknown_4: Integer;
+  end;
 
   TFontInfo = packed record
-    Handle: PPHFONT;
+    FontDataHandle: HGLOBAL;
     Height: Longint;
   end;
 
@@ -927,10 +937,27 @@ type
     // 0x0080 - Bloodlust (No spaceships allowed)
     // 0x0100 - Don't Restart Eliminated Players
     GraphicAndGameOptions: Integer;
-    // 0x0020 - Show Map Grid
-    // 0x0100 - Tutorial help.
-    // 0x1000 - Show enemy moves.
-    // 0x4000 - Always wait at end of turn.
+    // Game Options
+    // 0x00000008 - Music
+    // 0x00000010 - Sound Effects
+    // 0x00000020 - Show Map Grid
+    // 0x00000040 - ENTER key closes City Screen.
+    // 0x00000080 - Move units w/ mouse (cursor arrows).
+    // 0x00000100 - Tutorial help.
+    // 0x00000200 - Instant advice.
+    // 0x00000400 - Fast piece slide.
+    // 0x00000800 - No pause after enemy moves.
+    // 0x00001000 - Show enemy moves.
+    // 0x00002000 - Autosave each turn.
+    // 0x00004000 - Always wait at end of turn.
+    // 0x00008000 - Cheat mode
+    // Graphic Options
+    // 0x00010000 - Wonder Movies
+    // 0x00020000 - Throne Room
+    // 0x00040000 - Diplomacy Screen
+    // 0x00080000 - Civilopedia for Advances
+    // 0x00100000 - High Council
+    // 0x00200000 - Animated Heralds (Requires 16 megabytes RAM)
     word_655AEE: Word;
     MapFlags: Word;
     // 0x0002 - ?Finished
@@ -1047,6 +1074,10 @@ type
     // 1100 0000 - Tribe 6
     // 1110 0000 - Tribe 7
     MassIndex: Byte;
+    // This simply gives every different body of land and every body of water a separate number.
+    // Counting starts at the top-left corner and procedes from left to right and from top to bottom.
+    // Water bodies of less than 9 squares always have number 63, but do count towards the total.
+    // Both the land and water counters start counting at one. (c) HEX-EDITING SAVED GAMES (hexedit.rtf)
     Visibility: Byte;
     // 0000 0000 - Unexplored by all
     // 0000 0001 - Visible to tribe 0
@@ -1098,7 +1129,7 @@ type
 
   TUnitType = packed record               // Size = 0x14
     StringIndex: Cardinal;
-    Flags: Cardinal;
+    Abilities: Cardinal;
     // 0000 0000 0000 0001 - 0x0001 Two space visibility
     // 0000 0000 0000 0010 - 0x0002 Ignore zones of control
     // 0000 0000 0000 0100 - 0x0004 Can make amphibious assaults

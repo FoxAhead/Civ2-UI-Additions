@@ -31,7 +31,7 @@ function RectHeight(const R: TRect): Integer;
 
 procedure OffsetPoint(var Point: TPoint; DX, DY: Integer);
 
-function CopyFont(SourceFont: HFONT): HFONT;
+function CopyFont(SourceFontDataHandle: HGLOBAL): HFONT;
 
 function GetLabelString(StringIndex: Integer): string;
 
@@ -151,13 +151,16 @@ begin
   Point.Y := Point.Y + DY;
 end;
 
-function CopyFont(SourceFont: HFONT): HFONT;
+function CopyFont(SourceFontDataHandle: HGLOBAL): HFONT;
 var
-  LFont: LOGFONT;
+  LogFont: TLogFont;
+  FontData: PFontData;
 begin
-  ZeroMemory(@LFont, SizeOf(LFont));
-  GetObject(SourceFont, SizeOf(LFont), @LFont);
-  Result := CreateFontIndirect(LFont);
+  ZeroMemory(@LogFont, SizeOf(LogFont));
+  FontData := GlobalLock(SourceFontDataHandle);
+  GetObject(FontData.FontHandle, SizeOf(LogFont), @LogFont);
+  GlobalUnlock(SourceFontDataHandle);
+  Result := CreateFontIndirect(LogFont);
 end;
 
 function GetLabelString(StringIndex: Integer): string;
@@ -302,6 +305,7 @@ var
 begin
   DX := 1000;
   DY := 1000;
+  // Code from Q_CityResourcesClicked_sub_5022C0
   v11 := Civ2.ScaleByZoom($40, Civ2.CityWindow.Zoom);
   v10 := Civ2.ScaleByZoom($20, Civ2.CityWindow.Zoom);
   vX := X - (Civ2.ScaleWithCityWindowSize(Civ2.CityWindow, 5) + Civ2.CityWindow.RectResources.Left);
@@ -329,5 +333,119 @@ begin
     end;
   end;
 end;
+
+{
+procedure GetCaravanDeliveryRevenue(aUnitIndex: Integer; aCityIndex: Integer);
+var
+  vFreight: Integer;
+  vCivIndexF, vCivIndexT, vCityIndexF, vRevenue, vMassIndexT, vMassIndexF, vCommodity, vDemandBonus, vAdvanceCost, vMaxRevenue, vRandomMin: Integer;
+  i: Integer;
+begin
+  with Civ2 do
+  begin
+    // Code from Q_CaravanArrives_sub_440750
+    vFreight := 0;
+    vCivIndexF := Units[aUnitIndex].CivIndex;
+    vCivIndexT := Cities[aCityIndex].Owner;
+
+    if (Units[aUnitIndex].HomeCity = $FF) then
+      vCityIndexF := $FFFFFFFF
+    else
+      vCityIndexF := Units[aUnitIndex].HomeCity;
+
+    if (vCityIndexF < 0) then
+    begin
+      vCityIndexF := sub_4023C9(Units[aUnitIndex].X, Units[aUnitIndex].Y, vCivIndexF, $FFFFFFFF, $FFFFFFFF);
+      if (vCityIndexF < 0) then
+        vCityIndexF := 0;
+    end;
+
+    vRevenue := Distance(Cities[aCityIndex].X, Cities[aCityIndex].Y, Cities[vCityIndexF].X, Cities[vCityIndexF].Y);
+
+    if (Game.MapFlags and 4 <> 0) then
+      vRevenue := 4 * vRevenue div 5;
+
+    if (Game.MapFlags and 8 <> 0) then
+      vRevenue := 5 * vRevenue div 4;
+
+    vRevenue := (vRevenue + 10) * (Cities[aCityIndex].BaseTrade + Cities[vCityIndexF].BaseTrade) div 24;
+
+    vMassIndexT := MapGetMassIndex(Cities[aCityIndex].X, Cities[aCityIndex].Y);
+    vMassIndexF := MapGetMassIndex(Cities[vCityIndexF].X, Cities[vCityIndexF].Y);
+
+    if (vMassIndexF <> vMassIndexT) then
+      vRevenue := vRevenue * 2;
+
+    if (vCivIndexF = vCivIndexT) then
+      vRevenue := vRevenue shr 1;
+
+    vCommodity := Units[aUnitIndex].Counter;
+
+    if (Units[aUnitIndex].UnitType = $31) then // Freight
+    begin
+      vRevenue := vRevenue + (vRevenue shr 1);
+      vFreight := 1;
+    end;
+
+    v11 := j_Q_PFFindConnection_sub_488A45(vCivIndexF, Cities[aCityIndex].X, Cities[aCityIndex].Y, Cities[vCityIndexF].X, Cities[vCityIndexF].Y);
+
+    if j_Q_CityHasImprovement_sub_43D20A(aCityIndex, $20) then
+    begin
+      if j_Q_CityHasImprovement_sub_43D20A(vCityIndexF, $20) then
+      begin
+        if (vMassIndexF = vMassIndexT) then
+          Inc(v11)
+        else
+          v11 := v11 + 2;
+      end;
+    end;
+
+    if j_Q_CityHasImprovement_sub_43D20A(aCityIndex, $19) then
+      Inc(v11);
+
+    if j_Q_CityHasImprovement_sub_43D20A(vCityIndexF, $19) then
+      Inc(v11);
+
+    vRevenue := vRevenue + (vRevenue * v11) shr 1;
+    vDemandBonus := 0;
+
+    case vCommodity of
+      3, 5, 8, $A:
+        vDemandBonus := vRevenue div 2;
+      9, $B, $C, $D:
+        vDemandBonus := vRevenue;
+      $E:
+        vDemandBonus := 3 * vRevenue div 2;
+      $F:
+        vDemandBonus := 2 * vRevenue;
+    end;
+
+    for i := 0 to 2 do
+    begin
+      if (Cities[aCityIndex].DemandedTradeItem[i] = vCommodity) then
+      begin
+        if (Units[aUnitIndex].CivIndex = vCivIndexF) then
+          vRevenue := vDemandBonus + 2 * vRevenue
+        else
+          vRevenue := 2 * (vDemandBonus + vRevenue);
+      end;
+    end;
+
+    if (Game.Turn < 200) and not j_Q_CivHasTech_sub_4BD9F0(vCivIndexF, $26) and not j_Q_CivHasTech_sub_4BD9F0(vCivIndexF, $39) then
+      vRevenue := vRevenue * 2;
+
+    if j_Q_CivHasTech_sub_4BD9F0(vCivIndexF, $43) then
+      vRevenue := vRevenue - (vRevenue div 3);
+
+    if j_Q_CivHasTech_sub_4BD9F0(vCivIndexF, $1E) then
+      vRevenue := vRevenue - (vRevenue div 3);
+
+    vRandomMin := Random(10) + 200;
+    vAdvanceCost := j_Q_GetAdvanceCost_sub_4C2788(vCivIndexF);
+    vMaxRevenue := j_Q_Clamp_sub_5ADFA0(2 * vAdvanceCost div 3, vRandomMin, 30000);
+    vRevenue := j_Q_Clamp_sub_5ADFA0(vRevenue, 0, vMaxRevenue);
+  end;
+end;
+}
 
 end.

@@ -181,7 +181,7 @@ begin
         Dir := Civ2.PFFindUnitDir(FUnitIndex);
         if (Dir < 0) or (Dir = 8) then
           Break;
-        X := Civ2.WrapMapX(X + Civ2.PFDX^[Dir]);
+        X := Civ2.MapWrapX(X + Civ2.PFDX^[Dir]);
         Y := Y + Civ2.PFDY^[Dir];
         if not Civ2.IsInMapBounds(X, Y) then
           Break;
@@ -230,7 +230,7 @@ begin
           Dir := Civ2.PFMove(X, Y, $63);
           if (Dir < 0) or (Dir = 8) then
             Break;
-          X := Civ2.WrapMapX(X + Civ2.PFDX^[Dir]);
+          X := Civ2.MapWrapX(X + Civ2.PFDX^[Dir]);
           Y := Y + Civ2.PFDY^[Dir];
           if not Civ2.IsInMapBounds(X, Y) then
             Break;
