@@ -824,7 +824,7 @@ begin
     ScrollBarControlInfo.ControlInfo.Rect.Top := 36;
     ScrollBarControlInfo.ControlInfo.Rect.Right := Civ2.CurrPopupInfo^^.ClientSize.cx - 9;
     ScrollBarControlInfo.ControlInfo.Rect.Bottom := Civ2.CurrPopupInfo^^.ClientSize.cy - 45;
-    Civ2.CreateScrollbar(@ScrollBarControlInfo, @Civ2.CurrPopupInfo^^.GraphicsInfo^.WindowInfo, $0B, @ScrollBarControlInfo.ControlInfo.Rect, 1);
+    Civ2.CreateScrollbar(@ScrollBarControlInfo, @Civ2.CurrPopupInfo^^.GraphicsInfo^.WindowInfo, $0B, @ScrollBarControlInfo.ControlInfo.Rect, True);
     SetScrollRange(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
     SetScrollPos(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
   end;
@@ -1227,7 +1227,7 @@ begin
   CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Bottom := CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Bottom - 1;
   CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Right := CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect.Right - 1;
 
-  Civ2.CreateScrollbar(@CityWindowEx.Support.ControlInfoScroll, @PGraphicsInfo(ACityWindow).WindowInfo, $62, @CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect, 1);
+  Civ2.CreateScrollbar(@CityWindowEx.Support.ControlInfoScroll, @PGraphicsInfo(ACityWindow).WindowInfo, $62, @CityWindowEx.Support.ControlInfoScroll.ControlInfo.Rect, True);
   CityWindowEx.Support.ControlInfoScroll.ProcRedraw := @CallBackCityWindowSupportScroll;
   CityWindowEx.Support.ControlInfoScroll.ProcTrack := @CallBackCityWindowSupportScroll;
 
@@ -1915,7 +1915,7 @@ begin
         CityWindowEx.ResMap.Tile[i] := Civ2.GetResourceInCityTile(Civ2.CityWindow.CityIndex, SpiralIndex, i)
       else
         CityWindowEx.ResMap.Tile[i] := 0;
-    Civ2.DrawCityWindowResources(Civ2.CityWindow, 1);
+    Civ2.DrawCityWindowResources(Civ2.CityWindow, True);
   end;
 end;
 
@@ -1981,7 +1981,7 @@ begin
   else
     for i := 0 to 19 do
     begin
-      Civ2.SetWorker(Civ2.CityWindow.CityIndex, i, 0);
+      Civ2.SetWorker(Civ2.CityWindow.CityIndex, i, False);
       Inc(Civ2.Cities[Civ2.CityWindow.CityIndex].Workers, $4000000);
     end;
 end;
@@ -2549,7 +2549,7 @@ begin
       Rect.Bottom := Dialog.ClientSize.cy - 45;
       Dialog.ScrollControls1[0] := Civ2.Scroll_Ctr(Civ2.Crt_OperatorNew(SizeOf(TControlInfoScroll)));
 
-      Civ2.CreateScrollbar(Dialog.ScrollControls1[0], @Dialog.GraphicsInfo.WindowInfo, $0B, @Rect, 1);
+      Civ2.CreateScrollbar(Dialog.ScrollControls1[0], @Dialog.GraphicsInfo.WindowInfo, $0B, @Rect, True);
       Civ2.InitControlScrollRange(Dialog.ScrollControls1[0], 0, Dialog.NumListItems - 1);
       Civ2.ControlInfoScroll_SetScrollPosition(Dialog.ScrollControls1[0], 0);
       Civ2.SetScrollPageSize(Dialog.ScrollControls1[0], Dialog._Extra.ListPageSize);

@@ -29,6 +29,8 @@ type
 
   PFontInfo = ^TFontInfo;
 
+  PPalette = ^TPalette;
+
   PControlBlock = ^TControlBlock;
 
   PControlInfo = ^TControlInfo;
@@ -176,7 +178,7 @@ type
   // WindowProcMSWindow - GetWindowLongA(hWnd, 0)
   TWindowInfo1 = packed record            // Size = 0xB8
     Style: Integer;                       //
-    Palette: Pointer;                     // + 0x04
+    Palette: PPalette;                    // + 0x04
     WindowStructure: PWindowStructure;    // + 0x08
     Unknown_0C: Integer;                  // + 0x0C
     WindowProcs: TWindowProcs;            // + 0x10
@@ -630,6 +632,27 @@ type
   TFontInfo = packed record
     FontDataHandle: HGLOBAL;
     Height: Longint;
+  end;
+
+  TPalette = packed record
+    PalVersion: Word;
+    PalNumEntries: Word;
+    Colors: array[0..255] of PALETTEENTRY;
+    HPal: HPALETTE;
+    ID: Integer;
+    Unknown_040C: Integer;
+    Unknown_0410: Integer;
+    Unknown_0414: Integer;
+    Unknown_0418: Integer;
+    Unknown_041C: Integer;
+    Unknown_0420: Integer;
+    Unknown_0424: Byte;
+    Unknown_0425: Byte;
+    Unknown_0426: Byte;
+    Unknown_0427: Byte;
+    HGlobal_0428: HGLOBAL;
+    HGlobal_042C: HGLOBAL;
+    HGlobal_0430: HGLOBAL;
   end;
 
   TSprite = packed record

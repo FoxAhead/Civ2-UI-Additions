@@ -168,7 +168,7 @@ begin
   UnitTypes                  := Pointer($0064B1B8);
 
   // Functions
-  {$INCLUDE 'Civ2ProcImplF.inc'}
+{$INCLUDE 'Civ2ProcImplF.inc'}
 {*)}
 
   // Check structure sizes
