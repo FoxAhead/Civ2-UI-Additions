@@ -53,6 +53,8 @@ function GetTradeConnectionLevel(aCity, i: Integer): Integer;
 
 procedure GetResMapDXDY(X, Y: Integer; var DX, DY: Integer);
 
+procedure UpdateCityWindowExResMap(DX, DY: Integer);
+
 implementation
 
 uses
@@ -61,7 +63,8 @@ uses
   SysUtils,
   Civ2Types,
   Civ2Proc,
-  Civ2UIA_Types;
+  Civ2UIA_Types,
+  Civ2UIA_Global;
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -308,8 +311,8 @@ begin
   // Code from Q_CityResourcesClicked_sub_5022C0
   v11 := Civ2.ScaleByZoom($40, Civ2.CityWindow.Zoom);
   v10 := Civ2.ScaleByZoom($20, Civ2.CityWindow.Zoom);
-  vX := X - (Civ2.ScaleWithCityWindowSize(Civ2.CityWindow, 5) + Civ2.CityWindow.RectResources.Left);
-  vY := Y - ((v10 shr 1) + Civ2.ScaleWithCityWindowSize(Civ2.CityWindow, $B) + Civ2.CityWindow.RectResources.Top);
+  vX := X - (Civ2.CityWindow_ScaleWithSize(Civ2.CityWindow, 5) + Civ2.CityWindow.RectResources.Left);
+  vY := Y - ((v10 shr 1) + Civ2.CityWindow_ScaleWithSize(Civ2.CityWindow, $B) + Civ2.CityWindow.RectResources.Top);
   if (vX >= 0) and (4 * v11 > vX) and (vY >= 0) and (4 * v10 > vY) then
   begin
     DX := 2 * (vX div v11) - 3;
@@ -319,7 +322,7 @@ begin
 
     if (vX >= 0) and (vY >= 0) then
     begin
-      v15 := (Civ2.GetPixel(Pointer($6A9120), vX, vY) - $A) shr 4;
+      v15 := (Civ2.DrawPort_GetPixel(Pointer($6A9120), vX, vY) - $A) shr 4;
     end
     else
     begin
@@ -332,6 +335,29 @@ begin
       DY := DY + PShortIntArray($628343)[v15];
     end;
   end;
+end;
+
+procedure UpdateCityWindowExResMap(DX, DY: Integer);
+var
+  SpiralIndex, i: Integer;
+begin
+  CityWindowEx.ResMap.DX := DX;
+  CityWindowEx.ResMap.DY := DY;
+  SpiralIndex := -1;
+  if (DX <> 1000) and (DY <> 1000) then
+    for i := 0 to 20 do
+      if (Civ2.CitySpiralDX[i] = DX) and (Civ2.CitySpiralDY[i] = DY) then
+      begin
+        SpiralIndex := i;
+        Break;
+      end;
+  CityWindowEx.ResMap.CityIndex := Civ2.CityWindow.CityIndex;
+  CityWindowEx.ResMap.ShowTile := (SpiralIndex >= 0);
+  for i := 0 to 2 do
+    if SpiralIndex >= 0 then
+      CityWindowEx.ResMap.Tile[i] := Civ2.GetResourceInCityTile(Civ2.CityWindow.CityIndex, SpiralIndex, i)
+    else
+      CityWindowEx.ResMap.Tile[i] := 0;
 end;
 
 {

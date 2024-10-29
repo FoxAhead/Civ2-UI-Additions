@@ -95,6 +95,8 @@ var
 
 function PThisCall(Address: Cardinal): Pointer;
 begin
+  if ThisCallStubsIndex > 255 then
+    raise Exception.Create('Maximum ThisCallStubsIndex reached');
   ThisCallStubs[ThisCallStubsIndex].Part1 := $59; // pop     ecx
   ThisCallStubs[ThisCallStubsIndex].Part2 := $68240C87; // xchg    ecx, [esp]
   ThisCallStubs[ThisCallStubsIndex].Address := Address; // push    Address

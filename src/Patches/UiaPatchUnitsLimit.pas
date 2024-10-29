@@ -1,6 +1,24 @@
-unit Civ2UIA_UnitsLimit;
+unit UiaPatchUnitsLimit;
 
 interface
+
+uses
+  UiaPatch;
+
+type
+  TUiaPatchUnitsLimit = class(TUiaPatch)
+  private
+    procedure PatchUnitsLimit(HProcess: Cardinal);
+  public
+    procedure Attach(HProcess: Cardinal); override;
+  end;
+
+implementation
+
+uses
+  Civ2Types,
+  SysUtils,
+  Windows;
 
 const
 {(*}
@@ -2399,19 +2417,8 @@ const
     $005B6D17
     );
 {*)}
-
-procedure PatchUnitsLimit(HProcess: Cardinal);
-
-implementation
-
-uses
-  Civ2Types,
-  Civ2UIA_Options,
-  Civ2UIA_Proc,
-  SysUtils,
-  Windows;
-
-procedure PatchUnitsLimit(HProcess: Cardinal);
+  
+procedure TUiaPatchUnitsLimit.PatchUnitsLimit(HProcess: Cardinal);
 var
   i: Integer;
   NewUnitsAreaAddress: Pointer;
@@ -2452,5 +2459,18 @@ begin
   WriteMemory(HProcess, $005B50E3, WordRec(UnitsLimit800).Bytes);
   WriteMemory(HProcess, $005B5452, WordRec(UnitsLimit802).Bytes);
 end;
+
+{ TUiaPatchUnitsLimit }
+
+procedure TUiaPatchUnitsLimit.Attach(HProcess: Cardinal);
+begin
+  if UIAOPtions^.bUnitsLimit then
+  begin
+    PatchUnitsLimit(HProcess);
+  end;
+end;
+
+initialization
+  TUiaPatchUnitsLimit.RegisterMe();
 
 end.

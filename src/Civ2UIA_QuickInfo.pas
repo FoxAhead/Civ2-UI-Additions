@@ -81,7 +81,7 @@ var
 begin
   if (FQuickInfoParts <> 0) then
   begin
-    Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, MapPoint.X + 2, MapPoint.Y);
+    Civ2.MapWindow_MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, MapPoint.X + 2, MapPoint.Y);
     R := Bounds(ScreenPoint.X, ScreenPoint.Y - FHeight, FWidth, FHeight + 24);
     // Move Rect into viewport
     DX := DrawPort.ClientRectangle.Right - R.Right;
@@ -117,7 +117,7 @@ begin
     if WindowHandle = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow then
     begin
       ScreenToClient(WindowHandle, MousePoint);
-      Civ2.ScreenToMap(Civ2.MapWindow, NewMapPoint.X, NewMapPoint.Y, MousePoint.X, MousePoint.Y);
+      Civ2.MapWindow_ScreenToMap(Civ2.MapWindow, NewMapPoint.X, NewMapPoint.Y, MousePoint.X, MousePoint.Y);
       // City
       NewCityIndex := Civ2.GetCityIndexAtXY(NewMapPoint.X, NewMapPoint.Y);
       if (NewCityIndex >= 0) then

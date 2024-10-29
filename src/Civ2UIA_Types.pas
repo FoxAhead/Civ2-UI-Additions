@@ -37,7 +37,7 @@ type
     StartMapMean: TPoint;
   end;
 
-  TCityWindowSupport = record
+  TCityWindowExSupport = record
     ControlInfoScroll: TControlInfoScroll;
     ListTotal: Integer;
     ListStart: Integer;
@@ -46,7 +46,8 @@ type
     SortedUnitsList: TSortedUnitsList;
   end;
 
-  TCityWindowResourceMap = record
+  TCityWindowExResourceMap = record
+    CityIndex: Integer;
     ShowTile: Boolean;
     DX: Integer;
     DY: Integer;
@@ -54,8 +55,8 @@ type
   end;
 
   TCityWindowEx = record
-    Support: TCityWindowSupport;
-    ResMap: TCityWindowResourceMap;
+    Support: TCityWindowExSupport;
+    ResMap: TCityWindowExResourceMap;
   end;
 
   TCityGlobalsEx = record

@@ -87,7 +87,7 @@ begin
     if WindowHandle = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow then
     begin
       ScreenToClient(WindowHandle, MousePoint);
-      Civ2.ScreenToMap(Civ2.MapWindow, NewStopPoint.X, NewStopPoint.Y, MousePoint.X, MousePoint.Y);
+      Civ2.MapWindow_ScreenToMap(Civ2.MapWindow, NewStopPoint.X, NewStopPoint.Y, MousePoint.X, MousePoint.Y);
       if Civ2.MapSquareIsVisibleTo(NewStopPoint.X, NewStopPoint.Y, Civ2.HumanCivIndex^) or Civ2.Game.RevealMap then
       begin
         NewStartPoint := Point(Civ2.CursorX^, Civ2.CursorY^);
@@ -268,11 +268,11 @@ begin
       else
         Canvas.Pen.Color := Canvas.ColorFromIndex(175);
       Canvas.Pen.Width := ScaleByZoom(2, Civ2.MapWindow.MapZoom + 1);
-      Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1, FStartPoint.Y + 1);
+      Civ2.MapWindow_MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1, FStartPoint.Y + 1);
       Canvas.PenPos := ScreenPoint;
       for j := 0 to FCount[i] - 1 do
       begin
-        Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FNodes[i][j].X + 1, FNodes[i][j].Y + 1);
+        Civ2.MapWindow_MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FNodes[i][j].X + 1, FNodes[i][j].Y + 1);
         DX := Abs(Canvas.PenPos.X - ScreenPoint.X);
         if DX <= Civ2.MapWindow.MapCellSize.cx then
           Canvas.LineTo(ScreenPoint.X, ScreenPoint.Y)

@@ -11,7 +11,7 @@ type
 
   PCityGlobals = ^TCityGlobals;
 
-  PCitySpritesInfo = ^TCitySpritesInfo;
+  PCitySprites = ^TCitySprites;
 
   PHeap = ^THeap;
 
@@ -150,7 +150,7 @@ type
     Text: PChar;
     Num: Integer;
     Flags: Cardinal;
-    // 0x00000002 - 
+    // 0x00000002 -
     // 0x00000004 - Checked
     SubCount: Integer;
     Next: PMenu;
@@ -163,7 +163,7 @@ type
     Heap: THeap;
     Unknown_16: Word;
     Flags: Cardinal;
-    // 0x00008000 - 
+    // 0x00008000 -
     FirstMenu: PMenu;
   end;
 
@@ -224,11 +224,11 @@ type
     SIndex: Integer;
   end;
 
-  TCitySprites = array[0..199] of TCitySprite;
+  TCitySpritesArray = array[0..199] of TCitySprite;
 
-  TCitySpritesInfo = packed record        // 6A9490
-    CitySprites: TCitySprites;            //
-    CitySpritesItems: Integer;            // + 12C0 = 6AA750
+  TCitySprites = packed record            // 6A9490
+    Sprites: TCitySpritesArray;           //
+    Count: Integer;                       // + 12C0 = 6AA750
   end;
 
   TControlBlock = packed record           // Size = 0x30  GetWindowLongA(hWnd, 0)  (sub_5C9499)
@@ -384,7 +384,7 @@ type
     Flags: Integer;
     // 0x00000001 - Has Cancel button (StdType = 2)
     // 0x00000004 - Checkboxes
-    // 0x00000008 - Don't show
+    // 0x00000008 - Don't wait result
     // 0x00000020 - Created
     // 0x00000040 - Has Help button (StdType = 1)
     // 0x00000200 - Created parts
@@ -392,6 +392,7 @@ type
     // 0x00001000 - Has ListBox
     // 0x00002000 - Choose
     // 0x00004000 - Without background
+    // 0x00008000 - ?Append dialog data to existing one (example ADVICE.TXT)
     // 0x00010000 - System popup
     // 0x00040000 - System listbox
     // 0x00800000 - Sorted listbox
@@ -722,12 +723,12 @@ type
 
   TCityWindow = packed record             // 6A91B8  Size = $16E0
     MSWindow: TMSWindow;
-    CitySpritesInfo: TCitySpritesInfo;    // + 2D8 = 6A9490
+    CitySprites: TCitySprites;            // + 2D8 = 6A9490
     CityIndex: Integer;                   // + 159C
     Unknown2: Integer;
     Unknown3: Integer;
     Unknown4: Integer;
-    Unknown5: Integer;
+    CityModalMode: Integer;               // 0, 1, 2 (Warning GAME.TXT @CITYMODAL)
     CentralInfo: Integer;
     ImproveListStart: Integer;
     ImproveCount: Integer;
@@ -1196,25 +1197,28 @@ type
   TUnitTypes = array[0..$3D] of TUnitType; // 64B1B8
 
   TUnit = packed record                   // Size = 0x20
-    X: Word;                              // X
-    Y: Word;                              // Y
-    Attributes: Word;
+    X: Word;                              // 0000
+    Y: Word;                              // 0002
+    Attributes: Word;                     // 0004
     // 0000 0000 0000 0010 - 0x0002 ?Flag checked in UnitCanMove
+    // 0000 0000 0000 0100 - 0x0004 This unit is violating foreign territory
     // 0000 0000 0001 0000 - 0x0010 Paradropped
+    // 0000 0000 0100 0000 - 0x0040 ?this bit appear to be set on the first time you move an unit - and remains this way
     // 0000 0100 0000 0000 - 0x0400 Unit causes discontent
     // 0000 1000 0000 0000 - 0x0800 Unit is supported
     // 0010 0000 0000 0000 - 0x2000 Veteran
-    // 0100 0000 0000 0000 - 0x4000 Unit issued with the 'wait' order
-    UnitType: Byte;                       // 0x6560F6
-    CivIndex: Shortint;                   // 0x6560F7
-    MovePoints: Shortint;                 // 0x6560F8 (Move * Road movement multiplier)
-    Visibility: Byte;
-    HPLost: Byte;                         // + 0x0A
-    MoveDirection: Byte;                  // 0x6560FB
-    DebugSymbol: Char;
-    Counter: Byte;                        // 0x6560FD Settlers work / Caravan commodity / Air turn
-    MoveIteration: Byte;
-    Orders: Shortint;                     // 0x6560FF
+    // 0100 0000 0000 0000 - 0x4000 Unit issued with the 'wait' order (the 'W' was pressed on this unit)
+    // 1000 0000 0000 0000 - 0x8000 ?automate (not just settlers!)
+    UnitType: Byte;                       // 0006
+    CivIndex: Shortint;                   // 0007
+    MovePoints: Shortint;                 // 0008 (Move * Road movement multiplier)
+    Visibility: Byte;                     // 0009
+    HPLost: Byte;                         // 000A
+    MoveDirection: Byte;                  // 000B
+    DebugSymbol: Char;                    // 000C
+    Counter: Byte;                        // 000D Settlers work / Caravan commodity / Air turn
+    MoveIteration: Byte;                  // 000E
+    Orders: Shortint;                     // 000F
     // 0x01 Fortify
     // 0x02 Fortified
     // 0x03 Sleep
@@ -1227,22 +1231,22 @@ type
     // 0x0A Build airbase
     // 0x0B, 0x1B Go to
     // 0xFF No orders
-    HomeCity: Byte;                       // 0x656100
-    byte_656101: Byte;
-    GotoX: Word;                          // 0x656102
-    GotoY: Word;                          // 0x656104
-    PrevInStack: Word;                    // 0x656106
-    NextInStack: Word;                    // 0x656108
-    ID: Integer;
-    word_65610E: Word;
+    HomeCity: Byte;                       // 0010
+    byte_656101: Byte;                    // 0011
+    GotoX: Word;                          // 0012
+    GotoY: Word;                          // 0014
+    PrevInStack: Word;                    // 0016
+    NextInStack: Word;                    // 0018
+    ID: Integer;                          // 001A
+    word_65610E: Word;                    // 001E
   end;
 
   TUnits = array[0..$7FF] of TUnit;       // 6560F0
 
   TCity = packed record                   // Size = 0x58
-    X: Smallint;                          //
-    Y: Smallint;                          // + 0x02
-    Attributes: Cardinal;                 // + 0x04
+    X: Smallint;                          // 0000
+    Y: Smallint;                          // 0002
+    Attributes: Cardinal;                 // 0004
     // 0000 0000 0000 0000 0000 0000 0000 0001 - 0x00000001 Disorder
     // 0000 0000 0000 0000 0000 0000 0000 0010 - 0x00000002 We Love the King Day
     // 0000 0000 0000 0000 0000 0000 0000 0100 - 0x00000004 Improvement sold
@@ -1252,38 +1256,40 @@ type
     // 0000 0000 0100 0000 0000 0000 0000 0000 - 0x00400000 Investigated by spy
     // 0000 0100 0000 0000 0000 0000 0000 0000 - 0x04000000 x1 Objective
     // 0001 0000 0000 0000 0000 0000 0000 0000 - 0x10000000 x3 Major Objective
-    Owner: Byte;                          // + 0x08
-    Size: Byte;                           // + 0x09
-    Founder: Byte;                        // + 0x0A
-    TurnsCaptured: Byte;                  // + 0x0B
-    KnownTo: Byte;
-    RevealedSize: array[1..9] of Byte;
-    Specialists: Cardinal;
+    Owner: Byte;                          // 0008
+    Size: Byte;                           // 0009
+    Founder: Byte;                        // 000A
+    TurnsCaptured: Byte;                  // 000B
+    KnownTo: Byte;                        // 000C
+    RevealedSize: array[0..7] of Byte;    // 000D
+    Unknown_15: Byte;                     // 0015
+    Specialists: Cardinal;                // 0016
     // 00 - No specialist
     // 01 - Entertainer
     // 10 - Taxman
     // 11 - Scientist
-    FoodStorage: Smallint;
-    BuildProgress: Smallint;
-    BaseTrade: Smallint;
-    Name: array[0..15] of Char;
-    Workers: Integer;
+    FoodStorage: Smallint;                // 001A
+    BuildProgress: Smallint;              // 001C
+    BaseTrade: Smallint;                  // 001E
+    Name: array[0..15] of Char;           // 0020
+    Workers: Integer;                     // 0030
     // 0000 0000 000X XXXX XXXX XXXX XXXX XXXX - Bit number equals index in CitySpiral (20 - center tile)
-    Improvements: array[1..5] of Byte;
-    Building: Shortint;
-    TradeRoutes: Shortint;
-    SuppliedTradeItem: array[0..2] of Shortint;
-    DemandedTradeItem: array[0..2] of Shortint;
-    CommodityTraded: array[0..2] of Shortint;
-    TradePartner: array[0..2] of Smallint;
-    Science: Smallint;
-    Tax: Smallint;
-    Trade: Smallint;
-    TotalFood: Byte;
-    TotalShield: Byte;
-    HappyCitizens: Byte;
-    UnHappyCitizens: Byte;
-    ID: Integer;
+    // XXXX XX00 0000 0000 0000 0000 0000 0000 - Number of non-working citizens
+    Improvements: array[1..5] of Byte;    // 0034
+    Building: Shortint;                   // 0039  < 0 - -Improvement; >= 0 - UnitType
+    TradeRoutes: Shortint;                // 003A
+    SuppliedTradeItem: array[0..2] of Shortint; // 003B
+    DemandedTradeItem: array[0..2] of Shortint; // 003E
+    CommodityTraded: array[0..2] of Shortint; // 0041
+    TradePartner: array[0..2] of Smallint; // 0044
+    Science: Smallint;                    // 004A
+    Tax: Smallint;                        // 004C
+    Trade: Smallint;                      // 004E
+    TotalFood: Byte;                      // 0050
+    TotalShield: Byte;                    // 0051
+    HappyCitizens: Byte;                  // 0052
+    UnHappyCitizens: Byte;                // 0053
+    ID: Integer;                          // 0054
   end;
 
   TCities = array[0..$FF] of TCity;       // 64F340
@@ -1299,7 +1305,7 @@ type
     Flags: Word;                          //          64C6A0
     // 0x0001 - Skip next Oedo year (eg, used when falling into anarchy)
     // 0x0002 - Tribe is at war with another tribe? Used for peace turns calculation
-    // 0x0004 - Related to anarchy? On at the start of games
+    // 0x0004 - Toggled every turn with 1/3 chance. When this flag is not set, Republic Senate confirmes your action.
     // 0x0008 - Tribe has just recovered from revolution (allows government change)
     // 0x0020 - Free advance available from receiving Philosophy (cleared when received)
     // 0x0200 - Female
@@ -1307,9 +1313,8 @@ type
     Leader: Word;                         // + 0x06 = 64C6A6
     Beakers: Word;                        // + 0x08 = 64C6A8
     ResearchingTech: Smallint;
-    Unknown5: ShortInt;
-    _Turn: SmallInt;
-    Unknown_F: ShortInt;
+    CapitalX: SmallInt;
+    TurnOfCityBuild: SmallInt;
     Techs: Byte;
     FutureTechs: Byte;
     Unknown_12: ShortInt;
@@ -1323,21 +1328,35 @@ type
     // 4 - Fundamentalism
     // 5 - Republic
     // 6 - Democracy
-    Unknown4: array[$16..$1F] of Byte;
-    Treaties: array[0..7] of Integer;
+    SenateChances: ShortInt;
+    Unknown_17: array[$17..$1A] of Byte;  // 0017
+    Unknown_1B: Byte;                     // 001B
+    Unknown_1C: Word;                     // 001C
+    Reputation: Byte;                     // 001E
+    // 0 - Spotless
+    // 1 - Excellent
+    // ..
+    // 7 - Atrocious
+    Unknown_1F: Byte;                     // 001F
+    Treaties: array[0..7] of Integer;     // 0020
     // 0x00000001 - Contact
     // 0x00000002 - Cease Fire
     // 0x00000004 - Peace
     // 0x00000008 - Alliance
     // 0x00000010 - Vendetta
-    // 0x00000020 - Their space ship will arrive sooner
+    // 0x00000020 - ?Hatred or ?Their space ship will arrive sooner
     // 0x00000080 - Embassy
     // 0x00000100 - They talked about nukes with us
     // 0x00002000 - War
+    // 0x00004000 - Recently signed Peace treaty / Cease fire
     // 0x00020000 - We nuked them
     // 0x00040000 - Accepted tribute
-    Unknown9: array[$40..$153] of Byte;
-    DefMinUnitBuilding: array[0..61] of Byte;
+    Attitude: array[0..7] of Byte;        // 0040
+    //   0 - Worshipful
+    // ...
+    // 100 - Enraged
+    Unknown9: array[$48..$153] of Byte;
+    DefMinUnitBuilding: array[0..61] of Byte; // 0154
     //    Unknown10: array[$192..$593] of Byte;
     Unknown_192: array[0..63] of Word;
     Unknown_212: array[0..63] of Word;
