@@ -63,13 +63,14 @@ type
     SprEco: PSprites;
     SprRes: PSprites;
     SprResS: PSprites;
+    SprUnits: PSprites;
     Units: ^TUnits;
     UnitSelected: ^LongBool;
     UnitTypes: ^TUnitTypes;
 
     // Functions
     // (All THISCALLs are described as STDCALLs, then assigned with PThisCall())
-{$INCLUDE 'Civ2ProcDeclF.inc'}
+    {$INCLUDE 'Civ2ProcDeclF.inc'}
 
     constructor Create();
     destructor Destroy; override;
@@ -80,6 +81,9 @@ var
   Civ2: TCiv2;
 
 implementation
+
+uses
+  Civ2UIA_FormConsole;
 
 type
   TThisCallStubs = packed record
@@ -109,11 +113,14 @@ end;
 
 constructor TCiv2.Create;
 begin
+  if Assigned(Civ2) then
+    raise Exception.Create('TCiv2 is already created');
+
   inherited;
   // For inline ASM all TCiv2 fileds can be referenced directly only inside TCiv2 class, and as Self.FieldName
   // Important: by default EAX register contains Self reference
 {(*}
-      
+
   // Variables
   AdvisorWindow              := Pointer($0063EB10);
   CDRoot                     := Pointer($006AB680);
@@ -162,10 +169,11 @@ begin
   SprEco                     := Pointer($00648860);
   SprRes                     := Pointer($00644F00);
   SprResS                    := Pointer($00645068);
-  if ANewUnitsAreaAddress <> nil then
-    Units                    := ANewUnitsAreaAddress
-  else
-    Units                    := Pointer(AUnits);
+  SprUnits                   := Pointer($00641848);  
+//  if ANewUnitsAreaAddress <> nil then
+//    Units                    := ANewUnitsAreaAddress
+//  else
+  Units                      := Pointer($006560F0);
   UnitSelected               := Pointer($006D1DA8);
   UnitTypes                  := Pointer($0064B1B8);
 
@@ -198,6 +206,8 @@ begin
     raise Exception.Create('Wrong size of TCityGlobals');
   if SizeOf(TGame) <> $14A then
     raise Exception.Create('Wrong size of TGame');
+
+  TFormConsole.Log('Created TCiv2');
 end;
 
 destructor TCiv2.Destroy;
@@ -205,6 +215,12 @@ begin
 
   inherited;
 end;
+
+initialization
+  Civ2 := TCiv2.Create();
+
+finalization
+  Civ2.Free();
 
 end.
 

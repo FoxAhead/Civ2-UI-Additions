@@ -4,14 +4,10 @@ interface
 
 uses
   Windows,
-  Messages,
   SysUtils,
-  Variants,
   Classes,
-  Graphics,
   Controls,
   Forms,
-  Dialogs,
   StdCtrls;
 
 type
@@ -166,7 +162,6 @@ begin
       X := Y and 1;
     end;
   end;
-
 end;
 
 procedure TFormTest.Button3Click(Sender: TObject);
@@ -184,7 +179,7 @@ begin
       if Civ2.MapSquareIsVisibleTo(X, Y, j) then
         Civ2.MapUpdateKnownTerrainFeatures(X, Y, j);
   end;
-
 end;
 
 end.
+

@@ -4,14 +4,10 @@ interface
 
 uses
   Windows,
-  Messages,
   SysUtils,
-  Variants,
   Classes,
-  Graphics,
   Controls,
   Forms,
-  Dialogs,
   StdCtrls,
   ExtCtrls;
 
@@ -35,6 +31,11 @@ type
     class procedure Open();
     class procedure Log(Text: string = ''); overload;
     class procedure Log(Number: Integer); overload;
+  published
+    property ClientWidth stored True;
+    property ClientHeight stored True;
+    property Width stored False;
+    property Height stored False;
   end;
 
 implementation

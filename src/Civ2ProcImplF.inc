@@ -35,6 +35,7 @@
 @Dlg_LoadGAMESimpleL0                        := PThisCall($004037CE);
 @Dlg_LoadGAMESimpleL0F0                      := PThisCall($00403B25);
 @Dlg_LoadPopup                               := PThisCall($0040314D);
+@Dlg_LoadSimple                              := PThisCall($00403B8E);
 @DrawCitySprite                              := Pointer($00402A45);
 @DrawFrame                                   := Pointer($00401DB1);
 @DrawPort_GetPixel                           := PThisCall($005C0BF2);
@@ -98,6 +99,7 @@
 @Scroll_SetPosition                          := PThisCall($004027BB);
 @SetCurrFont                                 := Pointer($0040233D);
 @SetDIBColorTableFromPalette                 := Pointer($005E3BDC);
+@SetFocus                                    := Pointer($005C90B0);
 @SetFontColorWithShadow                      := Pointer($00403BB6);
 @SetSpecialist                               := Pointer($004022C5);
 @SetSpriteZoom                               := Pointer($00403350);

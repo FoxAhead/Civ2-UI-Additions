@@ -2,8 +2,6 @@ unit Civ2UIA_Options;
 
 interface
 
-
-
 type
   PUIAOptions = ^TUIAOptions;
 
@@ -47,11 +45,13 @@ var
     CpuUsageOn: True;
     SocketBufferOn: True;
     SimultaneousOn: False;
+
     // Experimental
     bUnitsLimit: False;
     iUnitsLimit: 32000;                   // Default = 2048
     // civ2patch
     civ2patchEnable: True;
+
     //HostileAiOn: False;
     RetirementYearOn: False;
     RetirementWarningYear: 2000;          // Default = 2000

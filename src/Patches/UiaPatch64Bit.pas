@@ -8,6 +8,7 @@ uses
 type
   TUiaPatch64Bit = class(TUiaPatch)
   public
+    function Active(): Boolean; override;
     procedure Attach(HProcess: Cardinal); override;
   end;
 
@@ -44,10 +45,14 @@ end;
 
 { TUiaPatch64Bit }
 
+function TUiaPatch64Bit.Active: Boolean;
+begin
+  Result := UIAOptions().Patch64bitOn;
+end;
+
 procedure TUiaPatch64Bit.Attach(HProcess: Cardinal);
 begin
-  if UIAOptions.Patch64bitOn then
-    WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
+  WriteMemory(HProcess, $005D2A0A, [OP_JMP], @PatchEditBox64Bit);
 end;
 
 initialization

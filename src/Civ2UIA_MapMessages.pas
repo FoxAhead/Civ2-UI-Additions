@@ -16,7 +16,8 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Add(MapMessage: TMapMessage);
+    procedure Add(MapMessage: TMapMessage); overload;
+    procedure Add(TextOut: string); overload;
     procedure Update();
     procedure Draw(DrawPort: PDrawPort);
     function HasSomethingToDraw(): Boolean;
@@ -30,8 +31,6 @@ uses
   Math,
   Types,
   Civ2Proc,
-  Civ2UIA_Proc,
-  Civ2UIA_Types,
   Civ2UIA_CanvasEx;
 
 { TMapMessages }
@@ -39,6 +38,11 @@ uses
 procedure TMapMessages.Add(MapMessage: TMapMessage);
 begin
   FMapMessagesList.Add(MapMessage);
+end;
+
+procedure TMapMessages.Add(TextOut: string);
+begin
+  FMapMessagesList.Add(TMapMessage.Create(TextOut));
 end;
 
 constructor TMapMessages.Create;
@@ -81,7 +85,12 @@ begin
       TextColor := TColor(X1 * $10101);
       TextSize := Canvas.TextExtent(MapMessage.TextOut);
       Y1 := Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.ClientRectangle.Right - TextSize.cx - 20;
-      TextOutWithShadows(TCanvas(Canvas), MapMessage.TextOut, Y1, 100 + i * 20, TextColor, clBlack, SHADOW_ALL);
+      //TextOutWithShadows(TCanvas(Canvas), MapMessage.TextOut, Y1, 100 + i * 20, TextColor, clBlack, SHADOW_ALL);
+      Canvas.MoveTo(Y1, 100 + i * 20);
+      Canvas.Font.Color := TextColor;
+      Canvas.FontShadowColor := clBlack;
+      Canvas.FontShadows := SHADOW_ALL;
+      Canvas.TextOutWithShadows(MapMessage.TextOut);
     end;
     Canvas.Free();
   end;
@@ -116,3 +125,4 @@ begin
 end;
 
 end.
+

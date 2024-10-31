@@ -32,7 +32,6 @@ type
 implementation
 
 uses
-  Civ2UIA_Proc,
   Civ2Proc;
 
 { TMapOverlay }
@@ -143,3 +142,4 @@ begin
 end;
 
 end.
+

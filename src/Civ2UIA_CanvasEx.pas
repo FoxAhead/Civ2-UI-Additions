@@ -1,12 +1,25 @@
 unit Civ2UIA_CanvasEx;
 
 interface
+
 uses
   Graphics,
   Windows,
   Civ2Types;
-type
 
+const
+  SHADOW_NONE                             = $00;
+  SHADOW_TL                               = $01;
+  SHADOW_T_                               = $02;
+  SHADOW_TR                               = $04;
+  SHADOW__L                               = $08;
+  SHADOW__R                               = $10;
+  SHADOW_BL                               = $20;
+  SHADOW_B_                               = $40;
+  SHADOW_BR                               = $80;
+  SHADOW_ALL                              = $FF;
+
+type
   TCanvasEx = class(TCanvas)
   private
     FSavedDC: HDC;
@@ -16,7 +29,6 @@ type
     procedure SetMaxPen(const Value: TPoint);
 
   protected
-
   public
     FontShadows: Cardinal;
     FontShadowColor: TColor;
@@ -39,16 +51,15 @@ type
     function PenBR(): TCanvasEx;
     function PenSave(): TCanvasEx;
     function PenRestore(): TCanvasEx;
+    procedure CopyFont(SourceFontDataHandle: HGLOBAL);
     property MaxPen: TPoint read FMaxPen write SetMaxPen;
   published
-
   end;
 
 implementation
 
 uses
   Civ2Proc,
-  Civ2UIA_Types,
   Civ2UIA_Proc;
 
 { TCanvasEx }
@@ -234,6 +245,18 @@ begin
     FMaxPen.X := Value.X;
   if Value.Y > FMaxPen.Y then
     FMaxPen.Y := Value.Y;
+end;
+
+procedure TCanvasEx.CopyFont(SourceFontDataHandle: HGLOBAL);
+var
+  LogFont: TLogFont;
+  FontData: PFontData;
+begin
+  ZeroMemory(@LogFont, SizeOf(LogFont));
+  FontData := GlobalLock(SourceFontDataHandle);
+  GetObject(FontData.FontHandle, SizeOf(LogFont), @LogFont);
+  GlobalUnlock(SourceFontDataHandle);
+  Font.Handle := CreateFontIndirect(LogFont);
 end;
 
 end.

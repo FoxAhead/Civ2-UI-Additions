@@ -35,6 +35,7 @@ Dlg_InitWithHeap: function(This: PDialogWindow; HeapAllocSize: Smallint): PDialo
 Dlg_LoadGAMESimpleL0: function(This: PDialogWindow; SectionName: PChar; Flags: Integer): Integer; stdcall;
 Dlg_LoadGAMESimpleL0F0: function(This: PDialogWindow; SectionName: PChar): Integer; stdcall;
 Dlg_LoadPopup: function(This: PDialogWindow; FileName, SectionName: PChar; Length: Integer; Text: PChar; A6: PGraphicsInfo; A3: PDrawPort; Rect: PRect; Flags: Integer): Integer; stdcall;
+Dlg_LoadSimple: function(This: PDialogWindow; FileName, SectionName: PChar; Length, Flags: Integer): Integer; stdcall;
 DrawCitySprite: procedure(This: PDrawPort; CityIndex, A3, XLeft, YTop, Zoom: Integer); cdecl;
 DrawFrame: procedure(DrawPort: PDrawPort; Rect: PRect; Color: Integer); cdecl;
 DrawPort_GetPixel: function(This: PDrawPort; X, Y: Integer): Integer; stdcall;
@@ -98,6 +99,7 @@ Scroll_SetPageSize: procedure(This: PControlInfoScroll; PageSize: Integer); stdc
 Scroll_SetPosition: procedure(This: PControlInfoScroll; Position: Integer); stdcall;
 SetCurrFont: procedure(A1: PFontInfo); cdecl;
 SetDIBColorTableFromPalette: procedure(DrawInfo: PDrawInfo; Palette: PPalette); cdecl;
+SetFocus: function(HWnd: HWND): HWND; cdecl;
 SetFontColorWithShadow: procedure(A1, A2, A3, A4: Integer); cdecl;
 SetSpecialist: procedure(CityIndex, SpecialistIndex, Specialist: Integer); cdecl;
 SetSpriteZoom: procedure(Zoom: Integer); cdecl;

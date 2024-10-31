@@ -474,7 +474,7 @@ type
     ListboxSpriteAreaWidth: array[0..1] of Integer;
     PageStartListboxItem: array[0..1] of PListboxItem;
     Unknown_218: Integer;
-    _Extra: PDialogExtra;                 // ! Storing data in unused structure members
+    _Extra: PDialogExtra;                 // ! Storing data in possibly unused structure members
     SelectedListboxItem: PListboxItem;
     SelectedListItem: PListItem;
     FirstListboxItem: PListboxItem;
@@ -656,7 +656,7 @@ type
     HGlobal_0430: HGLOBAL;
   end;
 
-  TSprite = packed record
+  TSprite = packed record                 // Size = 0x3C
     Rectangle1: TRect;
     Rectangle2: TRect;
     Rectangle3: TRect;
@@ -1406,16 +1406,24 @@ type
   TLeaders = array[1..21] of TLeader;     // 6554F8
 
 const
-  AUnits = $6560F0;
-  CST_RESOURCES: Integer = 1;
-  CST_CITIZENS: Integer = 2;
-  CST_UNITS_PRESENT: Integer = 3;
-  CST_IMPROVEMENTS: Integer = 4;
-  CST_BUILD: Integer = 5;
-  CST_SUPPORTED_UNITS: Integer = 6;
-
-var
-  ANewUnitsAreaAddress: Pointer = nil;    // For Units Limit patch
+  CST_RESOURCES                           = 1;
+  CST_CITIZENS                            = 2;
+  CST_UNITS_PRESENT                       = 3;
+  CST_IMPROVEMENTS                        = 4;
+  CST_BUILD                               = 5;
+  CST_SUPPORTED_UNITS                     = 6;
+  CIV2_DLG_HAS_CANCEL_BUTTON              = $00000001;
+  CIV2_DLG_CHECKBOXES                     = $00000004;
+  CIV2_DLG_CREATED                        = $00000020;
+  CIV2_DLG_HAS_HELP_BUTTON                = $00000040;
+  CIV2_DLG_CREATED_PARTS                  = $00000200;
+  CIV2_DLG_CLEAR_POPUP                    = $00000400;
+  CIV2_DLG_LISTBOX                        = $00001000;
+  CIV2_DLG_CHOOSE                         = $00002000;
+  CIV2_DLG_SYSTEMPOPUP                    = $00010000;
+  CIV2_DLG_SYSTEMLISTBOX                  = $00040000;
+  CIV2_DLG_SORTEDLISTBOX                  = $00800000;
+  CIV2_DLG_FORCE_SCROLLBAR_FOR_LISTBOX    = $01000000;
 
 implementation
 

@@ -15,7 +15,6 @@ type
     constructor Create(MapPoint: TPoint; Unique: Boolean = False); reintroduce; overload;
     procedure Distinct();
   published
-
   end;
 
 implementation
@@ -104,3 +103,4 @@ begin
 end;
 
 end.
+

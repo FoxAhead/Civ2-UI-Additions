@@ -8,6 +8,7 @@ uses
 type
   TUiaPatchCDCheck = class(TUiaPatch)
   public
+    function Active(): Boolean; override;
     procedure Attach(HProcess: Cardinal); override;
   end;
 
@@ -80,17 +81,19 @@ end;
 
 { TUiaPatch64Bit }
 
+function TUiaPatchCDCheck.Active: Boolean;
+begin
+  Result := UIAOPtions.DisableCDCheckOn;
+end;
+
 procedure TUiaPatchCDCheck.Attach(HProcess: Cardinal);
 begin
-  if UIAOPtions.DisableCDCheckOn then
-  begin
-    // Auto CDCheck
-    WriteMemory(HProcess, $00402BE9, [OP_JMP], @PatchCDCheckAuto);
-    // Old variant
-    {WriteMemory(HProcess, $0056463C, [$03]);
-    WriteMemory(HProcess, $0056467A, [$EB, $12]);
-    WriteMemory(HProcess, $005646A7, [$80]);}
-  end;
+  // Auto CDCheck
+  WriteMemory(HProcess, $00402BE9, [OP_JMP], @PatchCDCheckAuto);
+  // Old variant
+  {WriteMemory(HProcess, $0056463C, [$03]);
+  WriteMemory(HProcess, $0056467A, [$EB, $12]);
+  WriteMemory(HProcess, $005646A7, [$80]);}
 end;
 
 initialization

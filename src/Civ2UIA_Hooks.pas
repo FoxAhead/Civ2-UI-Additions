@@ -8,7 +8,6 @@ implementation
 
 uses
   Civ2UIA_Types,
-  Civ2UIA_Global,
   Civ2UIA_Proc,
   Civ2UIA_MapMessage,
   Civ2UIA_Ex,

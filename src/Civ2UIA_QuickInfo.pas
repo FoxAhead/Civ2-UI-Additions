@@ -3,7 +3,6 @@ unit Civ2UIA_QuickInfo;
 interface
 
 uses
-  Types,
   Civ2Types,
   Windows,
   Civ2UIA_CanvasEx,
@@ -48,10 +47,9 @@ type
 implementation
 
 uses
-  Civ2UIA_Types,
-  Civ2UIA_Global,
   Civ2UIA_Proc,
   Civ2Proc,
+  UiaPatchCityWindow,
   Graphics,
   Classes,
   Math,
@@ -230,7 +228,7 @@ begin
     for i := 0 to SortedUnitsList.Count - 1 do
     begin
       UnitType := PUnit(SortedUnitsList[i]).UnitType;
-      Canvas.CopySprite(@PSprites($641848)^[UnitType], -SpriteDX, 0).PenSave;
+      Canvas.CopySprite(@Civ2.SprUnits[UnitType], -SpriteDX, 0).PenSave;
       Canvas.TextOutWithShadows(IntToStr(SortedUnitsList.TypesCount[UnitType]), -DX, DY, DT_CENTER or DT_BOTTOM).PenBR;
       Bottom := Canvas.PenPos.Y;
       Canvas.PenRestore;
@@ -376,7 +374,7 @@ begin
         begin
           StringIndex := Civ2.UnitTypes[City.Building].StringIndex;
           Cost := Civ2.UnitTypes[City.Building].Cost;
-          Canvas.CopySprite(@PSprites($641848)^[City.Building], 0, 0).PenDX(-4).PenDY(7);
+          Canvas.CopySprite(@Civ2.SprUnits[City.Building], 0, 0).PenDX(-4).PenDY(7);
           DX := 0;
           DY := 2;
         end;
@@ -481,3 +479,4 @@ begin
 end;
 
 end.
+

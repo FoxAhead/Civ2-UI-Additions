@@ -6,8 +6,7 @@ uses
   Classes,
   Controls,
   Forms,
-  StdCtrls,
-  CheckLst;
+  StdCtrls;
 
 type
   TFormSettings = class(TForm)
@@ -64,11 +63,11 @@ procedure ShowFormSettings;
 implementation
 
 uses
-  Messages,
+  
   SysUtils,
   Windows,
-  Civ2UIA_Global,
-  Civ2UIA_Proc,
+  UiaMain,
+  
   Civ2Types,
   Civ2Proc,
   Civ2UIA_FormStrings,
@@ -84,7 +83,8 @@ begin
   SetWindowLong(FormSettings.Handle, GWL_HWNDPARENT, Civ2.MainWindowInfo.WindowStructure.HWindow);
   FormSettings.ShowModal();
   FormSettings.Free();
-  Ex.SaveSettingsFile();
+  Uia.Settings.Save();
+  //Ex.SaveSettingsFile();
 end;
 
 procedure TFormSettings.FormCreate(Sender: TObject);
@@ -107,8 +107,8 @@ procedure TFormSettings.ScrollBar1Change(Sender: TObject);
 begin
   if not FChangeEventActive then
     Exit;
-  UIASettings.ColorExposure := ScrollBar1.Position / 20;
-  UIASettings.ColorGamma := ScrollBar2.Position / 20;
+  Uia.Settings.Dat.ColorExposure := ScrollBar1.Position / 20;
+  Uia.Settings.Dat.ColorGamma := ScrollBar2.Position / 20;
   SetControls();
 end;
 
@@ -141,16 +141,16 @@ var
 begin
   FChangeEventActive := False;
   // Color correction
-  ScrollBar1.Position := Trunc(UIASettings.ColorExposure * 20);
-  ScrollBar2.Position := Trunc(UIASettings.ColorGamma * 20);
-  LabelExposure.Caption := FloatToStr(UIASettings.ColorExposure);
-  LabelGamma.Caption := FloatToStr(UIASettings.ColorGamma);
+  ScrollBar1.Position := Trunc(Uia.Settings.Dat.ColorExposure * 20);
+  ScrollBar2.Position := Trunc(Uia.Settings.Dat.ColorGamma * 20);
+  LabelExposure.Caption := FloatToStr(Uia.Settings.Dat.ColorExposure);
+  LabelGamma.Caption := FloatToStr(Uia.Settings.Dat.ColorGamma);
   // Flags
   for i := 0 to GroupBoxFlags.ControlCount - 1 do
   begin
     if GroupBoxFlags.Controls[i] is TCheckBox then
     begin
-      TCheckBox(GroupBoxFlags.Controls[i]).Checked := Ex.SettingsFlagSet(GroupBoxFlags.Controls[i].Tag);
+      TCheckBox(GroupBoxFlags.Controls[i]).Checked := Uia.Settings.DatFlagSet(GroupBoxFlags.Controls[i].Tag);
     end;
   end;
   FChangeEventActive := True;
@@ -159,8 +159,8 @@ end;
 
 procedure TFormSettings.SetColor(Exposure, Gamma: Double);
 begin
-  UIASettings.ColorExposure := Exposure;
-  UIASettings.ColorGamma := Gamma;
+  Uia.Settings.Dat.ColorExposure := Exposure;
+  Uia.Settings.Dat.ColorGamma := Gamma;
   SetControls();
 end;
 
@@ -200,7 +200,7 @@ var
   Tag: Integer;
 begin
   Tag := TComponent(Sender).Tag;
-  Ex.SetSettingsFlag(Tag, TCheckBox(Sender).Checked);
+  Uia.Settings.SetDatFlag(Tag, TCheckBox(Sender).Checked);
 end;
 
 procedure TFormSettings.FormDestroy(Sender: TObject);

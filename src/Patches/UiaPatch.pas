@@ -13,6 +13,7 @@ type
     function UIAOptions(): PUIAOptions;
   public
     class procedure RegisterMe();
+    function Active(): Boolean; virtual;
     procedure Attach(HProcess: Cardinal); virtual; abstract;
   end;
 
@@ -32,6 +33,11 @@ uses
   UiaMain;
 
 { TUiaPatch }
+
+function TUiaPatch.Active: Boolean;
+begin
+  Result := UIAOPtions.UIAEnable;
+end;
 
 class procedure TUiaPatch.RegisterMe;
 begin

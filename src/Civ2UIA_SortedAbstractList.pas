@@ -28,7 +28,6 @@ type
     property Count: Integer read GetCount;
     property Items[Index: Integer]: Pointer read GetItem write SetItem; default;
   published
-
   end;
 
 implementation
@@ -84,3 +83,4 @@ begin
 end;
 
 end.
+

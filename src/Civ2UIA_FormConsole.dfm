@@ -2,7 +2,6 @@ object FormConsole: TFormConsole
   Left = 217
   Top = 243
   AutoScroll = False
-  BorderStyle = bsSizeToolWin
   Caption = 'Debug Console'
   ClientHeight = 156
   ClientWidth = 1201
@@ -53,8 +52,9 @@ object FormConsole: TFormConsole
     Width = 1201
     Height = 132
     Anchors = [akLeft, akTop, akRight, akBottom]
+    Color = clBlack
     Font.Charset = RUSSIAN_CHARSET
-    Font.Color = clWindowText
+    Font.Color = clSilver
     Font.Height = -13
     Font.Name = 'Fixedsys'
     Font.Style = []
@@ -81,7 +81,8 @@ object FormConsole: TFormConsole
         '7. SetFocus(00080580): 5F7075 55AE20 4C428B 41FD3A 41F685 59DF9E' +
         ' 59DB95 451918 5BD109 254BB77 ')
     ParentFont = False
-    ScrollBars = ssVertical
+    ReadOnly = True
+    ScrollBars = ssBoth
     TabOrder = 0
     WordWrap = False
   end

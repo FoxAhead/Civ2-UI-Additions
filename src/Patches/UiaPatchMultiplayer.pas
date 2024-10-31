@@ -8,6 +8,7 @@ uses
 type
   TUiaPatchMultiplayer = class(TUiaPatch)
   public
+    function Active(): Boolean; override;
     procedure Attach(HProcess: Cardinal); override;
   end;
 
@@ -15,7 +16,7 @@ implementation
 
 uses
   WinSock;
-  
+
 function PatchSocketBuffer(af, Struct, protocol: Integer): TSocket; stdcall;
 var
   Val: Integer;
@@ -42,16 +43,21 @@ end;
 
 { TUiaPatchMultiplayer }
 
+function TUiaPatchMultiplayer.Active: Boolean;
+begin
+  Result := True;
+end;
+
 procedure TUiaPatchMultiplayer.Attach(HProcess: Cardinal);
 begin
   // Enable simultaneous moves in multiplayer.
-  if UIAOPtions^.SimultaneousOn then
+  if UIAOPtions().SimultaneousOn then
   begin
     WriteMemory(HProcess, $0041FAF0, [$01]);
   end;
 
   // Fix for multiplayer game by limiting socket buffer length to old default 0x2000 bytes.
-  if UIAOPtions^.SocketBufferOn then
+  if UIAOPtions().SocketBufferOn then
   begin
     WriteMemory(HProcess, $10003673, [OP_CALL], @PatchSocketBuffer);
     WriteMemory(HProcess, $100044F9, [OP_CALL], @PatchSocketBuffer);
@@ -60,6 +66,11 @@ begin
     WriteMemory(HProcess, $10004E29, [OP_CALL], @PatchSocketBuffer);
     WriteMemory(HProcess, $10004E4F, [OP_CALL], @PatchSocketBuffer);
   end;
+
+  // Fix crash in hotseat game (V_HumanCivIndex_dword_6D1DA0 = 0xFFFFFFFF, must be JG instead of JNZ)
+  if UIAOPtions().UIAEnable then
+    WriteMemory(HProcess, $00569EC7, [OP_JG]);
+
 end;
 
 initialization

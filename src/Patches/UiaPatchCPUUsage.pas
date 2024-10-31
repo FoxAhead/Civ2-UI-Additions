@@ -13,6 +13,7 @@ uses
 type
   TUiaPatchCPUUsage = class(TUiaPatch)
   public
+    function Active(): Boolean; override;
     procedure Attach(HProcess: Cardinal); override;
   end;
 
@@ -180,23 +181,25 @@ end;
 
 { TUiaPatchCPUUsage }
 
+function TUiaPatchCPUUsage.Active: Boolean;
+begin
+  Result := UIAOPtions().CpuUsageOn
+end;
+
 procedure TUiaPatchCPUUsage.Attach(HProcess: Cardinal);
 begin
-  if UIAOPtions^.CpuUsageOn then
-  begin
-    C2PatchInitializeOptions(
-      UIAOPtions.MessagesPurgeIntervalMs,
-      UIAOPtions.MessageProcessingTimeThresholdMs,
-      UIAOPtions.MessageWaitTimeThresholdMs,
-      UIAOPtions.MessageWaitTimeMinMs,
-      UIAOPtions.MessageWaitTimeMaxMs
-      );
-    C2PatchInitializeTimer();
-    WriteMemory(HProcess, $005BBA64, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
-    WriteMemory(HProcess, $005BBB91, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
-    WriteMemory(HProcess, $005BD2F9, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
-    WriteMemory(HProcess, $005BD31D, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
-  end;
+  C2PatchInitializeOptions(
+    UIAOPtions.MessagesPurgeIntervalMs,
+    UIAOPtions.MessageProcessingTimeThresholdMs,
+    UIAOPtions.MessageWaitTimeThresholdMs,
+    UIAOPtions.MessageWaitTimeMinMs,
+    UIAOPtions.MessageWaitTimeMaxMs
+    );
+  C2PatchInitializeTimer();
+  WriteMemory(HProcess, $005BBA64, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
+  WriteMemory(HProcess, $005BBB91, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
+  WriteMemory(HProcess, $005BD2F9, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
+  WriteMemory(HProcess, $005BD31D, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
 end;
 
 initialization

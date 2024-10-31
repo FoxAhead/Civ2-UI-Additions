@@ -10,6 +10,7 @@ type
   private
     procedure PatchUnitsLimit(HProcess: Cardinal);
   public
+    function Active(): Boolean; override;
     procedure Attach(HProcess: Cardinal); override;
   end;
 
@@ -17,6 +18,7 @@ implementation
 
 uses
   Civ2Types,
+  Civ2Proc,
   SysUtils,
   Windows;
 
@@ -2431,8 +2433,8 @@ var
 begin
   GetMem(NewUnitsAreaAddress, (UIAOPtions^.iUnitsLimit + 2) * SizeOf(TUnit));
   ZeroMemory(NewUnitsAreaAddress, (UIAOPtions^.iUnitsLimit + 2) * SizeOf(TUnit));
-  Diff := Integer(NewUnitsAreaAddress) - AUnits;
-  ANewUnitsAreaAddress := NewUnitsAreaAddress;
+  Diff := Integer(NewUnitsAreaAddress) - Integer(Civ2.Units);
+  Civ2.Units := NewUnitsAreaAddress;
   for i := Low(GUnitLimitPatchAddr) to High(GUnitLimitPatchAddr) do
   begin
     ReadProcessMemory(HProcess, Pointer(GUnitLimitPatchAddr[i]), @UnitsArrayOffset, 4, BytesRead);
@@ -2462,12 +2464,14 @@ end;
 
 { TUiaPatchUnitsLimit }
 
+function TUiaPatchUnitsLimit.Active: Boolean;
+begin
+  Result := UIAOPtions().bUnitsLimit;
+end;
+
 procedure TUiaPatchUnitsLimit.Attach(HProcess: Cardinal);
 begin
-  if UIAOPtions^.bUnitsLimit then
-  begin
-    PatchUnitsLimit(HProcess);
-  end;
+  PatchUnitsLimit(HProcess);
 end;
 
 initialization

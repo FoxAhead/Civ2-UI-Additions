@@ -9,8 +9,7 @@ implementation
 uses
   SysUtils,
   Civ2Types,
-  Civ2Proc,
-  Civ2UIA_Proc;
+  Civ2Proc;
 
 procedure Test2();
 var

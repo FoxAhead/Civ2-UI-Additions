@@ -17,10 +17,11 @@ uses
   Graphics,
   SysUtils,
   Windows,
+  UiaMain,
   Civ2Types,
   Civ2Proc,
-  Civ2UIA_CanvasEx,
-  Civ2UIA_Ex;
+  Civ2UIA_Hooks,
+  Civ2UIA_CanvasEx;
 
 function PatchGetInfoOfClickedCitySprite(X: Integer; Y: Integer; var A4: Integer; var A5: Integer): Integer; stdcall;
 var
@@ -174,7 +175,7 @@ end;
 
 function PatchMoveDebug(): Integer; stdcall;
 begin
-  if Ex.SettingsFlagSet(6) then
+  if Uia.Settings.DatFlagSet(6) then
     Result := 1
   else
     Result := PInteger($0062D04C)^;
@@ -354,11 +355,17 @@ begin
   //SendMessageToLoader($12345678, -p1.lfHeight);
 end;
 
+function PatchDlgLoadSimpleL0Ex(DummyEAX, DummyEDX: Integer; Dialog: PDialogWindow; Flags, Length: Integer; SectionName, FileName: PChar): Integer; register;
+begin
+  Flags := Flags or 1;
+  Result := Civ2.Dlg_LoadSimple(Dialog, FileName, SectionName, Length, Flags);
+end;
+
 { TUiaPatchTests }
 
 procedure TUiaPatchTests.Attach(HProcess: Cardinal);
 begin
-  // HookImportedFunctions(HProcess);
+  HookImportedFunctions(HProcess);
 
   //WriteMemory(HProcess, $00403D00, [OP_JMP], @PatchGetInfoOfClickedCitySprite); // Only for debugging City Sprites
   //WriteMemory(HProcess, $00508C78, [OP_JMP], @PatchDebugDrawCityWindow); // For debugging City Sprites
@@ -393,6 +400,14 @@ begin
 
   // Don't clear T_WindowInfo.Autofocus
   // WriteMemory(HProcess, $0050CF38, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP]);
+
+  // Set Cancel button to simple messages by list
+  //WriteMemory(HProcess, $00421E1D, [OP_CALL], @PatchDlgLoadSimpleL0Ex);
+
+  // Font lfQuality
+  //WriteMemory(HProcess, $005C8245 + 3, [5]);
+
+  
 end;
 
 initialization

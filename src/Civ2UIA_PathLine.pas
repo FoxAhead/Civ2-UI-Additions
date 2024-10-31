@@ -5,7 +5,6 @@ interface
 uses
   Civ2Types,
   Civ2UIA_MapOverlayModule,
-  Classes,
   Types;
 
 type
@@ -46,8 +45,7 @@ uses
   Windows,
   Civ2Proc,
   Civ2UIA_CanvasEx,
-  Civ2UIA_Proc,
-  Civ2UIA_Types;
+  Civ2UIA_Proc;
 
 { TPathLine }
 
@@ -289,59 +287,59 @@ begin
     end;
   end;
 
-//  // Debug CitySpiral or Distance
-//  if FCityIndex >= 0 then
-//  begin
-//    for i := 0 to 47 do
-//    begin
-//      Canvas := TCanvasEx.Create(DrawPort);
-//      Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1 + Civ2.CitySpiralDX[i], FStartPoint.Y + 1 + Civ2.CitySpiralDY[i]);
-//      Canvas.PenPos := ScreenPoint;
-//      Canvas.Font.Size := 11;
-//      Canvas.Brush.Style := bsClear;
-//      Canvas.Font.Style := [fsBold];
-//      Canvas.SetTextColors(41, 10);
-//      Canvas.FontShadows := SHADOW_BR;
-//      Distance := Civ2.Distance(FStartPoint.X, FStartPoint.Y, FStartPoint.X + Civ2.CitySpiralDX[i], FStartPoint.Y + Civ2.CitySpiralDY[i]);
-//      //Canvas.TextOutWithShadows(IntToStr(i), 0, 0, DT_CENTER + DT_VCENTER);
-//      Canvas.TextOutWithShadows(IntToStr(Distance), 0, 0, DT_CENTER + DT_VCENTER);
-//      Canvas.Free();
-//    end;
-//  end;
-  //    // Debug CityDXDY
-  //    if FCityIndex >= 0 then
+  //  // Debug CitySpiral or Distance
+  //  if FCityIndex >= 0 then
+  //  begin
+  //    for i := 0 to 47 do
   //    begin
-  //      for i := 0 to 23 do
-  //      begin
-  //        Canvas := TCanvasEx.Create(DrawPort);
-  //        Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1 + Civ2.CityDX[i], FStartPoint.Y + 1 + Civ2.CityDY[i]);
-  //        Canvas.PenPos := ScreenPoint;
-  //        Canvas.Font.Size := ScaleByZoom(11, Civ2.MapWindow.MapZoom);
-  //        Canvas.Brush.Style := bsClear;
-  //        Canvas.Font.Style := [fsBold];
-  //        Canvas.SetTextColors(41, 10);
-  //        Canvas.FontShadows := SHADOW_BR;
-  //        Canvas.TextOutWithShadows(IntToStr(i), 0, 0, DT_CENTER + DT_VCENTER);
-  //        Canvas.Free();
-  //      end;
+  //      Canvas := TCanvasEx.Create(DrawPort);
+  //      Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1 + Civ2.CitySpiralDX[i], FStartPoint.Y + 1 + Civ2.CitySpiralDY[i]);
+  //      Canvas.PenPos := ScreenPoint;
+  //      Canvas.Font.Size := 11;
+  //      Canvas.Brush.Style := bsClear;
+  //      Canvas.Font.Style := [fsBold];
+  //      Canvas.SetTextColors(41, 10);
+  //      Canvas.FontShadows := SHADOW_BR;
+  //      Distance := Civ2.Distance(FStartPoint.X, FStartPoint.Y, FStartPoint.X + Civ2.CitySpiralDX[i], FStartPoint.Y + Civ2.CitySpiralDY[i]);
+  //      //Canvas.TextOutWithShadows(IntToStr(i), 0, 0, DT_CENTER + DT_VCENTER);
+  //      Canvas.TextOutWithShadows(IntToStr(Distance), 0, 0, DT_CENTER + DT_VCENTER);
+  //      Canvas.Free();
   //    end;
-  //    // Debug PFDXDY
-  //    if FCityIndex >= 0 then
-  //    begin
-  //      for i := 0 to 8 do
-  //      begin
-  //        Canvas := TCanvasEx.Create(DrawPort);
-  //        Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1 + Civ2.PFDX[i], FStartPoint.Y + 1 + Civ2.PFDY[i]);
-  //        Canvas.PenPos := ScreenPoint;
-  //        Canvas.Font.Size := ScaleByZoom(11, Civ2.MapWindow.MapZoom);
-  //        Canvas.Brush.Style := bsClear;
-  //        Canvas.Font.Style := [fsBold];
-  //        Canvas.SetTextColors(41, 10);
-  //        Canvas.FontShadows := SHADOW_BR;
-  //        Canvas.TextOutWithShadows(IntToStr(i), 0, 0, DT_CENTER + DT_VCENTER);
-  //        Canvas.Free();
-  //      end;
-  //    end;
+  //  end;
+    //    // Debug CityDXDY
+    //    if FCityIndex >= 0 then
+    //    begin
+    //      for i := 0 to 23 do
+    //      begin
+    //        Canvas := TCanvasEx.Create(DrawPort);
+    //        Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1 + Civ2.CityDX[i], FStartPoint.Y + 1 + Civ2.CityDY[i]);
+    //        Canvas.PenPos := ScreenPoint;
+    //        Canvas.Font.Size := ScaleByZoom(11, Civ2.MapWindow.MapZoom);
+    //        Canvas.Brush.Style := bsClear;
+    //        Canvas.Font.Style := [fsBold];
+    //        Canvas.SetTextColors(41, 10);
+    //        Canvas.FontShadows := SHADOW_BR;
+    //        Canvas.TextOutWithShadows(IntToStr(i), 0, 0, DT_CENTER + DT_VCENTER);
+    //        Canvas.Free();
+    //      end;
+    //    end;
+    //    // Debug PFDXDY
+    //    if FCityIndex >= 0 then
+    //    begin
+    //      for i := 0 to 8 do
+    //      begin
+    //        Canvas := TCanvasEx.Create(DrawPort);
+    //        Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1 + Civ2.PFDX[i], FStartPoint.Y + 1 + Civ2.PFDY[i]);
+    //        Canvas.PenPos := ScreenPoint;
+    //        Canvas.Font.Size := ScaleByZoom(11, Civ2.MapWindow.MapZoom);
+    //        Canvas.Brush.Style := bsClear;
+    //        Canvas.Font.Style := [fsBold];
+    //        Canvas.SetTextColors(41, 10);
+    //        Canvas.FontShadows := SHADOW_BR;
+    //        Canvas.TextOutWithShadows(IntToStr(i), 0, 0, DT_CENTER + DT_VCENTER);
+    //        Canvas.Free();
+    //      end;
+    //    end;
 end;
 
 procedure TPathLine.SetStartPoint(const Value: TPoint);

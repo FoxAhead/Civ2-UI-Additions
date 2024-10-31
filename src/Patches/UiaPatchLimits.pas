@@ -18,6 +18,7 @@ type
     procedure C2PatchGoldLimit(HProcess: Cardinal);
     procedure C2PatchMapTilesLimit(HProcess: Cardinal);
   public
+    function Active(): Boolean; override;
     procedure Attach(HProcess: Cardinal); override;
   end;
 
@@ -61,6 +62,11 @@ begin
   WriteMemory(HProcess, $0041D6B7, WordRec(UIAOPtions^.MapXLimit).Bytes);
   WriteMemory(HProcess, $0041D6DE, WordRec(UIAOPtions^.MapYLimit).Bytes);
   WriteMemory(HProcess, $0041D6FF, WordRec(UIAOPtions^.MapSizeLimit).Bytes);
+end;
+
+function TUiaPatchLimits.Active: Boolean;
+begin
+  Result := True;
 end;
 
 procedure TUiaPatchLimits.Attach(HProcess: Cardinal);
