@@ -118,7 +118,7 @@ var
   StringInList: PChar;
 begin
   Result := 0;
-  if (Civ2.LoadedTxtSectionName <> nil) and (Dialog.Flags and $41000 = $1000) then // Has listbox, not system
+  if (Civ2.LoadedTxtSectionName <> nil) and (Dialog.Flags and $41000 = CIV2_DLG_LISTBOX) then // Has listbox, not system
     for i := Low(ResizableDialogSectionNames) to High(ResizableDialogSectionNames) do
     begin
       if StrComp(Civ2.LoadedTxtSectionName, ResizableDialogSectionNames[i]) = 0 then

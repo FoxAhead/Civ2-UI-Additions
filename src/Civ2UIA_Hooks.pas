@@ -9,8 +9,6 @@ implementation
 uses
   Civ2UIA_Types,
   Civ2UIA_Proc,
-  Civ2UIA_MapMessage,
-  Civ2UIA_Ex,
   Civ2UIA_FormConsole,
   SysUtils,
   Classes,
@@ -72,7 +70,6 @@ begin
     CallerChain := CallerChain.Prev;
   until Cardinal(CallerChain.Caller) > $1000000;
   TFormConsole.Log(Format('SetFocus(%.8x): %s', [HWindow, Text]));
-  //Ex.MapMessages.Add(TMapMessage.Create());
   OriginalAddress := OriginalAddresses[1];
   asm
     push  HWindow
@@ -94,7 +91,7 @@ begin
   SendMessageToLoader(2, 0);
   SendMessageToLoader(CallerAddress, HWindow);
   OriginalAddress := OriginalAddresses[2];
-  Ex.MapMessages.Add(TMapMessage.Create(Format('%.6x DestroyWindow(%.8x)', [CallerAddress, HWindow])));
+  TFormConsole.Log(Format('%.6x DestroyWindow(%.8x)', [CallerAddress, HWindow]));
   asm
     push  HWindow
     mov   eax, OriginalAddress

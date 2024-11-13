@@ -116,14 +116,18 @@ procedure TFormSettings.PropagatePaletteChanges;
 var
   HWindow: HWND;
   GraphicsInfo: PGraphicsInfo;
+  Palette: PPalette;
 begin
   GraphicsInfo := @Civ2.MapWindow.MSWindow.GraphicsInfo;
-  Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.WindowInfo1.Palette);
-  Civ2.DrawPort_UpdateDIBColorTableFromPaletteSafe(@GraphicsInfo.DrawPort, GraphicsInfo.WindowInfo.WindowInfo1.Palette);
+  Palette := GraphicsInfo.WindowInfo.WindowInfo1.Palette;
+  if Palette = nil then
+    Palette := Civ2.Palette;
+  Civ2.Palette_SetRandomID(Palette);
+  Civ2.DrawPort_UpdateDIBColorTableFromPaletteSafe(@GraphicsInfo.DrawPort, Palette);
   // Also recreate main window brush for background
   Civ2.WindowInfo1_RecreateBrush(Civ2.MainWindowInfo, $9E);
   // Also set new palette for map overlay - to be consistent with the game look
-  Ex.MapOverlay.SetDIBColorTableFromPalette(GraphicsInfo.WindowInfo.WindowInfo1.Palette);
+  Ex.MapOverlay.SetDIBColorTableFromPalette(Palette);
   // Redraw main window with all subwindows
   HWindow := GetParent(GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure^.HWindow);
   RedrawWindow(HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);

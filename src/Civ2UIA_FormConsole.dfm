@@ -3,7 +3,7 @@ object FormConsole: TFormConsole
   Top = 243
   AutoScroll = False
   Caption = 'Debug Console'
-  ClientHeight = 156
+  ClientHeight = 175
   ClientWidth = 1201
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -17,7 +17,7 @@ object FormConsole: TFormConsole
   OnDestroy = FormDestroy
   DesignSize = (
     1201
-    156)
+    175)
   PixelsPerInch = 96
   TextHeight = 13
   object LabelFocus: TLabel
@@ -50,7 +50,7 @@ object FormConsole: TFormConsole
     Left = 0
     Top = 24
     Width = 1201
-    Height = 132
+    Height = 151
     Anchors = [akLeft, akTop, akRight, akBottom]
     Color = clBlack
     Font.Charset = RUSSIAN_CHARSET
@@ -58,6 +58,7 @@ object FormConsole: TFormConsole
     Font.Height = -13
     Font.Name = 'Fixedsys'
     Font.Style = []
+    HideSelection = False
     Lines.Strings = (
       
         '1. SetFocus(0004050C): 408607 40863C 5C5C20 5EAC35 5EAB47 254BB7' +

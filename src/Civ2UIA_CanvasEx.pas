@@ -41,7 +41,8 @@ type
     function SetTextColors(MainColorIndex, ShadowColorIndex: Integer): TCanvasEx;
     function SetSpriteZoom(Zoom: Integer): TCanvasEx;
     function CopySprite(Sprite: PSprite; DX: Integer = 0; DY: Integer = 0): TCanvasEx;
-    function TextOutWithShadows(const Text: string; DX: Integer = 0; DY: Integer = 0; Align: Cardinal = DT_LEFT): TCanvasEx;
+    function TextOutWithShadows(const Text: string; DX: Integer = 0; DY: Integer = 0; Align: Cardinal = DT_LEFT; Rect: PRect = nil): TCanvasEx; overload;
+    procedure TextOutRect(X, Y: Integer; const Text: string; Rect: PRect);
     function PenReset(): TCanvasEx;
     function PenX(X: Integer): TCanvasEx;
     function PenY(Y: Integer): TCanvasEx;
@@ -131,7 +132,7 @@ begin
   Result := Self;
 end;
 
-function TCanvasEx.TextOutWithShadows(const Text: string; DX, DY: Integer; Align: Cardinal): TCanvasEx;
+function TCanvasEx.TextOutWithShadows(const Text: string; DX, DY: Integer; Align: Cardinal; Rect: PRect): TCanvasEx;
 var
   FontMainColor: TColor;
   P: TPoint;
@@ -162,7 +163,7 @@ begin
         if (SX = 0) and (SY = 0) then
           Continue;
         if (FontShadows1 and 1) = 1 then
-          TextOut(P.X + SX + DX + OffsetX, P.Y + SY + DY + OffsetY, Text);
+          TextOutRect(P.X + SX + DX + OffsetX, P.Y + SY + DY + OffsetY, Text, Rect);
         FontShadows1 := FontShadows1 shr 1;
         if FontShadows1 = 0 then
           Break;
@@ -170,9 +171,20 @@ begin
     end;
   end;
   Font.Color := FontMainColor;
-  TextOut(P.X + DX + OffsetX, P.Y + DY + OffsetY, Text);
+  TextOutRect(P.X + DX + OffsetX, P.Y + DY + OffsetY, Text, Rect);
   MaxPen := PenPos;
   Result := Self;
+end;
+
+procedure TCanvasEx.TextOutRect(X, Y: Integer; const Text: string; Rect: PRect);
+begin
+  if Rect <> nil then
+  begin
+    TextRect(Rect^, X, Y, Text);
+    MoveTo(X + TextWidth(Text), Y);
+  end
+  else
+    TextOut(X, Y, Text);
 end;
 
 function TCanvasEx.PenReset: TCanvasEx;

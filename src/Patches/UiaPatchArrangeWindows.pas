@@ -18,7 +18,6 @@ implementation
 
 uses
   Math,
-  
   Windows,
   Civ2Proc,
   Civ2UIA_Proc;

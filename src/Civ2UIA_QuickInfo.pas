@@ -161,8 +161,10 @@ var
   ColorGray: Integer;
 begin
   Civ2.DrawPort_ResetWH(@FDrawPort, RectWidth(FRect), RectHeight(FRect));
-  Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.Palette);
-
+  if FDrawPort.ColorDepth = 1 then
+    //Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.Palette);
+    Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.Palette);
+                
   if FBgTile.DrawInfo = nil then
   begin
     BgTile := PDrawPort($00640990);
@@ -479,4 +481,3 @@ begin
 end;
 
 end.
-

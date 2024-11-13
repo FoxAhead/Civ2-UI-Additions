@@ -26,7 +26,8 @@ uses
   Civ2Proc,
   Civ2UIA_Types,
   Civ2UIA_Ex,
-  Civ2UIA_CanvasEx;
+  Civ2UIA_CanvasEx,
+  Civ2UIA_FormConsole;
 
 type
   TMouseDrag = record
@@ -868,6 +869,75 @@ asm
     ret
 end;
 
+procedure AdvisorWndProcChar(CharCode: Char); cdecl;
+begin
+  case CharCode of
+    'T':
+      begin
+        Civ2.ShowTaxRate(Civ2.HumanCivIndex^);
+        Civ2.SetFocus(Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow);
+      end;
+  else
+    ;
+  end;
+end;
+
+procedure AdvisorWndProcKeyDown2(Key: Integer); cdecl;
+var
+  R: TRect;
+  W: HWND;
+  P: TPoint;
+begin
+  W := Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow;
+  GetWindowRect(W, R);
+  P := Point(R.Left, R.Top);
+  ScreenToClient(GetParent(W), P);
+  case Key of
+    $B0:
+      Civ2.ShowAdvisorCityStatus(Civ2.HumanCivIndex^);
+    $B1:
+      Civ2.ShowAdvisorDefenseMinister(Civ2.HumanCivIndex^);
+
+    //    $B2:
+    //      Civ2.ShowDialogForeignMinister(Civ2.HumanCivIndex^);
+    $B3:
+      Civ2.ShowAdvisorAttitude(Civ2.HumanCivIndex^);
+    $B4:
+      Civ2.ShowAdvisorTrade(Civ2.HumanCivIndex^);
+    $B5:
+      Civ2.ShowAdvisorScience(Civ2.HumanCivIndex^);
+    //    $B6:
+    //      Civ2.ShowAdvisorWonders(Civ2.HumanCivIndex^);
+  end;
+  case Key of
+    $B0, $B1, $B3, $B4, $B5:
+      begin
+        W := Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow;
+        SetWindowPos(W, 0, P.X, P.Y, 0, 0, SWP_NOSIZE or SWP_NOZORDER);
+      end;
+  end;
+end;
+
+procedure PatchAdvisorWindowPrepareAfterEx(); stdcall;
+var
+  V1: PPalette;
+  V2: ^WORD;
+begin
+  if Civ2.AdvisorWindow.Popup = 0 then
+  begin
+    Civ2.WindowProcs_SetWndProcChar(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowProcs, @AdvisorWndProcChar);
+    Civ2.WindowProcs_SetWndProcKeyDown2(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowProcs, @AdvisorWndProcKeyDown2);
+  end;
+end;
+
+procedure PatchAdvisorWindowPrepareAfter(); register;
+asm
+    mov   large fs:0, eax  // Restored
+    call  PatchAdvisorWindowPrepareAfterEx
+    push  $0042ABBA
+    ret
+end;
+
 { TUiaPatchCommon }
 
 procedure TUiaPatchCommon.Attach(HProcess: Cardinal);
@@ -913,6 +983,10 @@ begin
 
   // Initialize Leaders.CitiesBuilt counter on new game to reset to the beginning of the city names list (CITY.TXT)
   WriteMemory(HProcess, $004AA9C9, [OP_JMP], @PatchInitNewGameParameters);
+
+  // Set Char and KeyDown2 procs for advisors
+  WriteMemory(HProcess, $0042ABB4, [OP_JMP], @PatchAdvisorWindowPrepareAfter);
+
 end;
 
 initialization

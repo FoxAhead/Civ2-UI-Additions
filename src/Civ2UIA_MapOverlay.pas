@@ -117,7 +117,9 @@ begin
       begin
         FMapDeviceContext := MapDrawPort.DrawInfo.DeviceContext;
         Civ2.DrawPort_ResetWH(@FDrawPort, MapDrawPort.Width, MapDrawPort.Height);
-        Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.Palette);
+        if FDrawPort.ColorDepth = 1 then
+          //Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.Palette);
+          Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.Palette);
       end;
     end;
   end;
@@ -126,7 +128,8 @@ end;
 procedure TMapOverlay.SetDIBColorTableFromPalette(Palette: Pointer);
 begin
   if FDrawPort.DrawInfo <> nil then
-    Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Palette);
+    if FDrawPort.ColorDepth = 1 then
+      Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Palette);
 end;
 
 procedure TMapOverlay.UpdateModules;

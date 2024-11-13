@@ -1,6 +1,8 @@
 // This file is generated automatically. Do not change it.
 @AfterActiveUnitChanged                      := Pointer($004016EF);
 @ArrangeWindows                              := Pointer($004039F4);
+@BmpFillColor                                := Pointer($005E4E60);
+@CDRootFind                                  := Pointer($00402BE9);
 @CalcCityGlobals                             := Pointer($00402603);
 @CalcCityGlobalsTileRes                      := Pointer($0040335F);
 @CityCitizenClicked                          := Pointer($0040204A);
@@ -19,6 +21,8 @@
 @Clamp                                       := Pointer($00402D56);
 @ClearPopupActive                            := Pointer($005A3C58);
 @ControlInfo_ShowWindowInvalidateRect        := PThisCall($0040169A);
+@CopyBmp                                     := Pointer($005E4F9B);
+@CopySpriteBmp                               := Pointer($005E518E);
 @CopyToPort                                  := Pointer($00402081);
 @Crt_OperatorDelete                          := Pointer($005F23C0);
 @Crt_OperatorNew                             := Pointer($005F2470);
@@ -38,7 +42,11 @@
 @Dlg_LoadSimple                              := PThisCall($00403B8E);
 @DrawCitySprite                              := Pointer($00402A45);
 @DrawFrame                                   := Pointer($00401DB1);
+@DrawPort_BmpAttach                          := PThisCall($005C01C1);
+@DrawPort_BmpDetach                          := PThisCall($005C02E0);
 @DrawPort_GetPixel                           := PThisCall($005C0BF2);
+@DrawPort_GetPixelAddress                    := PThisCall($005C19D3);
+@DrawPort_Locked                             := PThisCall($005C54F0);
 @DrawPort_ResetWH                            := PThisCall($005BD65C);
 @DrawPort_UpdateDIBColorTableFromPaletteSafe := PThisCall($005C0D12);
 @DrawStringCurrDrawPort2                     := Pointer($00401E0B);
@@ -59,6 +67,8 @@
 @GetStringInList                             := Pointer($00403387);
 @GetTopUnitInStack                           := Pointer($00403391);
 @GetUpkeep                                   := Pointer($004014DD);
+@GraphicsInfo_BuildWindowC                   := PThisCall($005BB4AE);
+@GraphicsInfo_BuildWindowCCD2                := PThisCall($005BB80A);
 @GraphicsInfo_CopyToScreenAndValidateW       := PThisCall($004014A1);
 @Heap_Add                                    := Pointer($0040389B);
 @HumanTurn                                   := Pointer($00402BA8);
@@ -80,14 +90,18 @@
 @MenuBar_AddMenu                             := PThisCall($0040117C);
 @MenuBar_AddSubMenu                          := PThisCall($00402D10);
 @MenuBar_GetSubMenu                          := PThisCall($004039EF);
+@NextLinePixelAddress                        := PThisCall($005C5610);
 @PFFindConnection                            := Pointer($00403481);
 @PFFindUnitDir                               := Pointer($00402FA9);
 @PFMove                                      := Pointer($004028B0);
+@Palette_GetRGB                              := PThisCall($00402036);
 @Palette_SetRandomID                         := PThisCall($005C6A42);
 @PopupSimpleGAMEWithSprite                   := Pointer($004034A9);
 @PopupWithImprovementSprite                  := Pointer($00403AD0);
 @ProcessOrdersGoTo                           := Pointer($00401145);
 @ProcessUnit                                 := Pointer($00402716);
+@RectHeight                                  := Pointer($00403C7E);
+@RectWidth                                   := Pointer($004036BB);
 @ResetSpriteZoom                             := Pointer($004023D3);
 @ScaleByZoom                                 := Pointer($00401E83);
 @Scroll_CallRedrawAfter                      := PThisCall($005CD640);
@@ -105,6 +119,14 @@
 @SetSpriteZoom                               := Pointer($00403350);
 @SetWinRectCityWindow                        := Pointer($00402A6D);
 @SetWorker                                   := Pointer($00401EF1);
+@ShowAdvisorAttitude                         := Pointer($004013F2);
+@ShowAdvisorCityStatus                       := Pointer($00401DA2);
+@ShowAdvisorDefenseMinister                  := Pointer($004015AA);
+@ShowAdvisorScience                          := Pointer($0040242D);
+@ShowAdvisorTrade                            := Pointer($00401EA6);
+@ShowAdvisorWonders                          := Pointer($00402194);
+@ShowDialogForeignMinister                   := Pointer($00403BED);
+@ShowTaxRate                                 := Pointer($00402C43);
 @Sprite_CopyToPortNC                         := PThisCall($005CEF31);
 @Sprite_CopyToSprite                         := PThisCall($005CF23F);
 @Sprite_Dispose                              := PThisCall($005CDF50);
@@ -116,5 +138,7 @@
 @WindowInfo1_RecreateBrush                   := PThisCall($00402045);
 @WindowInfo1_RestoreWindow                   := PThisCall($00402C7F);
 @WindowInfo1_SetFocusAndBringToTop           := PThisCall($0040325B);
+@WindowProcs_SetWndProcChar                  := PThisCall($00401F91);
+@WindowProcs_SetWndProcKeyDown2              := PThisCall($004018F2);
 @txtStrcatInt                                := Pointer($00401ED8);
 @txtStrcatLabelString                        := Pointer($00401BF4);

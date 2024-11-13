@@ -12,24 +12,21 @@ type
     procedure Attach(HProcess: Cardinal); override;
   end;
 
-function PatchCDCheckAuto(ACheckFile: PChar): PChar; cdecl;
-
 implementation
 
 uses
   Civ2Proc,
   SysUtils,
-  Windows;
+  Windows,
+  Civ2UIA_FormConsole;
 
-function TryCDCheck(ACheckFile: PChar; DriveType: Cardinal): PChar;
+function TryCDRootFind(CheckFileName: PChar; DriveType: Cardinal): PChar;
 var
-  PrevMode: Cardinal;
-  LogicalDrives: Cardinal;
+  PrevMode, LogicalDrives: Cardinal;
+  i: Integer;
   Buffer: array[0..255] of Char;
   RootPathName: PChar;
-  i: Integer;
-  ReOpenBuff: _OFSTRUCT;
-  FileHandle: THandle;
+  ReOpenBuff: TOFStruct;
 begin
   PrevMode := SetErrorMode(SEM_FAILCRITICALERRORS);
   LogicalDrives := GetLogicalDrives();
@@ -42,23 +39,18 @@ begin
       if GetDriveType(RootPathName) = DriveType then
       begin
         StrCopy(Civ2.ChText, RootPathName);
-        StrCat(Civ2.ChText, ACheckFile);
-        FileHandle := OpenFile(Civ2.ChText, ReOpenBuff, OF_EXIST);
-        if (DriveType = DRIVE_CDROM) and (FileHandle <> HFILE_ERROR) then
+        StrCat(Civ2.ChText, CheckFileName);
+        //TFormConsole.Log('TryCDRootFind: ' + RootPathName);
+        if OpenFile(Civ2.ChText, ReOpenBuff, OF_EXIST) <> HFILE_ERROR then
         begin
           Civ2.CDRoot[0] := RootPathName[0];
           Civ2.CDRoot[1] := #0;
           StrCat(Civ2.CDRoot, ':\');
-          Break;
-        end
-        else
-        begin
-          Civ2.CDRoot[0] := #0;
-          StrCat(Civ2.CDRoot, ':\');
+          //TFormConsole.Log('Found!');
           Break;
         end;
       end;
-      while RootPathName^ <> #0 do
+      while RootPathName[0] <> #0 do
       begin
         Inc(RootPathName);
       end;
@@ -66,17 +58,22 @@ begin
     end;
   end;
   SetErrorMode(PrevMode);
-  if Civ2.CDRoot^ <> #0 then
+  if Civ2.CDRoot[0] <> #0 then
     Result := Civ2.CDRoot
   else
     Result := nil;
 end;
 
-function PatchCDCheckAuto(ACheckFile: PChar): PChar; cdecl;
+function PatchCDRootFindAuto(CheckFileName: PChar): PChar; cdecl;
 begin
-  Result := TryCDCheck(ACheckFile, DRIVE_CDROM);
+  //TFormConsole.Log('ModuleFileName: ' + Civ2.Path);
+  Result := TryCDRootFind(CheckFileName, DRIVE_CDROM);
   if Result = nil then
-    Result := TryCDCheck(ACheckFile, DRIVE_FIXED);
+  begin
+    Civ2.CDRoot := '.\';
+    Result := '.\';
+  end;
+  TFormConsole.Log('CDRoot: ' + Civ2.CDRoot);
 end;
 
 { TUiaPatch64Bit }
@@ -89,7 +86,7 @@ end;
 procedure TUiaPatchCDCheck.Attach(HProcess: Cardinal);
 begin
   // Auto CDCheck
-  WriteMemory(HProcess, $00402BE9, [OP_JMP], @PatchCDCheckAuto);
+  WriteMemory(HProcess, $00402BE9, [OP_JMP], @PatchCDRootFindAuto);
   // Old variant
   {WriteMemory(HProcess, $0056463C, [$03]);
   WriteMemory(HProcess, $0056467A, [$EB, $12]);

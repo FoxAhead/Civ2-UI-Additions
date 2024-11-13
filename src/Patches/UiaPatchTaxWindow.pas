@@ -15,11 +15,13 @@ implementation
 
 uses
   Graphics,
+  SysUtils,
   Windows,
   Civ2Types,
   Civ2Proc,
   Civ2UIA_Proc,
-  Civ2UIA_CanvasEx;
+  Civ2UIA_CanvasEx,
+  Civ2UIA_FormConsole;
 
 procedure PatchUpdateTaxWindowEx(TaxWindow: PTaxWindow); stdcall;
 var
@@ -29,7 +31,6 @@ var
   Text, Text1, Text2: string;
   Beakers, AdvanceCost: Integer;
   i: Integer;
-  //Discoveries, TaxRate, ScienceRate: Integer;
 begin
   Civ := @Civ2.Civs[TaxWindow.CivIndex];
   Beakers := Civ.Beakers;
@@ -46,11 +47,15 @@ begin
   Text1 := GetLabelString(368) + ': ' + ConvertTurnsToString(GetTurnsToComplete(0, TaxWindow.TotalScience, AdvanceCost), $22); // Discoveries Every
   Canvas.TextOutWithShadows(Text1, 0, 0, DT_CENTER);
 
-  Canvas.MoveTo(Xc, Y + TaxWindow.FontHeight);
-  Text := string(Civ2.GetStringInList(Civ2.RulesCivilizes[Civ.ResearchingTech].TextIndex)); // Advance name
-  Text2 := ConvertTurnsToString(GetTurnsToComplete(Beakers, TaxWindow.TotalScience, AdvanceCost), $22);
-  Text := '(' + Text + ': ' + Text2 + ')';
-  Canvas.TextOutWithShadows(Text, 0, 0, DT_CENTER);
+  if Civ.ResearchingTech > 0 then
+  begin
+    Canvas.MoveTo(Xc, Y + TaxWindow.FontHeight);
+    Text := string(Civ2.GetStringInList(Civ2.RulesCivilizes[Civ.ResearchingTech].TextIndex)); // Advance name
+    Text2 := ConvertTurnsToString(GetTurnsToComplete(Beakers, TaxWindow.TotalScience, AdvanceCost), $22);
+    Text := '(' + Text + ': ' + Text2 + ')';
+    Canvas.TextOutWithShadows(Text, 0, 0, DT_CENTER);
+  end;
+
   Canvas.Free();
 
   Civ2.GraphicsInfo_CopyToScreenAndValidateW(@TaxWindow.MSWindow.GraphicsInfo);
@@ -69,7 +74,7 @@ begin
   end;
   Civ2.CityWindow_Update(Civ2.CityWindow, 0);
   case Civ2.AdvisorWindow.AdvisorType of
-    4, 5, 6:
+    4, 5, 6, 9:
       Civ2.UpdateCopyValidateAdvisor(Civ2.AdvisorWindow.AdvisorType);
   end;
   //Civ2.Civs[TaxWindow.CivIndex].TaxRate := TaxRate;
@@ -84,7 +89,6 @@ asm
     ret
 end;
 
-
 { TUiaPatchTaxWindow }
 
 procedure TUiaPatchTaxWindow.Attach(HProcess: Cardinal);
@@ -98,4 +102,3 @@ initialization
   TUiaPatchTaxWindow.RegisterMe();
 
 end.
-

@@ -7,6 +7,8 @@ uses
   Windows;
 
 type
+  PWindowProcs = ^TWindowProcs;
+
   PCityWindow = ^TCityWindow;
 
   PCityGlobals = ^TCityGlobals;
@@ -555,7 +557,7 @@ type
     ClientRectangle: TRect;
     WindowRectangle: TRect;
     pBmp: PByte;
-    RowsAddr: Pointer;
+    RowsOffset: Pointer;
     PrevPaletteID: Integer;
     DrawInfo: PDrawInfo;
     ColorDepth: Integer;
@@ -722,13 +724,13 @@ type
   TMapWindows = array[0..7] of TMapWindow; // 66C7A8
 
   TCityWindow = packed record             // 6A91B8  Size = $16E0
-    MSWindow: TMSWindow;
-    CitySprites: TCitySprites;            // + 2D8 = 6A9490
-    CityIndex: Integer;                   // + 159C
-    Unknown2: Integer;
-    Unknown3: Integer;
-    Unknown4: Integer;
-    CityModalMode: Integer;               // 0, 1, 2 (Warning GAME.TXT @CITYMODAL)
+    MSWindow: TMSWindow;                  // 0000
+    CitySprites: TCitySprites;            // 02D8
+    CityIndex: Integer;                   // 159C
+    Minimized: BOOL;                      // 15A0
+    Hidden: BOOL;                         // 15A4
+    NoUpdate: BOOL;                       // 15A8
+    CityModalMode: Integer;               // 15AC - 0, 1, 2 (Warning GAME.TXT @CITYMODAL)
     CentralInfo: Integer;
     ImproveListStart: Integer;
     ImproveCount: Integer;
@@ -833,7 +835,7 @@ type
     //  5 - F5  Trade Advisor
     //  6 - F6  Science Advisor
     //  7 - F7  Wonders of the World
-    //  8 - F8  Top 5 Cities, About Civilization II
+    //  8 - F8  Top 5 Cities, About Civilization II, Hall of Fame
     //  9 - F11 Demographics
     // 10 - F9  Civilization Score
     // 12 - Ctrl-D Casaulty Timeline
@@ -1312,8 +1314,8 @@ type
     Gold: Integer;                        // + 0x02 = 64C6A2
     Leader: Word;                         // + 0x06 = 64C6A6
     Beakers: Word;                        // + 0x08 = 64C6A8
-    ResearchingTech: Smallint;
-    CapitalX: SmallInt;
+    ResearchingTech: Smallint;            // 000A
+    CapitalX: SmallInt;                   // 000C - Used to center the CityWindow overview minimap by capital
     TurnOfCityBuild: SmallInt;
     Techs: Byte;
     FutureTechs: Byte;

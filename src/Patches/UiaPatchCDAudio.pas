@@ -21,7 +21,8 @@ uses
   Windows,
   Civ2Proc,
   Civ2UIA_Proc,
-  Civ2UIA_CanvasEx;
+  Civ2UIA_CanvasEx,
+  Civ2UIA_FormConsole;
 
 var
   MCICDCheckThrottle: Integer;
@@ -78,20 +79,14 @@ end;
 
 procedure DrawCDPositon(Position: Cardinal);
 var
-  //DC: HDC;
   Canvas: TCanvasEx;
-  //SavedDC: Integer;
   TextOut: string;
   R: TRect;
   R2: TRect;
   TextSize: TSize;
 begin
   TextOut := CDPosition_To_String(Position) + ' / ' + CDLength_To_String(MCIPlayLength);
-  //DC := Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo^.DeviceContext;
   Canvas := TCanvasEx.Create(@Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort);
-  //SavedDC := SaveDC(DC);
-  //Canvas := TCanvas.Create();
-  //Canvas.Handle := DC;
   Canvas.Font.Style := [];
   Canvas.Font.Size := 10;
   Canvas.Font.Name := 'Arial';
@@ -117,23 +112,21 @@ begin
   Canvas.FontShadowColor := clWhite;
   Canvas.FontShadows := SHADOW_NONE;
   Canvas.TextOutWithShadows(TextOut);
-  //Canvas.Handle := 0;
   Canvas.Free();
-  //RestoreDC(DC, SavedDC);
   InvalidateRect(Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure^.HWindow, @R, True);
 end;
 
-function PatchMciPlay(MCIId: MCIDEVICEID; uMessage: UINT; dwParam1, dwParam2: DWORD): MCIERROR; stdcall;
+function PatchMciPlay(mciId: MCIDEVICEID; uMessage: UINT; dwParam1, dwParam2: DWORD): MCIERROR; stdcall;
 var
   PlayParms: TMCI_Play_Parms;
 begin
   MCIPlayId := 0;
   MCIPlayTrack := 0;
-  Result := mciSendCommand(MCIId, uMessage, dwParam1, dwParam2);
+  Result := mciSendCommand(mciId, uMessage, dwParam1, dwParam2);
   if Result = 0 then
   begin
     PlayParms := PMCI_Play_Parms(dwParam2)^;
-    MCIPlayId := MCIId;
+    MCIPlayId := mciId;
     MCIPlayTrack := PlayParms.dwFrom;
     MCIPlayLength := CDGetTrackLength(MCIPlayId, MCIPlayTrack);
   end;
@@ -169,8 +162,39 @@ end;
 
 function PatchWindowProcMsMrTimerAfter(): Integer; stdcall;
 begin
-  Result := 0;
   PatchCheckCDStatus();
+  Result := 0;
+end;
+
+function TryMciOpenCdAudio(ElementName: PChar; dwParam1: DWORD; var dwParam2: MCI_OPEN_PARMS; out MciResult: MCIERROR): Boolean; stdcall;
+var
+  OpenParms: MCI_OPEN_PARMS;
+  Text: array[0..255] of Char;
+begin
+  Result := False;
+  OpenParms := dwParam2;
+  if ElementName = nil then
+    dwParam2.lpstrElementName := nil
+  else if ElementName[1] = ':' then
+    dwParam2.lpstrElementName := ElementName
+  else
+    Exit;
+  MciResult := mciSendCommand(0, MCI_OPEN, dwParam1, DWORD(@dwParam2));
+  Result := (MciResult = 0);
+  if not Result then
+  begin
+    dwParam2 := OpenParms;
+    mciGetErrorString(MciResult, Text, SizeOf(Text));
+    TFormConsole.Log(IntToStr(MciResult) + Text);
+  end;
+end;
+
+function PatchMciOpenCDAudio(mciId: MCIDEVICEID; uMessage: UINT; dwParam1: DWORD; dwParam2: PMCI_Open_Parms): MCIERROR; stdcall;
+begin
+  if Civ2.CDRoot[0] = #0 then
+    Civ2.CDRootFind('Civ2\Civ2.exe');
+  if not TryMciOpenCdAudio(Civ2.CDRoot, dwParam1 or MCI_OPEN_ELEMENT, dwParam2^, Result) then
+    TryMciOpenCdAudio(nil, dwParam1, dwParam2^, Result);
 end;
 
 { TUiaPatchCDAudio }
@@ -179,10 +203,13 @@ procedure TUiaPatchCDAudio.Attach(HProcess: Cardinal);
 begin
   WriteMemory(HProcess, $005D47B5, [OP_CALL], @PatchWindowProcMsMrTimerAfter);
   WriteMemory(HProcess, $005DDCD3, [OP_NOP, OP_CALL], @PatchMciPlay);
+  //
+  WriteMemory(HProcess, $005DDD7B, [OP_NOP, OP_CALL], @PatchMciOpenCDAudio);
+  WriteMemory(HProcess, $005DDF2C, [OP_NOP, OP_CALL], @PatchMciOpenCDAudio);
+
 end;
 
 initialization
   TUiaPatchCDAudio.RegisterMe();
 
 end.
-

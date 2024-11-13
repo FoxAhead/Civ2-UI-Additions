@@ -41,6 +41,7 @@ type
 implementation
 
 uses
+  Messages,
   Civ2Proc;
 
 {$R *.dfm}
@@ -55,14 +56,24 @@ begin
     FormConsole := TFormConsole.Create(nil);
     //FormConsole.FormStyle := fsStayOnTop;
     FormConsole.Memo1.Clear();
+    //FormConsole.Show();
   end;
 end;
 
 class procedure TFormConsole.Open;
+var
+  R: TRect;
+  P: TPoint;
 begin
   EnsureInstance();
   SetWindowLong(FormConsole.Handle, GWL_HWNDPARENT, Civ2.MainWindowInfo.WindowStructure.HWindow);
+  Windows.GetClientRect(Civ2.MainWindowInfo.WindowStructure.HWindow, R);
+  P := Point(R.Right, R.Top);
+  MapWindowPoints(Civ2.MainWindowInfo.WindowStructure.HWindow, 0, P, 1);
+  SendMessage(FormConsole.Memo1.Handle, EM_LINESCROLL, 0, FormConsole.Memo1.Lines.Count);
   FormConsole.Show();
+  FormConsole.Left := P.X - FormConsole.Width;
+  FormConsole.Top := P.Y;
 end;
 
 class procedure TFormConsole.Log(Text: string);

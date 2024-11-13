@@ -53,7 +53,7 @@ begin
     Canvas.Font.Color := Canvas.ColorFromIndex(114); // Yellow
     Canvas.FontShadowColor := Canvas.ColorFromIndex(10); // Black
     Canvas.MoveTo(Left + ScaleByZoom(32, Zoom), Top + ScaleByZoom(32, Zoom));
-    Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER);
+    Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER, @DrawPort.ClientRectangle);
     Canvas.Free;
   end;
 
@@ -238,8 +238,9 @@ begin
   // Draw additionals: counter for settlers, aircrafts
   WriteMemory(HProcess, $0056C5E8, [OP_JMP], @PatchDrawUnitAfter);
 
-  // Draw Unit Sentry
+  // Unit Sentry: Prepare sentry sprites
   WriteMemory(HProcess, $0044B48F, [OP_CALL], @PatchLoadSpritesUnits);
+  // Unit Sentry: Draw
   WriteMemory(HProcess, $0056C4EF, [OP_CALL], @PatchDrawUnitSentry);
 
   // Draw Veteran badge

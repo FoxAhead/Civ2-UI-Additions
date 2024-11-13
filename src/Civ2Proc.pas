@@ -27,6 +27,7 @@ type
     CityDY: PShortIntArray;
     CityWindow: PCityWindow;
     Civs: ^TCivs;
+    ColorIndex: PByte;
     Commodities: PIntegerArray;
     Cosmic: PCosmic;
     CurrPopupInfo: PPDialogWindow;
@@ -47,6 +48,8 @@ type
     MapHeader: PMapHeader;
     MapWindow: PMapWindow;
     MapWindows: PMapWindows;
+    Palette: PPalette;
+    Path: PChar;
     PFDX: PShortIntArray;
     PFDY: PShortIntArray;
     PFStopX: PInteger;
@@ -133,6 +136,7 @@ begin
   CityDX                     := Pointer($00630D38);
   CityDY                     := Pointer($00630D50);
   Civs                       := Pointer($0064C6A0);
+  ColorIndex                 := Pointer($00637E78);
   Commodities                := Pointer($0064B168);
   Cosmic                     := Pointer($0064BCC8);
   CurrPopupInfo              := Pointer($006CEC84);
@@ -153,6 +157,8 @@ begin
   MapHeader                  := Pointer($006D1160);
   MapWindow                  := Pointer($0066C7A8);
   MapWindows                 := Pointer($0066C7A8);
+  Palette                    := Pointer($006A8C00);
+  Path                       := Pointer($006AB600);    
   PFDX                       := Pointer($00628350);
   PFDY                       := Pointer($00628360);
   PFStopX                    := Pointer($00673FA0);
@@ -169,7 +175,7 @@ begin
   SprEco                     := Pointer($00648860);
   SprRes                     := Pointer($00644F00);
   SprResS                    := Pointer($00645068);
-  SprUnits                   := Pointer($00641848);  
+  SprUnits                   := Pointer($00641848);
 //  if ANewUnitsAreaAddress <> nil then
 //    Units                    := ANewUnitsAreaAddress
 //  else

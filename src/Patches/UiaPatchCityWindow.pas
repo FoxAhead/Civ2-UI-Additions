@@ -85,7 +85,6 @@ begin
   Civ2.CityWindow_DrawSupport(Civ2.CityWindow, True);
 end;
 
-
 function PatchDrawCityWindowSupportEx1(CityWindow: PCityWindow; SupportedUnits, Rows, Columns: Integer; var DeltaX: Integer): Integer; stdcall;
 begin
   CityWindowEx.Support.Counter := 0;
@@ -396,8 +395,7 @@ end;
 
 procedure PatchDrawCityWindowResources2Ex(CityWindow: PCityWindow); stdcall;
 const
-  DX: array[1..3, 0..2] of Integer = (
-    (0, 0, 0),                            // WindowSize = 1
+  DX                                      : array[1..3, 0..2] of Integer = ((0, 0, 0), // WindowSize = 1
     (3, 2, 0),                            // WindowSize = 2
     (4, 2, 1)                             // WindowSize = 3
     );
@@ -691,7 +689,7 @@ begin
   end;
 end;
 
-function PatchAfterCityWindowClose(): Integer; stdcall;
+function PatchCityWndProcCloseAfter(): Integer; stdcall;
 begin
   Result := 0;
   // If there is some Advisor opened
@@ -700,6 +698,9 @@ begin
     // Then focus and bring it to top
     Civ2.WindowInfo1_SetFocusAndBringToTop(@Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1);
   end;
+  // Reset tile resources info
+  CityWindowEx.ResMap.CityIndex := -1;
+  CityWindowEx.ResMap.DX := 1000;
 end;
 
 procedure PatchStrcatBuildingCost(Cost, Done: Integer); cdecl;
@@ -772,17 +773,16 @@ asm
     ret
 end;
 
-procedure PatchCitywinCityButtonChangeAfterEx(); stdcall;
+procedure FocusCityWindowIfNotHidden(); stdcall;
 begin
-  Civ2.SetFocus(Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow);
+  if not Civ2.CityWindow.Hidden then
+    Civ2.SetFocus(Civ2.CityWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow);
 end;
 
-procedure PatchCitywinCityButtonChangeAfter(); register;
+procedure PatchCitywinCityButtonAfter(); register;
 asm
     mov   large fs:0, eax // Restored
-    call  PatchCitywinCityButtonChangeAfterEx
-    push  $0050B66F
-    ret
+    call  FocusCityWindowIfNotHidden
 end;
 
 { TUiaPatchCityWindow }
@@ -850,7 +850,7 @@ begin
 
   // Set focus on City Window when opened and back to Advisor when closed
   WriteMemory(HProcess, $0040138E, [OP_JMP], @PatchFocusCityWindow);
-  WriteMemory(HProcess, $00509985, [OP_CALL], @PatchAfterCityWindowClose);
+  WriteMemory(HProcess, $00509985, [OP_CALL], @PatchCityWndProcCloseAfter);
 
   // Show Cost shields and Maintenance coins in City Change list and fix Turns calculation for high production numbers
   //WriteMemory(HProcess, $00509AC9, [OP_JMP], @PatchCityChangeListBuildingCost);
@@ -860,8 +860,16 @@ begin
   // Show total number of city units along with supported units
   WriteMemory(HProcess, $00503D7F, [OP_CALL], @PatchCityWindowDrawResources);
 
-  // Set focus back to CityWindow after ChangeProduction dialog
-  WriteMemory(HProcess, $0050B669, [OP_CALL], @PatchCitywinCityButtonChangeAfter);
+  // Set focus back to CityWindow after:
+  // Q_CitywinCityButtonChange_sub_50A473 - ChangeProduction dialog
+  WriteMemory(HProcess, $0050B669, [OP_NOP, OP_CALL], @PatchCitywinCityButtonAfter);
+  // Q_CitywinCityButtonBuy_sub_509B48 - Buy dialog
+  WriteMemory(HProcess, $0050A1CB, [OP_NOP, OP_CALL], @PatchCitywinCityButtonAfter);
+  // Q_CitywinCityMouse_sub_50C1D1 - Clicking different CityWindow areas
+  WriteMemory(HProcess, $0050C3FB, [OP_CALL], @FocusCityWindowIfNotHidden);
+  // Q_CitywinCityButtonRename_sub_50B74E - Rename City dialog
+  WriteMemory(HProcess, $0050B99A, [OP_CALL], @FocusCityWindowIfNotHidden);
+
 end;
 
 initialization

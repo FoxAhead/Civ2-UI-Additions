@@ -87,7 +87,7 @@ DebugInfo=0
 RemoteSymbols=0
 MinStackSize=16384
 MaxStackSize=1048576
-ImageBase=4194304
+ImageBase=50331648
 ExeDescription=
 [Directories]
 OutputDir=bin
@@ -115,7 +115,7 @@ AutoIncBuild=1
 MajorVer=1
 MinorVer=21
 Release=0
-Build=1967
+Build=2138
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=1.21.0.1967
+FileVersion=1.21.0.2138
 InternalName=
 LegalCopyright=
 LegalTrademarks=
