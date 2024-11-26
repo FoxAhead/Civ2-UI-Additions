@@ -39,7 +39,9 @@ implementation
 
 uses
   SysUtils,
-  Windows;
+  Windows,
+  Civ2UIA_Proc,
+  Civ2UIA_FormConsole;
 
 const
   FILENAME_CIV2UIA_DAT                    = 'CIV2UIA.DAT';
@@ -106,8 +108,17 @@ end;
 
 procedure TUiaSettings.Save;
 begin
-  SuppressPopupList.SaveToFile(FILENAME_CIV2UIASP_TXT);
-  SaveDatFile();
+  TFormConsole.Log('TUiaSettings.Save() begin %s', [GetCallersString()]);
+  try
+    SuppressPopupList.SaveToFile(FILENAME_CIV2UIASP_TXT);
+    SaveDatFile();
+  except
+    on E: Exception do
+    begin
+      TFormConsole.Log('TUiaSettings.Save() Error %s', [E.Message]);
+    end;
+  end;
+  TFormConsole.Log('TUiaSettings.Save() end');
 end;
 
 procedure TUiaSettings.SaveDatFile;

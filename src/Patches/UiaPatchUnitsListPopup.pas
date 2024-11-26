@@ -171,7 +171,7 @@ begin
           SpriteW := ScaleByZoom(RectWidth(ListItem.Sprite.Rectangle1), Dialog.Zoom);
           SpriteH := ScaleByZoom(RectHeight(ListItem.Sprite.Rectangle1), Dialog.Zoom);
           if Assigned(Dialog.Proc3SpriteDraw) then
-            Dialog.Proc3SpriteDraw(ListItem.Sprite, Dialog.GraphicsInfo, ListItem.UnitIndex, ListItem.Unknown_04, ListItemX, ListItemY);
+            Dialog.Proc3SpriteDraw(ListItem.Sprite, Dialog.GraphicsInfo, ListItem.Index, ListItem.Unknown_04, ListItemX, ListItemY);
           if ((Dialog.Flags and $20000) <> 0) and (Dialog.SelectedListItem = ListItem) then
           begin
             R := Rect(ListItemX - 1, ListItemY - 1, ListItemX + SpriteW, ListItemY + SpriteH);
@@ -301,7 +301,7 @@ begin
           begin
             if Dialog.SelectedListItem <> nil then
             begin
-              Civ2.ListItemProcLButtonUp(Dialog.SelectedListItem.UnitIndex);
+              Civ2.ListItemProcLButtonUp(Dialog.SelectedListItem.Index);
             end;
           end;
       end;

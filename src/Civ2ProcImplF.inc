@@ -1,10 +1,12 @@
 // This file is generated automatically. Do not change it.
+@AdvisorWindow_CopyBg                        := PThisCall($0040127B);
 @AfterActiveUnitChanged                      := Pointer($004016EF);
 @ArrangeWindows                              := Pointer($004039F4);
 @BmpFillColor                                := Pointer($005E4E60);
 @CDRootFind                                  := Pointer($00402BE9);
 @CalcCityGlobals                             := Pointer($00402603);
 @CalcCityGlobalsTileRes                      := Pointer($0040335F);
+@CheckPaths                                  := Pointer($00401F9B);
 @CityCitizenClicked                          := Pointer($0040204A);
 @CityHasImprovement                          := Pointer($00402C48);
 @CitySprites_GetInfoOfClickedCitySprite      := PThisCall($00403D00);
@@ -87,10 +89,15 @@
 @MapWindow_RedrawMap                         := PThisCall($00401F32);
 @MapWindow_ScreenToMap                       := PThisCall($00402B2B);
 @MapWrapX                                    := Pointer($004022ED);
+@MciCdAudioClose                             := Pointer($005DDE57);
+@MciGetNumberOfTracks                        := Pointer($005DDEFF);
+@MciNotifyCdAudio                            := Pointer($005DE714);
+@MciNotifySequencer                          := Pointer($005DE6BD);
 @MenuBar_AddMenu                             := PThisCall($0040117C);
 @MenuBar_AddSubMenu                          := PThisCall($00402D10);
 @MenuBar_GetSubMenu                          := PThisCall($004039EF);
 @NextLinePixelAddress                        := PThisCall($005C5610);
+@OutputDebugSmedsLogI                        := Pointer($005D2279);
 @PFFindConnection                            := Pointer($00403481);
 @PFFindUnitDir                               := Pointer($00402FA9);
 @PFMove                                      := Pointer($004028B0);
@@ -140,5 +147,6 @@
 @WindowInfo1_SetFocusAndBringToTop           := PThisCall($0040325B);
 @WindowProcs_SetWndProcChar                  := PThisCall($00401F91);
 @WindowProcs_SetWndProcKeyDown2              := PThisCall($004018F2);
+@WriteCiv2Dat                                := Pointer($004011AE);
 @txtStrcatInt                                := Pointer($00401ED8);
 @txtStrcatLabelString                        := Pointer($00401BF4);

@@ -9,7 +9,7 @@ uses
 
 type
   PShortIntArray = ^TShortIntArray;
-
+               
   TShortIntArray = array[0..32767] of ShortInt;
 
   TCiv2 = class
@@ -48,8 +48,10 @@ type
     MapHeader: PMapHeader;
     MapWindow: PMapWindow;
     MapWindows: PMapWindows;
+    MciInfo: PMciInfo;
     Palette: PPalette;
-    Path: PChar;
+    PathCivilizationDirectory: PChar;
+    PathWorking: PChar;
     PFDX: PShortIntArray;
     PFDY: PShortIntArray;
     PFStopX: PInteger;
@@ -157,8 +159,10 @@ begin
   MapHeader                  := Pointer($006D1160);
   MapWindow                  := Pointer($0066C7A8);
   MapWindows                 := Pointer($0066C7A8);
+  MciInfo                    := Pointer($006389D4);  
   Palette                    := Pointer($006A8C00);
-  Path                       := Pointer($006AB600);    
+  PathCivilizationDirectory  := Pointer($006AB600);
+  PathWorking                := Pointer($0064BB08);  
   PFDX                       := Pointer($00628350);
   PFDY                       := Pointer($00628360);
   PFStopX                    := Pointer($00673FA0);

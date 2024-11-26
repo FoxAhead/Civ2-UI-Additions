@@ -3,7 +3,8 @@ unit Civ2UIA_Proc;
 interface
 
 uses
-  Windows;
+  Windows,
+  Civ2UIA_Types;
 
 type
   TCityBuildInfo = record
@@ -40,19 +41,23 @@ function GetTurnsToComplete(Done, Increment, Total: Integer): Integer;
 
 function ConvertTurnsToString(Turns: Integer; Options: Cardinal = 0): string;
 
-function GetTurnsToBuild(RealCost, Done: Integer): Integer;
+//function GetTurnsToBuild(RealCost, Done: Integer): Integer;
 
-function GetTurnsToBuild2(RealCost, Done: Integer): Integer;
+function GetTurnsToBuild(RealCost, Done: Integer): Integer;
 
 function GetTurnsToBuildInCity(CityIndex: Integer): Integer;
 
-procedure GetCityBuildInfo(CityIndex: Integer; var CityBuildInfo: TCityBuildInfo);
+procedure GetCityBuildInfo(CityIndex: Integer; out CityBuildInfo: TCityBuildInfo);
 
 function GetTradeConnectionLevel(aCity, i: Integer): Integer;
 
 //procedure GetResMapDXDY(X, Y: Integer; var DX, DY: Integer);
 
 //procedure UpdateCityWindowExResMap(DX, DY: Integer);
+
+function GetCallerChain(): PCallerChain; register;
+
+function GetCallersString(): string;
 
 implementation
 
@@ -218,24 +223,6 @@ begin
 end;
 
 function GetTurnsToBuild(RealCost, Done: Integer): Integer;
-var
-  LeftToDo, Production: Integer;
-begin
-  // Code from Q_StrcatBuildingCost_sub_509AC0
-  LeftToDo := RealCost - 1 - Done;
-  Production := Max(1, GetProduction());
-  Result := Min(Max(1, LeftToDo div Production + 1), 999)
-    {  Production := GetProduction();
-      if Production > 0 then
-        Result := Min(Max(1, LeftToDo div Production + 1), 999)
-      else if LeftToDo <= 0 then
-        Result := 1
-      else
-        Result := -1;}
-end;
-
-// Correct version
-function GetTurnsToBuild2(RealCost, Done: Integer): Integer;
 begin
   Result := GetTurnsToComplete(Done, GetProduction(), RealCost);
 end;
@@ -248,7 +235,7 @@ begin
   Result := CityBuildInfo.TurnsToBuild;
 end;
 
-procedure GetCityBuildInfo(CityIndex: Integer; var CityBuildInfo: TCityBuildInfo);
+procedure GetCityBuildInfo(CityIndex: Integer; out CityBuildInfo: TCityBuildInfo);
 var
   City: PCity;
   Cost: Integer;
@@ -298,8 +285,6 @@ begin
     Inc(Result);
   end;
 end;
-
-
 
 {
 procedure GetCaravanDeliveryRevenue(aUnitIndex: Integer; aCityIndex: Integer);
@@ -414,5 +399,22 @@ begin
   end;
 end;
 }
+
+function GetCallerChain(): PCallerChain; register;
+asm
+    mov   eax, ebp
+end;
+
+function GetCallersString(): string;
+var
+  CallerChain: PCallerChain;
+begin
+  CallerChain := GetCallerChain();
+  Result := '';
+  repeat
+    Result := Format('%.6x %s', [Integer(CallerChain.Caller), Result]);
+    CallerChain := CallerChain.Prev;
+  until Cardinal(CallerChain.Caller) > $30000000;
+end;
 
 end.

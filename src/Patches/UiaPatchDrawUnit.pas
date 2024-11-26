@@ -20,7 +20,6 @@ uses
   Windows,
   Civ2UIA_CanvasEx,
   Civ2UIA_Proc,
-  Civ2UIA_Ex,
   Civ2Types,
   Civ2Proc;
 
@@ -199,10 +198,13 @@ procedure PatchDrawUnitVeteranBadgeEx(DrawPort: PDrawPort; UnitIndex: Integer; R
 var
   Canvas: TCanvasEx;
   H, H2: Integer;
+  Rgn: HRGN;
 begin
   if (Civ2.Units[UnitIndex].Attributes and $2000 <> 0) and (Civ2.Units[UnitIndex].CivIndex = Civ2.HumanCivIndex^) then
   begin
     Canvas := TCanvasEx.Create(DrawPort);
+    Rgn := CreateRectRgn(DrawPort.ClientRectangle.Left, DrawPort.ClientRectangle.Top, DrawPort.ClientRectangle.Right, DrawPort.ClientRectangle.Bottom);
+    SelectClipRgn(DrawPort.DrawInfo.DeviceContext, Rgn);
     Canvas.Brush.Color := Canvas.ColorFromIndex(122);
     Canvas.Pen.Color := Canvas.ColorFromIndex(114);
     H := R.Bottom - R.Top;

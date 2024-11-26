@@ -6,7 +6,11 @@ uses
   Contnrs,
   Windows,
   Civ2Types,
-  UiaSettings;
+  UiaSettings,
+  Civ2UIA_PathLine,
+  Civ2UIA_QuickInfo,
+  Civ2UIA_MapMessages,
+  Civ2UIA_MapOverlay;
 
 type
   TWindowType = (wtUnknown, wtCityStatus, //F1
@@ -19,7 +23,13 @@ type
     wtTop5Cities,                         //F8
     wtCivilizationScore,                  //F9
     wtDemographics,                       //F11
-    wtCityWindow, wtTaxRate, wtCivilopedia, wtUnitsListPopup, wtMap);
+    wtCityWindow, wtTaxRate, wtCivilopedia, wtUnitsListPopup, wtMap, wtDialogMultiColumns);
+
+type
+  TCityGlobalsEx = record
+    TotalMapRes: array[0..2] of Integer;
+    TradeRouteLevel: array[0..2] of Integer;
+  end;
 
 type
   TUia = class
@@ -29,13 +39,19 @@ type
     Patches: TClassList;
   public
     Settings: TUiaSettings;
+    MapMessages: TMapMessages;
+    MapOverlay: TMapOverlay;
+    ModuleNameString: string;
+    VersionString: string;
+    CityGlobalsEx: TCityGlobalsEx;
     constructor Create;
     destructor Destroy; override;
-    procedure RegisterPatch(PatchClass: TClass);
     procedure AttachPatches(HProcess: THandle);
+    procedure GetModuleVersion();
     function GuessWindowType(HWindow: HWND): TWindowType;
-    procedure RegisterWindowByAddress(HWindow: HWND; ReturnAddress1, ReturnAddress2: Cardinal);
     function FindScrolBar(HWindow: HWND): HWND;
+    procedure RegisterPatch(PatchClass: TClass);
+    procedure RegisterWindowByAddress(HWindow: HWND; ReturnAddress1, ReturnAddress2: Cardinal);
   published
   end;
 
@@ -47,10 +63,42 @@ implementation
 uses
   SysUtils,
   UiaPatch,
+  FileInfo,
   Civ2Proc,
   Civ2UIA_FormConsole;
 
 { TUia }
+
+constructor TUia.Create;
+begin
+  TFormConsole.Log('Creating TUia');
+  if Assigned(Uia) then
+    raise Exception.Create('TUia is already created');
+
+  GetModuleVersion();
+
+  MapMessages := TMapMessages.Create();
+  MapOverlay := TMapOverlay.Create();
+  MapOverlay.AddModule(TPathLine.Create());
+  MapOverlay.AddModule(TQuickInfo.Create());
+  MapOverlay.AddModule(MapMessages);
+
+  Patches := TClassList.Create();
+  Settings := TUiaSettings.Create();
+
+  TFormConsole.Log('Created TUia');
+end;
+
+destructor TUia.Destroy;
+begin
+  Settings.Free();
+  Patches.Free();
+
+  MapOverlay.Free();
+  MapMessages := nil;
+
+  inherited;
+end;
 
 procedure TUia.AttachPatches;
 var
@@ -71,22 +119,13 @@ begin
   end;
 end;
 
-constructor TUia.Create;
+procedure TUia.GetModuleVersion();
+var
+  ModuleName: array[0..MAX_PATH] of Char;
 begin
-  if Assigned(Uia) then
-    raise Exception.Create('TUia is already created');
-
-  Patches := TClassList.Create();
-  Settings := TUiaSettings.Create();
-
-  TFormConsole.Log('Created TUia');
-end;
-
-destructor TUia.Destroy;
-begin
-  Settings.Free();
-  Patches.Free();
-  inherited;
+  Windows.GetModuleFileName(HInstance, ModuleName, SizeOf(ModuleName));
+  ModuleNameString := string(ModuleName);
+  VersionString := CurrentFileInfo(ModuleNameString);
 end;
 
 function TUia.GuessWindowType(HWindow: HWND): TWindowType;
@@ -107,8 +146,12 @@ begin
   begin
     Dialog := Civ2.CurrPopupInfo^;
     if (Dialog <> nil) then
+    begin
       if (Dialog.GraphicsInfo = Pointer(GetWindowLongA(HWindow, $0C))) and (Dialog.NumListItems > 0) and (Dialog.NumLines = 0) then
-        Result := wtUnitsListPopup;
+        Result := wtUnitsListPopup
+      else if Dialog.Columns > 1 then
+        Result := wtDialogMultiColumns;
+    end;
   end;
   if Result = wtUnknown then
   begin
@@ -127,25 +170,27 @@ procedure TUia.RegisterWindowByAddress(HWindow: HWND; ReturnAddress1, ReturnAddr
 var
   WindowType: TWindowType;
 begin
+  //TFormConsole.Log(Format('ReturnAddress1=%x, ReturnAddress2=%x',[ReturnAddress1, ReturnAddress2]));
   WindowType := wtUnknown;
   case ReturnAddress1 of
     $0040D35C:
       WindowType := wtTaxRate;
-    $0042AB8A:
-      case ReturnAddress2 of
-        $0042D742:
-          WindowType := wtCityStatus;     // F1
-        $0042F0A0:
-          WindowType := wtDefenceMinister; // F2
-        $00430632:
-          WindowType := wtIntelligenceReport; // F3
-        $0042E1A9:
-          WindowType := wtAttitudeAdvisor; // F4
-        $0042CD56:
-          WindowType := wtTradeAdvisor;   // F5
-        $0042B6A4:
-          WindowType := wtScienceAdvisor; // F6
-      end;
+    //$0042AB8A:
+  else
+    case ReturnAddress2 of
+      $0042D742:
+        WindowType := wtCityStatus;       // F1
+      $0042F0A0:
+        WindowType := wtDefenceMinister;  // F2
+      $00430632:
+        WindowType := wtIntelligenceReport; // F3
+      $0042E1A9:
+        WindowType := wtAttitudeAdvisor;  // F4
+      $0042CD56:
+        WindowType := wtTradeAdvisor;     // F5
+      $0042B6A4:
+        WindowType := wtScienceAdvisor;   // F6
+    end;
   end;
   if WindowType <> wtUnknown then
   begin
@@ -178,4 +223,4 @@ initialization
 finalization
   Uia.Free();
 
-end.         
+end.

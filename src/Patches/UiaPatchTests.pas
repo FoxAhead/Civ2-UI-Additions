@@ -282,7 +282,7 @@ var
   i, j: Integer;
   TextOut: string;
 begin
-  Dlg := PDialogWindow(Pointer($6AD678)^);
+  Dlg := PDialogWindow(Pointer($6AD678)^); // gNetMgr.DialogWindow
   if Dlg.Flags and $400 = 0 then
   begin
     i := 1200 - (6 * GetTickCount() div 100 - PCardinal($006CEC80)^);

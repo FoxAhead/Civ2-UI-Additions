@@ -16,7 +16,7 @@ implementation
 uses
   Windows,
   Civ2Types,
-  Civ2UIA_Ex;
+  UiaMain;
 
 const
   LowMapZoom: Byte = $FA;
@@ -29,7 +29,7 @@ begin
     begin
       if (DestWS.Palette <> 0) and (PInteger($00638B48)^ = 1) then // V_PaletteBasedDevice_dword_638B48
         RealizePalette(DestWS.DeviceContext);
-      if not Ex.MapOverlay.CopyToScreenBitBlt(SrcDI, DestWS) then
+      if not Uia.MapOverlay.CopyToScreenBitBlt(SrcDI, DestWS) then
         BitBlt(DestWS.DeviceContext, XDest, YDest, Width, Height, SrcDI.DeviceContext, XSrc, YSrc, SRCCOPY);
     end;
   end;

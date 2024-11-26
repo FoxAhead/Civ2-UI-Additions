@@ -49,11 +49,12 @@ implementation
 uses
   Civ2UIA_Proc,
   Civ2Proc,
-  UiaPatchCityWindow,
+  //UiaPatchCityWindow,
   Graphics,
   Classes,
   Math,
-  SysUtils;
+  SysUtils,
+  UiaMain;
 
 { TQuickInfo }
 
@@ -447,7 +448,7 @@ begin
                 TextOut := TextOut + string(Civ2.GetStringInList(Civ2.Commodities[TradeItem]));
                 TextOut := TextOut + Format(': +%d', [Civ2.CityGlobals.TradeRevenue[i]]);
                 Canvas.TextOutWithShadows(TextOut).CopySprite(@Civ2.SprResS[2], 2, 3);
-                TradeConnectionLevel := CityGlobalsEx.TradeRouteLevel[i];
+                TradeConnectionLevel := Uia.CityGlobalsEx.TradeRouteLevel[i];
                 for j := 1 to TradeConnectionLevel do
                 begin
                   Canvas.TextOutWithShadows('+');

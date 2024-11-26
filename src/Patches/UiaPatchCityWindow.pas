@@ -36,14 +36,8 @@ type
     ChangeSpecialistDown: Boolean;
   end;
 
-  TCityGlobalsEx = record
-    TotalMapRes: array[0..2] of Integer;
-    TradeRouteLevel: array[0..2] of Integer;
-  end;
-
 var
   CityWindowEx: TCityWindowEx;
-  CityGlobalsEx: TCityGlobalsEx;
 
 implementation
 
@@ -270,7 +264,9 @@ end;
 
 procedure UpdateCityWindowExResMap(DX, DY: Integer);
 var
-  SpiralIndex, i: Integer;
+  SpiralIndex, i, MapX, MapY: Integer;
+  City: PCity;
+  Visible: Boolean;
 begin
   CityWindowEx.ResMap.DX := DX;
   CityWindowEx.ResMap.DY := DY;
@@ -284,8 +280,16 @@ begin
       end;
   CityWindowEx.ResMap.CityIndex := Civ2.CityWindow.CityIndex;
   CityWindowEx.ResMap.ShowTile := (SpiralIndex >= 0);
+  if SpiralIndex >= 0 then
+  begin
+    City := @Civ2.Cities[Civ2.CityWindow.CityIndex];
+    MapX := Civ2.MapWrapX(City.X + DX);
+    MapY := City.Y + DY;
+    if not Civ2.MapSquareIsVisibleTo(MapX, MapY, City.Owner) then
+      CityWindowEx.ResMap.ShowTile := False;
+  end;
   for i := 0 to 2 do
-    if SpiralIndex >= 0 then
+    if CityWindowEx.ResMap.ShowTile then
       CityWindowEx.ResMap.Tile[i] := Civ2.GetResourceInCityTile(Civ2.CityWindow.CityIndex, SpiralIndex, i)
     else
       CityWindowEx.ResMap.Tile[i] := 0;
@@ -419,7 +423,7 @@ begin
   begin
     DX1 := -CityWindow.WindowSize * (i mod 2);
     DX2 := DX[CityWindow.WindowSize][i];
-    Canvas.TextOutWithShadows(IntToStr(CityGlobalsEx.TotalMapRes[i])).CopySprite(@Civ2.SprResS[i], DX1, DY).PenDX(DX2);
+    Canvas.TextOutWithShadows(IntToStr(Uia.CityGlobalsEx.TotalMapRes[i])).CopySprite(@Civ2.SprResS[i], DX1, DY).PenDX(DX2);
   end;
   // Resources from one tile
   if CityWindowEx.ResMap.CityIndex <> Civ2.CityWindow.CityIndex then
@@ -427,7 +431,7 @@ begin
 
   if CityWindowEx.ResMap.ShowTile then
   begin
-    Text := Format('%d%d%d', [CityGlobalsEx.TotalMapRes[0], CityGlobalsEx.TotalMapRes[1], CityGlobalsEx.TotalMapRes[2]]);
+    Text := Format('%d%d%d', [Uia.CityGlobalsEx.TotalMapRes[0], Uia.CityGlobalsEx.TotalMapRes[1], Uia.CityGlobalsEx.TotalMapRes[2]]);
     W1 := Canvas.TextWidth(Text);
     Text := Format('%d%d%d', [CityWindowEx.ResMap.Tile[0], CityWindowEx.ResMap.Tile[1], CityWindowEx.ResMap.Tile[2]]);
     W2 := Canvas.TextWidth(Text);
@@ -455,9 +459,9 @@ end;
 
 procedure PatchCalcCityGlobalsResourcesEx(); stdcall;
 begin
-  CityGlobalsEx.TotalMapRes[0] := Civ2.CityGlobals.TotalRes[0];
-  CityGlobalsEx.TotalMapRes[1] := Civ2.CityGlobals.TotalRes[1];
-  CityGlobalsEx.TotalMapRes[2] := Civ2.CityGlobals.TotalRes[2];
+  Uia.CityGlobalsEx.TotalMapRes[0] := Civ2.CityGlobals.TotalRes[0];
+  Uia.CityGlobalsEx.TotalMapRes[1] := Civ2.CityGlobals.TotalRes[1];
+  Uia.CityGlobalsEx.TotalMapRes[2] := Civ2.CityGlobals.TotalRes[2];
 end;
 
 procedure PatchCalcCityGlobalsResources(); register;
@@ -469,7 +473,7 @@ end;
 
 procedure PatchCalcCityEconomicsTradeRouteLevelEx(i, Level: Integer); stdcall;
 begin
-  CityGlobalsEx.TradeRouteLevel[i] := Level;
+  Uia.CityGlobalsEx.TradeRouteLevel[i] := Level;
 end;
 
 procedure PatchCalcCityEconomicsTradeRouteLevel(); register;
@@ -486,9 +490,9 @@ var
   j: Integer;
 begin
   Civ2.ChText^ := #00;
-  if CityGlobalsEx.TradeRouteLevel[i] > 0 then
+  if Uia.CityGlobalsEx.TradeRouteLevel[i] > 0 then
   begin
-    for j := 0 to CityGlobalsEx.TradeRouteLevel[i] - 1 do
+    for j := 0 to Uia.CityGlobalsEx.TradeRouteLevel[i] - 1 do
     begin
       StrCat(Civ2.ChText, '+');
     end;
@@ -713,7 +717,7 @@ begin
   P := StrEnd(Civ2.ChText) - 1;
   if P^ = '(' then
     P^ := #00;
-  TurnsToBuildString := ConvertTurnsToString(GetTurnsToBuild2(RealCost, Done), $22);
+  TurnsToBuildString := ConvertTurnsToString(GetTurnsToBuild(RealCost, Done), $22);
   Text := Format('%s%d#644F00:3# (%s', [Civ2.ChText, RealCost, TurnsToBuildString]);
   StrPCopy(Civ2.ChText, Text);
 end;

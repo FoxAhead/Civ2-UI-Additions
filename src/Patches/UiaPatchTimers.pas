@@ -14,11 +14,11 @@ type
 implementation
 
 uses
-  Civ2UIA_Ex;
+  UiaMain;
   
 procedure PatchOnWmTimerDrawEx1(); stdcall;
 begin
-  Ex.MapOverlay.UpdateModules();
+  Uia.MapOverlay.UpdateModules();
 end;
 
 procedure PatchOnWmTimerDraw(); register;

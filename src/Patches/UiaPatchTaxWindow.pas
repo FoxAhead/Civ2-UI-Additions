@@ -15,13 +15,11 @@ implementation
 
 uses
   Graphics,
-  SysUtils,
   Windows,
   Civ2Types,
   Civ2Proc,
   Civ2UIA_Proc,
-  Civ2UIA_CanvasEx,
-  Civ2UIA_FormConsole;
+  Civ2UIA_CanvasEx;
 
 procedure PatchUpdateTaxWindowEx(TaxWindow: PTaxWindow); stdcall;
 var

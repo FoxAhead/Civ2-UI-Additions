@@ -16,8 +16,7 @@ implementation
 uses
   SysUtils,
   UiaMain,
-  Civ2Types,
-  Civ2UIA_Ex;
+  Civ2Types;
 
 function SimplePopupSuppressed(SectionName: PChar): Boolean;
 begin
@@ -45,7 +44,7 @@ begin
         Text := Text + ' ' + string(TextLine.Text);
         TextLine := TextLine.Next;
       end;
-      Ex.MapMessages.Add(Text);
+      Uia.MapMessages.Add(Text);
       Dialog.PressedButton := $12345678;
     end
   end;

@@ -70,8 +70,7 @@ uses
   
   Civ2Types,
   Civ2Proc,
-  Civ2UIA_FormStrings,
-  Civ2UIA_Ex;
+  Civ2UIA_FormStrings;
 
 {$R *.dfm}
 
@@ -127,7 +126,7 @@ begin
   // Also recreate main window brush for background
   Civ2.WindowInfo1_RecreateBrush(Civ2.MainWindowInfo, $9E);
   // Also set new palette for map overlay - to be consistent with the game look
-  Ex.MapOverlay.SetDIBColorTableFromPalette(Palette);
+  Uia.MapOverlay.SetDIBColorTableFromPalette(Palette);
   // Redraw main window with all subwindows
   HWindow := GetParent(GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure^.HWindow);
   RedrawWindow(HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
@@ -186,16 +185,16 @@ var
 begin
   FormStrings := TFormStrings.Create(Self);
   SetWindowLong(FormStrings.Handle, GWL_HWNDPARENT, Self.Handle);
-  FormStrings.Memo1.Lines.Assign(Ex.SuppressPopupList);
+  FormStrings.Memo1.Lines.Assign(Uia.Settings.SuppressPopupList);
   FormStrings.ShowModal();
   for i := 0 to FormStrings.Memo1.Lines.Count - 1 do
     FormStrings.Memo1.Lines[i] := UpperCase(FormStrings.Memo1.Lines[i]);
-  Ex.SuppressPopupList.Assign(FormStrings.Memo1.Lines);
+  Uia.Settings.SuppressPopupList.Assign(FormStrings.Memo1.Lines);
   FormStrings.Free();
-  for i := Ex.SuppressPopupList.Count - 1 downto 0 do
+  for i := Uia.Settings.SuppressPopupList.Count - 1 downto 0 do
   begin
-    if Ex.SuppressPopupList[i] = '' then
-      Ex.SuppressPopupList.Delete(i);
+    if Uia.Settings.SuppressPopupList[i] = '' then
+      Uia.Settings.SuppressPopupList.Delete(i);
   end;
 end;
 

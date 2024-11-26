@@ -50,7 +50,7 @@ implementation
 uses
   ShellAPI,
   Civ2Proc,
-  Civ2UIA_Ex;
+  UiaMain;
 
 {$R *.dfm}
 
@@ -66,7 +66,7 @@ end;
 
 procedure TFormAbout.FormCreate(Sender: TObject);
 begin
-  lbl0014Version.Caption := Ex.VersionString;
+  lbl0014Version.Caption := Uia.VersionString;
 end;
 
 procedure TFormAbout.lbl0015Click(Sender: TObject);

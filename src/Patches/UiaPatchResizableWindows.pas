@@ -20,46 +20,83 @@ implementation
 
 uses
   Math,
+  SysUtils,
   Windows,
   UiaMain,
   Civ2Types,
-  Civ2Proc,
-  Civ2UIA_Ex;
+  Civ2Proc;
+
+const
+  // When modify ResizableDialogSectionNames, also tweak ResizableDialogListbox and ResizableDialogList
+  ResizableDialogSectionNames             : array[1..4] of PChar = (PChar($00630F1C), // PRODUCTION
+    PChar($00625F30),                     // INTELLCITY
+    PChar($00624F24),                     // FINDCITY
+    PChar($00634BA4)                      // GOTO
+    );
+
+function GetResizableDialogIndex(Dialog: PDialogWindow): Integer;
+var
+  i: Integer;
+  StringInList: PChar;
+begin
+  Result := 0;
+  if (Civ2.LoadedTxtSectionName <> nil) and (Dialog.Flags and $41000 = CIV2_DLG_LISTBOX) then // Has listbox, not system
+    for i := Low(ResizableDialogSectionNames) to High(ResizableDialogSectionNames) do
+    begin
+      if StrComp(Civ2.LoadedTxtSectionName, ResizableDialogSectionNames[i]) = 0 then
+      begin
+        Result := i;
+        Exit;
+      end;
+    end;
+  if (Integer(Dialog.Proc1) = $00402C11) and (Integer(Dialog.Proc2) = $004018C0) then
+  begin
+    // UnitsListPopup
+    // TODO - Possible bug? When new section name will be added, index will be shifted
+    Result := High(ResizableDialogSectionNames) + 1;
+    Exit;
+  end;
+end;
 
 function PatchUpdateAdvisorHeight(): Integer; stdcall;
 begin
   Result := Civ2.AdvisorWindow.MSWindow.ClientTopLeft.Y + Civ2.AdvisorWindow.MSWindow.ClientSize.cy - 44;
 end;
 
-procedure PatchAdvisorCopyBgEx(This: PAdvisorWindow); stdcall;
+procedure PatchAdvisorWindowCopyFullBg(DummyEAX, DummyEDX: Integer; AdvisorWindow: PAdvisorWindow; aHeight, aWidth, YSrc, XSrc: Integer); register;
 var
   DrawPort: PDrawPort;
   BgDrawPort: PDrawPort;
   Width, Height: Integer;
   DX, DY: Integer;
+  Column: Integer;
 begin
-  if This.AdvisorType in ResizableAdvisorWindows then
+  if AdvisorWindow.AdvisorType in ResizableAdvisorWindows then
   begin
-    DrawPort := @This.MSWindow.GraphicsInfo.DrawPort;
-    BgDrawPort := @This.BgDrawPort;
-    Width := This.MSWindow.ClientSize.cx;
-    Height := This.MSWindow.ClientSize.cy;
-    DX := This.MSWindow.ClientTopLeft.X;
-    DY := This.MSWindow.ClientTopLeft.Y;
+    DrawPort := @AdvisorWindow.MSWindow.GraphicsInfo.DrawPort;
+    BgDrawPort := @AdvisorWindow.BgDrawPort;
+    Width := AdvisorWindow.MSWindow.ClientSize.cx;
+    Height := AdvisorWindow.MSWindow.ClientSize.cy;
+    DX := AdvisorWindow.MSWindow.ClientTopLeft.X;
+    DY := AdvisorWindow.MSWindow.ClientTopLeft.Y;
     Windows.StretchBlt(DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle.Left, DrawPort.ClientRectangle.Top, Width, Height, BgDrawPort.DrawInfo.DeviceContext, 0, 0, 600, 400, SRCCOPY);
   end
   else
-    asm
-    mov   ecx, This
-    mov   eax, $0042AC18   // Q_CopyBg_sub_42AC18(P_AdvisorWindow this)
-    call  eax
-    end;
+    Civ2.AdvisorWindow_CopyBg(AdvisorWindow, 0, 0, AdvisorWindow.Width, AdvisorWindow.Height);
 end;
 
-procedure PatchAdvisorCopyBg(); register;
-asm
-    push  ecx
-    call  PatchAdvisorCopyBgEx
+procedure PatchUpdateAdvisorScience(Position: Integer); register;
+var
+  Column: Integer;
+  ScrollInfo: TScrollInfo;
+begin
+  ZeroMemory(@ScrollInfo, SizeOf(ScrollInfo));
+  ScrollInfo.cbSize := SizeOf(ScrollInfo);
+  ScrollInfo.fMask := SIF_RANGE or SIF_DISABLENOSCROLL;
+  ScrollInfo.nMin := 0;
+  ScrollInfo.nMax := Civ2.AdvisorWindow._Range - 1;
+  Column := SetScrollInfo(Civ2.AdvisorWindow.ControlInfoScroll.ControlInfo.HWindow, SB_CTL, ScrollInfo, True);
+  Civ2.AdvisorWindow.ScrollPosition := Civ2.AdvisorWindow.ScrollPageSize * Column;
 end;
 
 procedure PatchPrepareAdvisorWindow1Ex(This: PAdvisorWindow; AWidth, AHeight: Integer); stdcall;
@@ -107,6 +144,22 @@ asm
     ret
 end;
 
+procedure PatchPrepareAdvisorWindow3Ex(This: PAdvisorWindow); stdcall;
+begin
+  if This.AdvisorType in ResizableAdvisorWindows then
+  begin
+    This.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.MinTrackSize.Y := 415;
+  end;
+end;
+
+procedure PatchPrepareAdvisorWindow3(); register;
+asm
+    push  [ebp - $460]
+    call  PatchPrepareAdvisorWindow3Ex
+    push  $0042ABB1
+    ret
+end;
+
 procedure PatchUpdateAdvisorRepositionControlsEx(); stdcall;
 var
   S: TSize;
@@ -128,6 +181,7 @@ begin
     RP := @Civ2.AdvisorWindow.ControlInfoScroll.ControlInfo.Rect;
     if Civ2.AdvisorWindow.AdvisorType in [3, 6] then
     begin
+      // Intelligence Report and Science Advisor - horizontal scrolls
       OffsetRect(RP^, 0, -RP^.Top + S.cy - 38);
       SetWindowPos(Civ2.AdvisorWindow.ControlInfoScroll.ControlInfo.HWindow, 0, RP.Left, RP.Top, RP.Right - RP.Left, RP.Bottom - RP.Top, SWP_NOSIZE or SWP_NOREDRAW);
     end
@@ -141,23 +195,7 @@ begin
   Uia.Settings.Dat.AdvisorHeights[Civ2.AdvisorWindow.AdvisorType] := S.cy;
 end;
 
-procedure PatchPrepareAdvisorWindow3Ex(This: PAdvisorWindow); stdcall;
-begin
-  if This.AdvisorType in ResizableAdvisorWindows then
-  begin
-    This.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.MinTrackSize.Y := 415;
-  end;
-end;
-
-procedure PatchPrepareAdvisorWindow3(); register;
-asm
-    push  [ebp - $460]
-    call  PatchPrepareAdvisorWindow3Ex
-    push  $0042ABB1
-    ret
-end;
-
-procedure PatchUpdateAdvisorRepositionControlsEx2(This: PGraphicsInfo); stdcall;
+procedure PatchGraphicsInfoCopyToScreenAndValidateWEx(This: PGraphicsInfo); stdcall;
 begin
   if (This = @Civ2.AdvisorWindow.MSWindow.GraphicsInfo) and (Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows) then
   begin
@@ -165,10 +203,12 @@ begin
   end;
 end;
 
-procedure PatchUpdateAdvisorRepositionControls(); register;
+// Instead of injecting in every UpdateUdisor... function, let's inject in one place after GraphicsInfo_CopyToScreenAndValidate
+// which is called at the end of the UpdateUdisor...
+procedure PatchGraphicsInfoCopyToScreenAndValidateW(); register;
 asm
     push  [ebp - $04]
-    call  PatchUpdateAdvisorRepositionControlsEx2
+    call  PatchGraphicsInfoCopyToScreenAndValidateWEx
     push  $0040847B
     ret
 end;
@@ -215,8 +255,9 @@ asm
     ret
 end;
 
-procedure PatchCloseAdvisorWindowAfter(); stdcall;
+procedure PatchCloseAdvisorWindowAfter(AdvisorWindow: PAdvisorWindow); register;
 begin
+  AdvisorWindow.AdvisorType := -1;        // Restored
   // Called also two times at the bottom of the main game loop!
   Uia.Settings.Save();
 end;
@@ -227,7 +268,7 @@ var
   MinPageSize, MaxPageSize: Integer;
   ListboxItemHeight: Integer;
 begin
-  DialogIndex := Ex.GetResizableDialogIndex(Dialog);
+  DialogIndex := GetResizableDialogIndex(Dialog);
   if (DialogIndex > 0) and (Dialog.ScrollOrientation = 0) then // Vertical
   begin
     Dialog._Extra := Civ2.Heap_Add(@Dialog.Heap, SizeOf(TDialogExtra));
@@ -354,6 +395,20 @@ begin
     end;
   end;
 end;
+
+procedure PatchWriteCiv2DatEx(); stdcall;
+begin
+  Uia.Settings.Save();
+end;
+
+procedure PatchWriteCiv2Dat(); register;
+asm
+    mov   [ebp - 4], 1 // Restored
+    call  PatchWriteCiv2DatEx
+    push  $004A73E9
+    ret
+end;
+
 { TUiaPatchResizableWindows}
 
 procedure TUiaPatchResizableWindows.Attach(HProcess: Cardinal);
@@ -366,13 +421,24 @@ begin
   WriteMemory(HProcess, $0042ADD1, [OP_CALL], @PatchUpdateAdvisorHeight); // Science Advisor
   WriteMemory(HProcess, $0042F2E3, [OP_CALL], @PatchUpdateAdvisorHeight); // Intelligence Report
   WriteMemory(HProcess, $004315B5, [OP_CALL], @PatchUpdateAdvisorHeight); // Wonders of the World
-  WriteMemory(HProcess, $00401636, [OP_JMP], @PatchAdvisorCopyBg); // Stretch background for resizable Advisors
-  WriteMemory(HProcess, $0042A8EC, [OP_JMP], @PatchPrepareAdvisorWindow1); // Set size
-  WriteMemory(HProcess, $0042AB85, [OP_JMP], @PatchPrepareAdvisorWindow2); // Set resizable style and border
-  WriteMemory(HProcess, $0042AB96, [OP_JMP], @PatchPrepareAdvisorWindow3); // Set MinMaxTrackSize
-  WriteMemory(HProcess, $00408476, [OP_JMP], @PatchUpdateAdvisorRepositionControls);
-  WriteMemory(HProcess, $005DCA69, [OP_JMP], @PatchWindowProcMSWindowWmNcHitTest); // Set cursor at window edges
-  WriteMemory(HProcess, $0042A7B2, [OP_CALL], @PatchCloseAdvisorWindowAfter); // Save UIA settings after closing Advisor
+  // Stretch background for resizable Advisors
+  WriteMemory(HProcess, $0042AC3F, [OP_CALL], @PatchAdvisorWindowCopyFullBg);
+  // Update scrollbars range
+  WriteMemory(HProcess, $0042B2C9, [OP_CALL], @PatchUpdateAdvisorScience); // Science Advisor
+  WriteMemory(HProcess, $0042FF89, [OP_CALL], @PatchUpdateAdvisorScience); // Intelligence Report
+  // Set size
+  WriteMemory(HProcess, $0042A8EC, [OP_JMP], @PatchPrepareAdvisorWindow1);
+  // Set resizable style and border
+  WriteMemory(HProcess, $0042AB85, [OP_JMP], @PatchPrepareAdvisorWindow2);
+  // Set MinMaxTrackSize
+  WriteMemory(HProcess, $0042AB96, [OP_JMP], @PatchPrepareAdvisorWindow3);
+  // Reposition advisor controls
+  WriteMemory(HProcess, $00408476, [OP_JMP], @PatchGraphicsInfoCopyToScreenAndValidateW);
+  // Set cursor at window edges
+  WriteMemory(HProcess, $005DCA69, [OP_JMP], @PatchWindowProcMSWindowWmNcHitTest);
+  //WriteMemory(HProcess, $0042A7B2, [OP_CALL], @PatchCloseAdvisorWindowAfter); // Save UIA settings after closing Advisor
+  WriteMemory(HProcess, $0042A787, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_CALL], @PatchCloseAdvisorWindowAfter); // Save UIA settings after closing Advisor
+  WriteMemory(HProcess, $004A73E2, [OP_JMP], @PatchWriteCiv2Dat); // Save UIA settings on saving CIV2.DAT file
   // Resizable Dialog window
   WriteMemory(HProcess, $0059FD36, [OP_JMP], @PatchCreateDialogDimension);
   WriteMemory(HProcess, $005A1EDC, [OP_JMP], @PatchCreateDialogMainWindow);

@@ -3,6 +3,7 @@ unit Civ2Types;
 interface
 
 uses
+  MMSystem,
   SysUtils,
   Windows;
 
@@ -106,6 +107,8 @@ type
   PCity = ^TCity;
 
   PCiv = ^TCiv;
+
+  PMciInfo = ^TMciInfo;
 
   TWindowProcs = packed record            // Size = 0x68
     ProcMouseMove: Pointer;
@@ -336,7 +339,7 @@ type
   PListboxItem = Pointer;
 
   TListItem = packed record
-    UnitIndex: Integer;
+    Index: Integer;                 
     Unknown_04: Integer;
     Text: PChar;
     Sprite: PSprite;
@@ -387,6 +390,7 @@ type
     // 0x00000001 - Has Cancel button (StdType = 2)
     // 0x00000004 - Checkboxes
     // 0x00000008 - Don't wait result
+    // 0x00000010 - Don't destroy GraphicsInfo
     // 0x00000020 - Created
     // 0x00000040 - Has Help button (StdType = 1)
     // 0x00000200 - Created parts
@@ -837,10 +841,10 @@ type
     //  7 - F7  Wonders of the World
     //  8 - F8  Top 5 Cities, About Civilization II, Hall of Fame
     //  9 - F11 Demographics
-    // 10 - F9  Civilization Score
+    // 10 - F9  Civilization Score, Civilization Rating
     // 12 - Ctrl-D Casaulty Timeline
     Unknown_454: Integer;
-    Unknown_458: Integer;
+    _Range: Integer;
     CurrCivIndex: Integer;
     ScrollPosition: Integer;
     ScrollPageSize: Integer;
@@ -1259,7 +1263,7 @@ type
     // 0000 0100 0000 0000 0000 0000 0000 0000 - 0x04000000 x1 Objective
     // 0001 0000 0000 0000 0000 0000 0000 0000 - 0x10000000 x3 Major Objective
     Owner: Byte;                          // 0008
-    Size: Byte;                           // 0009
+    Size: Shortint;                       // 0009
     Founder: Byte;                        // 000A
     TurnsCaptured: Byte;                  // 000B
     KnownTo: Byte;                        // 000C
@@ -1406,6 +1410,13 @@ type
   end;
 
   TLeaders = array[1..21] of TLeader;     // 6554F8
+
+  TMciInfo = packed record                // 6389D4
+    SequencerId: MCIDEVICEID;
+    CdAudioId: MCIDEVICEID;
+    CdAudioId2: MCIDEVICEID;              // Unused. Will use this for file DeviceID
+    NumberOfTracks: Integer;
+  end;
 
 const
   CST_RESOURCES                           = 1;

@@ -9,7 +9,6 @@ uses
   Civ2Types in 'Civ2Types.pas',
   Civ2Proc in 'Civ2Proc.pas',
   Civ2UIA_CanvasEx in 'Civ2UIA_CanvasEx.pas',
-  Civ2UIA_Ex in 'Civ2UIA_Ex.pas',
   Civ2UIA_FormAbout in 'Civ2UIA_FormAbout.pas' {FormAbout},
   Civ2UIA_FormConsole in 'Civ2UIA_FormConsole.pas' {FormConsole},
   Civ2UIA_FormSettings in 'Civ2UIA_FormSettings.pas' {FormSettings},
@@ -42,6 +41,7 @@ uses
   UiaPatchColorCorrection in 'Patches\UiaPatchColorCorrection.pas',
   UiaPatchCommon in 'Patches\UiaPatchCommon.pas',
   UiaPatchCPUUsage in 'Patches\UiaPatchCPUUsage.pas',
+  UiaPatchDllGif in 'Patches\UiaPatchDllGif.pas',
   UiaPatchDrawUnit in 'Patches\UiaPatchDrawUnit.pas',
   UiaPatchLimits in 'Patches\UiaPatchLimits.pas',
   UiaPatchMapWindow in 'Patches\UiaPatchMapWindow.pas',
@@ -63,12 +63,6 @@ uses
 
 {$R *.res}
 
-procedure CreateGlobals();
-begin
-  //  Civ2 := TCiv2.Create();
-  Ex := TEx.Create();
-end;
-
 procedure DllMain(Reason: Integer);
 var
   HProcess: Cardinal;
@@ -78,7 +72,6 @@ begin
       begin
         HProcess := OpenProcess(PROCESS_ALL_ACCESS, False, GetCurrentProcessId());
         Uia.AttachPatches(HProcess);
-        CreateGlobals();
         CloseHandle(HProcess);
         SendMessageToLoader(0, 0);
       end;

@@ -151,14 +151,15 @@ var
   Sprite: PSprite;
   R: TRect;
   Canvas: TCanvasEx;
-  Building, Cost: Integer;
+  Building: Integer;
   City: PCity;
   CityIndex: Integer;
   SortCriteria, SortSign: Integer;
   Improvements: array[0..1] of Integer;
   SavedCityGlobals: TCityGlobals;
-  RealCost, TurnsToBuild: Integer;
+  CityBuildInfo: TCityBuildInfo;
 begin
+  //TFormConsole.Log('PatchUpdateAdvisorCityStatusEx');
   Result := 0;                            // Return 1 if processed
   SavedCityGlobals := Civ2.CityGlobals^;
   ZeroMemory(@AdvisorWindowEx.Rects, SizeOf(AdvisorWindowEx.Rects));
@@ -179,7 +180,7 @@ begin
   Page := Civ2.Clamp((Bottom - Top1) div LineHeight, 1, $63);
   Civ2.AdvisorWindow.ScrollPageSize := Page;
   Cities := AdvisorWindowEx.SortedCitiesList.Count;
-  Civ2.AdvisorWindow.Unknown_458 := Civ2.Clamp((Cities + Page - 1) div Page, 1, $63);
+  Civ2.AdvisorWindow._Range := Civ2.Clamp((Cities + Page - 1) div Page, 1, $63);
   MaxScrollPosition := Civ2.Clamp(Cities - 1, 0, $3E7);
   ScrollPos := Civ2.Clamp(Civ2.AdvisorWindow.ScrollPosition, 0, MaxScrollPosition);
   Civ2.AdvisorWindow.ScrollPosition := ScrollPos;
@@ -235,6 +236,7 @@ begin
     begin
       X1 := MSWindow.ClientTopLeft.X + (((i + 1) and 1) shl 6) + 2;
       CityIndex := AdvisorWindowEx.SortedCitiesList.GetIndexIndex(i); // (Integer(City) - Integer(Civ2.Cities)) div SizeOf(TCity);
+      Civ2.CalcCityGlobals(CityIndex, True);
       Civ2.DrawCitySprite(DrawPort, CityIndex, 0, X1, Y1, 0);
 
       // Begin Debug CityIndex
@@ -289,7 +291,8 @@ begin
         Civ2.Sprite_CopyToPortNC(@Civ2.SprRes[2 * j + 1], @R, DrawPort, X2, Y2 + 2);
         X2 := X2 + 42;
       end;
-      //
+      // BuildInfo
+      GetCityBuildInfo(CityIndex, CityBuildInfo);
       X1 := X1 + 104;
       X2 := X1;
       if City.Building < 0 then
@@ -300,7 +303,6 @@ begin
         begin
           Civ2.SetFontColorWithShadow($5E, $A, -1, -1);
         end;
-        Cost := Civ2.Improvements[Building].Cost;
         Civ2.SetSpriteZoom(-2);
         Civ2.Sprite_CopyToPortNC(@PSprites($645160)^[-City.Building], @R, DrawPort, X2, Y2 + 2);
         Civ2.ResetSpriteZoom();
@@ -311,19 +313,14 @@ begin
         Civ2.SetFontColorWithShadow($7A, $A, -1, -1);
         Building := City.Building;
         Text := string(Civ2.GetStringInList(Civ2.UnitTypes[Building].StringIndex)) + ' ';
-        Cost := Civ2.UnitTypes[Building].Cost;
         Civ2.SetSpriteZoom(-2);
         Civ2.Sprite_CopyToPortNC(@Civ2.SprUnits[City.Building], @R, DrawPort, X2 - 10, Y2 - 8);
         Civ2.ResetSpriteZoom();
         X2 := X2 + 28;
       end;
       // Build progress
-      RealCost := Cost * Civ2.Cosmic.RowsInShieldBox;
-      Civ2.CalcCityGlobals(CityIndex, True);
-      TurnsToBuild := GetTurnsToBuild2(RealCost, City.BuildProgress);
-
       X2 := Civ2.DrawStringCurrDrawPort2(PChar(Text), X2, Y2) + 4;
-      Text := Format('%s (%d/%d)', [ConvertTurnsToString(TurnsToBuild, $20), City.BuildProgress, RealCost]);
+      Text := Format('%s (%d/%d)', [ConvertTurnsToString(CityBuildInfo.TurnsToBuild, $20), City.BuildProgress, CityBuildInfo.RealCost]);
       Civ2.SetFontColorWithShadow($21, $12, -1, -1);
       Civ2.DrawStringRightCurrDrawPort2(PChar(Text), MSWindow.ClientSize.cx - 12, Y2, 0);
 

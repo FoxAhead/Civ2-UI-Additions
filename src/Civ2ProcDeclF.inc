@@ -1,10 +1,12 @@
 // This file is generated automatically. Do not change it.
+AdvisorWindow_CopyBg: procedure(This: PAdvisorWindow; XSrc, YSrc, Width, Height: Integer); stdcall;
 AfterActiveUnitChanged: procedure(A1: Integer); cdecl;
 ArrangeWindows: procedure; cdecl;
 BmpFillColor: procedure(PBmp: PByte; Color, Left, Top: Integer; W: Cardinal; H, BmWidth4u, Height: Integer); cdecl;
 CDRootFind: function(FileName: PChar): PChar; cdecl;
 CalcCityGlobals: procedure(CityIndex: Integer; Calc: Boolean); cdecl;
 CalcCityGlobalsTileRes: procedure(CityIndex, SpiralIndex, AddTotal: Integer); cdecl;
+CheckPaths: function(CheckFileName: PChar): Integer; cdecl;
 CityCitizenClicked: procedure(CitizenIndex: Integer); cdecl;
 CityHasImprovement: function(CityIndex, Improvement: Integer): Boolean; cdecl;
 CitySprites_GetInfoOfClickedCitySprite: function(This: PCitySprites; X, Y: Integer; var SIndex, SType: Integer): Integer; stdcall;
@@ -40,7 +42,7 @@ Dlg_LoadGAMESimpleL0: function(This: PDialogWindow; SectionName: PChar; Flags: I
 Dlg_LoadGAMESimpleL0F0: function(This: PDialogWindow; SectionName: PChar): Integer; stdcall;
 Dlg_LoadPopup: function(This: PDialogWindow; FileName, SectionName: PChar; Length: Integer; Text: PChar; A6: PGraphicsInfo; A3: PDrawPort; Rect: PRect; Flags: Integer): Integer; stdcall;
 Dlg_LoadSimple: function(This: PDialogWindow; FileName, SectionName: PChar; Length, Flags: Integer): Integer; stdcall;
-DrawCitySprite: procedure(This: PDrawPort; CityIndex, A3, XLeft, YTop, Zoom: Integer); cdecl;
+DrawCitySprite: procedure(DrawPort: PDrawPort; CityIndex, Options, XLeft, YTop, Zoom: Integer); cdecl;
 DrawFrame: procedure(DrawPort: PDrawPort; Rect: PRect; Color: Integer); cdecl;
 DrawPort_BmpAttach: procedure(This: PDrawPort); stdcall;
 DrawPort_BmpDetach: procedure(This: PDrawPort); stdcall;
@@ -87,10 +89,15 @@ MapWindow_MapToWindow: procedure(This: PMapWindow; var WindowX, WindowY: Integer
 MapWindow_RedrawMap: procedure(This: PMapWindow; CivIndex: Integer; CopyToScreen: Boolean); stdcall;
 MapWindow_ScreenToMap: function(This: PMapWindow; var MapX, MapY: Integer; ScreenX, ScreenY: Smallint): Boolean; stdcall;
 MapWrapX: function(X: Integer): Integer; cdecl;
+MciCdAudioClose: procedure; cdecl;
+MciGetNumberOfTracks: function: Integer; cdecl;
+MciNotifyCdAudio: function: Integer; cdecl;
+MciNotifySequencer: function: Integer; cdecl;
 MenuBar_AddMenu: function(This: PMenuBar; Num: Integer; Text: PChar): PMenu; stdcall;
 MenuBar_AddSubMenu: function(This: PMenuBar; Num, SubNum: Integer; Text: PChar; Len: Integer): PMenu; stdcall;
 MenuBar_GetSubMenu: function(This: PMenuBar; Num: Integer): PMenu; stdcall;
 NextLinePixelAddress: function(This: PDrawPort; A2: PByte): PByte; stdcall;
+OutputDebugSmedsLogI: function(A1: PChar; A2: Integer): char; cdecl;
 PFFindConnection: function(CivIndex, X1, Y1, X2, Y2: Integer): Integer; cdecl;
 PFFindUnitDir: function(UnitIndex: Integer): Integer; cdecl;
 PFMove: function(X, Y, A3: Integer): Integer; cdecl;
@@ -140,5 +147,6 @@ WindowInfo1_RestoreWindow: procedure(This: PWindowInfo1); stdcall;
 WindowInfo1_SetFocusAndBringToTop: procedure(This: PWindowInfo1); stdcall;
 WindowProcs_SetWndProcChar: procedure(This: PWindowProcs; A2: Pointer); stdcall;
 WindowProcs_SetWndProcKeyDown2: procedure(This: PWindowProcs; A2: Pointer); stdcall;
+WriteCiv2Dat: procedure; cdecl;
 txtStrcatInt: function(A1: Integer): PChar; cdecl;
 txtStrcatLabelString: function(A1: Integer): PChar; cdecl;

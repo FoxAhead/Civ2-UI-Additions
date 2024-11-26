@@ -26,16 +26,14 @@ type
     { Private declarations }
     FMessagesCounter: Integer;
     class procedure EnsureInstance();
+    procedure AddToMemo(Text: string);
   public
     { Public declarations }
     class procedure Open();
     class procedure Log(Text: string = ''); overload;
     class procedure Log(Number: Integer); overload;
-  published
-    property ClientWidth stored True;
-    property ClientHeight stored True;
-    property Width stored False;
-    property Height stored False;
+    class procedure Log(const F: string; const A: array of const); overload;
+    procedure ShowUp();
   end;
 
 implementation
@@ -46,6 +44,8 @@ uses
 
 {$R *.dfm}
 
+{ TFormConsole }
+
 var
   FormConsole: TFormConsole;
 
@@ -54,38 +54,62 @@ begin
   if FormConsole = nil then
   begin
     FormConsole := TFormConsole.Create(nil);
-    //FormConsole.FormStyle := fsStayOnTop;
     FormConsole.Memo1.Clear();
-    //FormConsole.Show();
   end;
 end;
 
 class procedure TFormConsole.Open;
-var
-  R: TRect;
-  P: TPoint;
 begin
   EnsureInstance();
-  SetWindowLong(FormConsole.Handle, GWL_HWNDPARENT, Civ2.MainWindowInfo.WindowStructure.HWindow);
-  Windows.GetClientRect(Civ2.MainWindowInfo.WindowStructure.HWindow, R);
-  P := Point(R.Right, R.Top);
-  MapWindowPoints(Civ2.MainWindowInfo.WindowStructure.HWindow, 0, P, 1);
-  SendMessage(FormConsole.Memo1.Handle, EM_LINESCROLL, 0, FormConsole.Memo1.Lines.Count);
-  FormConsole.Show();
-  FormConsole.Left := P.X - FormConsole.Width;
-  FormConsole.Top := P.Y;
+  FormConsole.ShowUp();
 end;
 
 class procedure TFormConsole.Log(Text: string);
 begin
   EnsureInstance();
-  Inc(FormConsole.FMessagesCounter);
-  FormConsole.Memo1.Lines.Add(Format('%d. %s', [FormConsole.FMessagesCounter, Text]));
+  //FormConsole.ShowUp();
+  FormConsole.AddToMemo(Text);
 end;
 
 class procedure TFormConsole.Log(Number: Integer);
 begin
   Log(IntToHex(Number, 8));
+end;
+
+class procedure TFormConsole.Log(const F: string; const A: array of const);
+begin
+  Log(Format(F, A));
+end;
+
+procedure TFormConsole.AddToMemo(Text: string);
+begin
+  //PostMessage(Memo1.Handle, WM_SETREDRAW, 0, 0);
+  while Memo1.Lines.Count >= 500 do
+    Memo1.Lines.Delete(0);
+  Inc(FMessagesCounter);
+  Memo1.Lines.Add(Format('%d. %s', [FMessagesCounter, Text]));
+  Memo1.Text := Trim(Memo1.Text);
+  //PostMessage(Memo1.Handle, WM_SETREDRAW, 1, 0);
+end;
+
+procedure TFormConsole.ShowUp;
+var
+  R: TRect;
+  P: TPoint;
+begin
+  SendMessage(Memo1.Handle, EM_LINESCROLL, 0, Memo1.Lines.Count);
+  if (Civ2 <> nil) and (Civ2.MainWindowInfo.WindowStructure <> nil) then
+  begin
+    SetWindowLong(Handle, GWL_HWNDPARENT, Civ2.MainWindowInfo.WindowStructure.HWindow);
+    Windows.GetClientRect(Civ2.MainWindowInfo.WindowStructure.HWindow, R);
+    P := Point(R.Right, R.Top);
+    MapWindowPoints(Civ2.MainWindowInfo.WindowStructure.HWindow, 0, P, 1);
+    Show();
+    Left := P.X - Width;
+    Top := P.Y;
+  end
+  else
+    Show();
 end;
 
 procedure TFormConsole.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -113,4 +137,3 @@ begin
 end;
 
 end.
-

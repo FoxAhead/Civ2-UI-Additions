@@ -25,9 +25,7 @@ uses
   Civ2Types,
   Civ2Proc,
   Civ2UIA_Types,
-  Civ2UIA_Ex,
-  Civ2UIA_CanvasEx,
-  Civ2UIA_FormConsole;
+  Civ2UIA_CanvasEx;
 
 type
   TMouseDrag = record
@@ -125,6 +123,7 @@ begin
   if Abs(Delta) > 10 then
     goto EndOfFunction;                   // Filtering
   WindowType := Uia.GuessWindowType(HWndParent);
+  //TFormConsole.Log(Format('WindowType=%d',[Ord(WindowType)]));
 
   if WindowType = wtCityWindow then
   begin
@@ -170,7 +169,10 @@ begin
         ScrollLines := 1;
       wtCityWindow:
         ScrollLines := CityWindowScrollLines;
+      wtDialogMultiColumns:
+        ScrollLines := 1;
     end;
+    //TFormConsole.Log(Format('ScrollLines=%d',[ScrollLines]));
     ControlInfoScroll := Pointer(GetWindowLongA(HWndScrollBar, GetClassLongA(HWndScrollBar, GCL_CBWNDEXTRA) - 8));
     nPrevPos := ControlInfoScroll^.CurrentPosition;
     SetScrollPos(HWndScrollBar, SB_CTL, nPrevPos - Delta * ScrollLines, True);
@@ -384,124 +386,6 @@ asm
     push  $005EB2DF
     ret
 end;
-
-{procedure PatchRegisterWindowByAddress(This, ReturnAddress1, ReturnAddress2: Cardinal); stdcall;
-var
-  WindowType: TWindowType;
-begin
-  WindowType := wtUnknown;
-  case ReturnAddress1 of
-    $0040D35C:
-      WindowType := wtTaxRate;
-    $0042AB8A:
-      case ReturnAddress2 of
-        $0042D742:
-          WindowType := wtCityStatus;     // F1
-        $0042F0A0:
-          WindowType := wtDefenceMinister; // F2
-        $00430632:
-          WindowType := wtIntelligenceReport; // F3
-        $0042E1A9:
-          WindowType := wtAttitudeAdvisor; // F4
-        $0042CD56:
-          WindowType := wtTradeAdvisor;   // F5
-        $0042B6A4:
-          WindowType := wtScienceAdvisor; // F6
-      end;
-  end;
-  if WindowType <> wtUnknown then
-  begin
-    RegisteredHWND[WindowType] := PCardinal(PCardinal(This + $50)^ + 4)^;
-  end;
-end;
-
-procedure PatchRegisterWindow(); register;
-asm
-    pop   SavedReturnAddress1
-    mov   SavedThis, ecx
-    mov   eax, [ebp + 4]
-    mov   SavedReturnAddress2, eax
-    mov   eax, $005534BC
-    call  eax
-    push  eax
-    push  SavedReturnAddress2
-    push  SavedReturnAddress1
-    push  SavedThis
-    call  PatchRegisterWindowByAddress
-    pop   eax
-    push  SavedReturnAddress1
-end;}
-
-{function PatchChangeListOfUnitsStart(PopupResult: Cardinal): Cardinal; stdcall;
-begin
-  if ListOfUnits.Start > (ListOfUnits.Length - 9) then
-    ListOfUnits.Start := ListOfUnits.Length - 9;
-  if ListOfUnits.Start < 0 then
-    ListOfUnits.Start := 0;
-  Result := PopupResult;
-end;}
-
-{var
-  ScrollBarControlInfo: TControlInfoScroll;
-
-procedure PatchCallCreateScrollBar(); stdcall;
-begin
-  if (Civ2.CurrPopupInfo^^.NumListItems >= 9) and (ListOfUnits.Length > 9) then
-  begin
-    ZeroMemory(@ScrollBarControlInfo, SizeOf(ScrollBarControlInfo));
-    ScrollBarControlInfo.ControlInfo.Rect.Left := Civ2.CurrPopupInfo^^.ClientSize.cx - 25;
-    ScrollBarControlInfo.ControlInfo.Rect.Top := 36;
-    ScrollBarControlInfo.ControlInfo.Rect.Right := Civ2.CurrPopupInfo^^.ClientSize.cx - 9;
-    ScrollBarControlInfo.ControlInfo.Rect.Bottom := Civ2.CurrPopupInfo^^.ClientSize.cy - 45;
-    Civ2.Scroll_CreateControl(@ScrollBarControlInfo, @Civ2.CurrPopupInfo^^.GraphicsInfo^.WindowInfo, $0B, @ScrollBarControlInfo.ControlInfo.Rect, True);
-    SetScrollRange(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, 0, ListOfUnits.Length - 9, False);
-    SetScrollPos(ScrollBarControlInfo.ControlInfo.HWindow, SB_CTL, ListOfUnits.Start, True);
-  end;
-end;}
-
-//
-
-//------------------------------------------------
-//     CityWindow
-//------------------------------------------------
-
-//function GetTurnsToComplete(RealCost, Done: Integer): Integer; stdcall;
-//var
-//  LeftToDo, Production: Integer;
-//begin
-//  // Code from Q_StrcatBuildingCost_sub_509AC0
-//  LeftToDo := RealCost - 1 - Done;
-//  Production := Min(Max(1, Civ2.CityGlobals.TotalRes[1] - Civ2.CityGlobals.Support), 1000);
-//  Result := Min(Max(1, LeftToDo div Production + 1), 999);
-//end;
-
-//
-// Return number of turns
-//
-{function PatchCityChangeListBuildingCostEx(Cost, Done: Integer): Integer; stdcall;
-var
-  P: PChar;
-  Text: string;
-  RealCost: Integer;
-begin
-  RealCost := Cost * Civ2.CityGlobals.ShieldsInRow;
-  P := StrEnd(Civ2.ChText) - 1;
-  if P^ = '(' then
-    P^ := #00;
-  Text := string(Civ2.ChText);
-  Text := Text + IntToStr(RealCost) + '#644F00:3# (';
-  StrPCopy(Civ2.ChText, Text);
-  Result := GetTurnsToBuild(RealCost, Done);
-end;
-
-procedure PatchCityChangeListBuildingCost; register;
-asm
-    push  [ebp + $0C] // Done
-    push  [ebp + $08] // Cost
-    call  PatchCityChangeListBuildingCostEx
-    push  $00509B07
-    ret
-end;}
 
 procedure PatchShowDialogForeignMinisterGoldEx(Dialog: PDialogWindow; Gold: Integer); stdcall;
 var
@@ -773,7 +657,7 @@ var
 begin
   if AHWnd = Civ2.MainWindowInfo.WindowStructure.HWindow then
   begin
-    TextOut := ExtractFileName(Ex.ModuleNameString) + ' v' + Ex.VersionString;
+    TextOut := ExtractFileName(Uia.ModuleNameString) + ' v' + Uia.VersionString;
     GetClientRect(AHWnd, R);
     Canvas := TCanvasEx.Create(APaint.hdc);
     Canvas.Font.Name := 'MS Sans Serif';
@@ -785,40 +669,6 @@ begin
     Canvas.Free();
   end;
   EndPaint(AHWnd, APaint);
-end;
-
-function PatchFindAndLoadResourceEx(ResType: PChar; ResNum: Integer; var Module: HMODULE; var ResInfo: HRSRC): HGLOBAL; stdcall;
-var
-  MyResInfo: HRSRC;
-  Gifs: array[0..4] of char;
-begin
-  Gifs := 'GIFS';
-  if StrLComp(ResType, Gifs, 4) = 0 then
-  begin
-    if Ex.DllGifNeedFixing(ResNum) then
-    begin
-      MyResInfo := FindResource(HInstance, MakeIntResource(ResNum), Gifs);
-      if MyResInfo <> 0 then
-      begin
-        Module := HInstance;
-        ResInfo := MyResInfo;
-      end;
-    end;
-  end;
-  Result := LoadResource(Module, ResInfo);
-end;
-
-procedure PatchFindAndLoadResource(); register;
-asm
-    lea   eax, [ebp - $0C] // HRSRC hResInfo
-    push  eax
-    lea   eax, [ebp - $18] // HMODULE hModule
-    push  eax
-    push  [ebp + $0C]      // char *aResName
-    push  [ebp + $08]      // char *aResType
-    call  PatchFindAndLoadResourceEx
-    push  $005DB2F3
-    ret
 end;
 
 procedure PatchMSWindowBuildAfterEx(MSWindow: PMSWindow; CallerChain: PCallerChain); stdcall;
@@ -839,34 +689,16 @@ asm
     ret
 end;
 
-procedure PatchLoadMainIconEx(WindowInfo1: PWindowInfo1); stdcall;
+procedure PatchLoadMainIcon(DummyEAX, DummyEDX: Integer; WindowInfo1: PWindowInfo1; IconName: Cardinal); register;
 begin
+  Civ2.WindowInfo1_LoadMainIcon(WindowInfo1, IconName); // Restored
   SetClassLong(WindowInfo1.WindowStructure.HWindow, GCL_HICON, WindowInfo1.WindowStructure.Icon);
 end;
 
-procedure PatchLoadMainIcon(); register;
-asm
-    push  [ebp - 4] // P_WindowInfo1 a1
-    call  PatchLoadMainIconEx
-    push  $00408074
-    ret
-end;
-
-procedure PatchInitNewGameParametersEx(); stdcall;
-var
-  i: Integer;
+procedure PatchInitNewGameParametersLeaders(i: Integer); register;
 begin
-  for i := 1 to 21 do
-    Civ2.Leaders[i].CitiesBuilt := 0;
-end;
-
-procedure PatchInitNewGameParameters(); register;
-asm
-    call  PatchInitNewGameParametersEx;
-    mov   eax, $401A46  // Restore overwritten call to sub_401A46
-    call  eax
-    push  $004AA9CE
-    ret
+  Civ2.Leaders[i].Unknown1 := 0;          // Restored
+  Civ2.Leaders[i].CitiesBuilt := 0;
 end;
 
 procedure AdvisorWndProcChar(CharCode: Char); cdecl;
@@ -942,12 +774,8 @@ end;
 
 procedure TUiaPatchCommon.Attach(HProcess: Cardinal);
 begin
-  //  if UIAOPtions.UIAEnable then
-  //  begin
   WriteMemory(HProcess, $005EB465, [], @PatchWindowProcCommon);
   WriteMemory(HProcess, $005EACDE, [], @PatchWindowProc1);
-  //WriteMemory(HProcess, $00402AC7, [OP_JMP], @PatchRegisterWindow);
-//  end;
 
 // Show Gold coin in Foreign Minister dialog
   WriteMemory(HProcess, $00430D71, [OP_JMP], @PatchShowDialogForeignMinisterGold);
@@ -966,9 +794,6 @@ begin
   // Version info
   WriteMemory(HProcess, $005DC520, [OP_NOP, OP_CALL], @PatchWindowProcMSWindowWmPaintAfter);
 
-  // Fix mk.dll (229.gif, 250.gif) and pv.dll (105.gif)
-  WriteMemory(HProcess, $005DB2D4, [OP_JMP], @PatchFindAndLoadResource);
-
   // Fix dye-copper demand bug: initialize variable int vRoads [ebp-128h] with 0
   WriteMemory(HProcess, $0043D61D + 3, [$FF, $FF, $FF, $FF]);
 
@@ -979,10 +804,10 @@ begin
   WriteMemory(HProcess, $005536FC, [OP_JMP], @PatchMSWindowBuildAfter);
 
   // Load icon to show in taskbar and Alt-TAB popup
-  WriteMemory(HProcess, $0040806F, [OP_JMP], @PatchLoadMainIcon);
+  WriteMemory(HProcess, $00589B72, [OP_CALL], @PatchLoadMainIcon);
 
   // Initialize Leaders.CitiesBuilt counter on new game to reset to the beginning of the city names list (CITY.TXT)
-  WriteMemory(HProcess, $004AA9C9, [OP_JMP], @PatchInitNewGameParameters);
+  WriteMemory(HProcess, $004AAA1D, [OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_NOP, OP_CALL], @PatchInitNewGameParametersLeaders);
 
   // Set Char and KeyDown2 procs for advisors
   WriteMemory(HProcess, $0042ABB4, [OP_JMP], @PatchAdvisorWindowPrepareAfter);
