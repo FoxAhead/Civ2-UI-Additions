@@ -217,6 +217,7 @@ begin
     Canvas.LineTo(Canvas.PenPos.X + H2, Canvas.PenPos.Y + H2);
     Canvas.PenDXDY(-1, -1);
     Canvas.LineTo(Canvas.PenPos.X - H2, Canvas.PenPos.Y + H2);
+    DeleteObject(Rgn);
     Canvas.Free();
   end;
 end;
