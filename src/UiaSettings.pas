@@ -108,7 +108,6 @@ end;
 
 procedure TUiaSettings.Save;
 begin
-  TFormConsole.Log('TUiaSettings.Save() begin %s', [GetCallersString()]);
   try
     SuppressPopupList.SaveToFile(FILENAME_CIV2UIASP_TXT);
     SaveDatFile();
@@ -118,7 +117,6 @@ begin
       TFormConsole.Log('TUiaSettings.Save() Error %s', [E.Message]);
     end;
   end;
-  TFormConsole.Log('TUiaSettings.Save() end');
 end;
 
 procedure TUiaSettings.SaveDatFile;

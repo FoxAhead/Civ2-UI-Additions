@@ -155,6 +155,7 @@ type
     Text: PChar;
     Num: Integer;
     Flags: Cardinal;
+    // 0x00000001 - Hidden
     // 0x00000002 -
     // 0x00000004 - Checked
     SubCount: Integer;
@@ -339,7 +340,7 @@ type
   PListboxItem = Pointer;
 
   TListItem = packed record
-    Index: Integer;                 
+    Index: Integer;
     Unknown_04: Integer;
     Text: PChar;
     Sprite: PSprite;
@@ -766,8 +767,8 @@ type
 
   TCityGlobals = packed record            // Size = 0x140
     BuildProgress: Integer;
-    field_4: array[1..4] of char;
-    field_8: array[1..28] of char;
+    field_4: array[1..4] of Char;
+    field_8: array[1..28] of Char;
     // 0000 0001 - 0x01 Not valid
     // 0000 0100 - 0x04 Foreign offensive unit
     // 0000 1000 - 0x08 City
@@ -788,7 +789,7 @@ type
     TradeCorruption: Integer;
     Pollution: Integer;
     DistanceToCapital: Integer;
-    field_64: array[1..4] of char;
+    field_64: array[1..4] of Char;
     TradeRevenue: array[0..2] of Integer;
     AngryCitizens: Integer;
     field_78: Integer;
@@ -796,7 +797,7 @@ type
     UnhappyCitizens: Integer;
     field_84: Integer;
     field_88: Integer;
-    field_8C: array[1..4] of char;
+    field_8C: array[1..4] of Char;
     TileRes: array[0..2] of Integer;
     TechPollution: Integer;
     TotalRes: array[0..2] of Integer;     // 0 - Food, 1 - Production, 2 - Trade
@@ -806,9 +807,9 @@ type
     field_B8: Integer;
     AttUnitsOfDiscontent: Integer;
     field_C0: Integer;
-    field_C4: array[1..4] of char;
+    field_C4: array[1..4] of Char;
     UnhappyArray: array[0..4] of Byte;
-    field_CD: array[1..3] of char;
+    field_CD: array[1..3] of Char;
     EnvLevel: Integer;
     Lux: Integer;
     Capital: Integer;
@@ -816,13 +817,13 @@ type
     SettlersEat: Integer;
     PaidUnits: Integer;
     field_E8: Integer;
-    field_EC: array[1..4] of char;
+    field_EC: array[1..4] of Char;
     field_F0: Integer;
     PrevFoodDelta: Integer;
     HappyArray: array[0..4] of Byte;
-    field_FD: array[1..3] of char;
+    field_FD: array[1..3] of Char;
     AngryArray: array[0..4] of Byte;
-    field_100: array[1..59] of char;
+    field_100: array[1..59] of Char;
   end;
 
   TAdvisorWindow = packed record          // Size = 0x4A4
@@ -1216,15 +1217,15 @@ type
     // 0100 0000 0000 0000 - 0x4000 Unit issued with the 'wait' order (the 'W' was pressed on this unit)
     // 1000 0000 0000 0000 - 0x8000 ?automate (not just settlers!)
     UnitType: Byte;                       // 0006
-    CivIndex: Shortint;                   // 0007
-    MovePoints: Shortint;                 // 0008 (Move * Road movement multiplier)
+    CivIndex: ShortInt;                   // 0007
+    MovePoints: ShortInt;                 // 0008 (Move * Road movement multiplier)
     Visibility: Byte;                     // 0009
     HPLost: Byte;                         // 000A
     MoveDirection: Byte;                  // 000B
     DebugSymbol: Char;                    // 000C
-    Counter: Byte;                        // 000D Settlers work / Caravan commodity / Air turn
+    Counter: ShortInt;                    // 000D Settlers work / Caravan commodity / Air turn
     MoveIteration: Byte;                  // 000E
-    Orders: Shortint;                     // 000F
+    Orders: ShortInt;                     // 000F
     // 0x01 Fortify
     // 0x02 Fortified
     // 0x03 Sleep
@@ -1250,8 +1251,8 @@ type
   TUnits = array[0..$7FF] of TUnit;       // 6560F0
 
   TCity = packed record                   // Size = 0x58
-    X: Smallint;                          // 0000
-    Y: Smallint;                          // 0002
+    X: SmallInt;                          // 0000
+    Y: SmallInt;                          // 0002
     Attributes: Cardinal;                 // 0004
     // 0000 0000 0000 0000 0000 0000 0000 0001 - 0x00000001 Disorder
     // 0000 0000 0000 0000 0000 0000 0000 0010 - 0x00000002 We Love the King Day
@@ -1263,11 +1264,11 @@ type
     // 0000 0100 0000 0000 0000 0000 0000 0000 - 0x04000000 x1 Objective
     // 0001 0000 0000 0000 0000 0000 0000 0000 - 0x10000000 x3 Major Objective
     Owner: Byte;                          // 0008
-    Size: Shortint;                       // 0009
+    Size: ShortInt;                       // 0009
     Founder: Byte;                        // 000A
     TurnsCaptured: Byte;                  // 000B
     KnownTo: Byte;                        // 000C
-    RevealedSize: array[0..7] of Byte;    // 000D
+    RevealedSize: array[0..7] of ShortInt; // 000D
     Unknown_15: Byte;                     // 0015
     Specialists: Cardinal;                // 0016
     // 00 - No specialist
@@ -1282,15 +1283,15 @@ type
     // 0000 0000 000X XXXX XXXX XXXX XXXX XXXX - Bit number equals index in CitySpiral (20 - center tile)
     // XXXX XX00 0000 0000 0000 0000 0000 0000 - Number of non-working citizens
     Improvements: array[1..5] of Byte;    // 0034
-    Building: Shortint;                   // 0039  < 0 - -Improvement; >= 0 - UnitType
-    TradeRoutes: Shortint;                // 003A
-    SuppliedTradeItem: array[0..2] of Shortint; // 003B
-    DemandedTradeItem: array[0..2] of Shortint; // 003E
-    CommodityTraded: array[0..2] of Shortint; // 0041
-    TradePartner: array[0..2] of Smallint; // 0044
-    Science: Smallint;                    // 004A
-    Tax: Smallint;                        // 004C
-    Trade: Smallint;                      // 004E
+    Building: ShortInt;                   // 0039  < 0 - -Improvement; >= 0 - UnitType
+    TradeRoutes: ShortInt;                // 003A
+    SuppliedTradeItem: array[0..2] of ShortInt; // 003B
+    DemandedTradeItem: array[0..2] of ShortInt; // 003E
+    CommodityTraded: array[0..2] of ShortInt; // 0041
+    TradePartner: array[0..2] of SmallInt; // 0044
+    Science: SmallInt;                    // 004A
+    Tax: SmallInt;                        // 004C
+    Trade: SmallInt;                      // 004E
     TotalFood: Byte;                      // 0050
     TotalShield: Byte;                    // 0051
     HappyCitizens: Byte;                  // 0052
@@ -1318,7 +1319,7 @@ type
     Gold: Integer;                        // + 0x02 = 64C6A2
     Leader: Word;                         // + 0x06 = 64C6A6
     Beakers: Word;                        // + 0x08 = 64C6A8
-    ResearchingTech: Smallint;            // 000A
+    ResearchingTech: SmallInt;            // 000A
     CapitalX: SmallInt;                   // 000C - Used to center the CityWindow overview minimap by capital
     TurnOfCityBuild: SmallInt;
     Techs: Byte;

@@ -15,17 +15,23 @@ implementation
 
 uses
   Classes,
-  
   Windows,
   UiaMain,
   Civ2Types,
-  Civ2Proc;
+  Civ2Proc,
+  Civ2UIA_FormConsole;
 
-procedure PatchResetEngineersOrderEx(AlreadyWorker: Integer); stdcall;
+procedure PatchResetEngineersOrderEx(ThisWorker, AlreadyWorker: Integer); stdcall;
+var
+  X, Y: Word;
 begin
   if not Uia.Settings.DatFlagSet(1) then
     Exit;
-  Civ2.Units[AlreadyWorker].Counter := 0;
+  Civ2.Units[AlreadyWorker].Counter := 0; // Restored
+  X := Civ2.Units[ThisWorker].X;
+  Y := Civ2.Units[ThisWorker].Y;
+  Civ2.PickUpUnit(ThisWorker, 0);
+  Civ2.PutDownUnit(ThisWorker, X, Y, 0);
   if Civ2.Units[AlreadyWorker].CivIndex = Civ2.HumanCivIndex^ then
   begin
     Civ2.Units[AlreadyWorker].Orders := -1;
@@ -35,6 +41,7 @@ end;
 procedure PatchResetEngineersOrder(); register;
 asm
     push  [ebp - $10] // int vAlreadyWorker
+    push  [ebp - $C]  // int vThisWorker
     call  PatchResetEngineersOrderEx
     push  $004C452F
     ret
@@ -165,20 +172,18 @@ var
   UnitIndex: Integer;
   Unit1, Unit2: PUnit;
   i: Integer;
-  UnitsList: TList;
 begin
   Result := 0;
   UnitIndex := Civ2.Game.ActiveUnitIndex;
   if (UnitIndex >= 0) and (UnitIndex < Civ2.Game.TotalUnits) then
   begin
-    UnitsList := TList.Create();
     Unit1 := @Civ2.Units[UnitIndex];
     MapX := Unit1.X;
     MapY := Unit1.Y;
     for i := 0 to Civ2.Game.TotalUnits - 1 do
     begin
       Unit2 := @Civ2.Units[i];
-      if (Unit2.X = MapX) and (Unit2.Y = MapY) and (Unit2.UnitType = Unit1.UnitType) and (Civ2.UnitCanMove(i)) then
+      if (Unit2.X = MapX) and (Unit2.Y = MapY) and (Unit2.UnitType = Unit1.UnitType) and Civ2.UnitCanMove(i) and (Unit2.Orders = -1) then
       begin
         Unit2.GotoX := GotoX;
         Unit2.GotoY := GotoY;
@@ -196,7 +201,6 @@ begin
       PInteger($0062BCB0)^ := 0;
       PInteger($006AD8D4)^ := 0;
     end;
-    UnitsList.Free();
   end;
 end;
 

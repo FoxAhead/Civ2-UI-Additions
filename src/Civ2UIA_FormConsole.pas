@@ -88,7 +88,7 @@ begin
     Memo1.Lines.Delete(0);
   Inc(FMessagesCounter);
   Memo1.Lines.Add(Format('%d. %s', [FMessagesCounter, Text]));
-  Memo1.Text := Trim(Memo1.Text);
+  //Memo1.Text := Trim(Memo1.Text);
   //PostMessage(Memo1.Handle, WM_SETREDRAW, 1, 0);
 end;
 
@@ -114,12 +114,12 @@ end;
 
 procedure TFormConsole.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  Action := caFree;
+  //Action := caFree;
 end;
 
 procedure TFormConsole.FormDestroy(Sender: TObject);
 begin
-  FormConsole := nil;
+  //FormConsole := nil;
 end;
 
 procedure TFormConsole.Button1Click(Sender: TObject);

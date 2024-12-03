@@ -50,7 +50,8 @@ uses
   UiaMain,
   Civ2Proc,
   Civ2UIA_Proc,
-  Civ2UIA_CanvasEx;
+  Civ2UIA_CanvasEx,
+  Civ2UIA_FormConsole;
 
 procedure ChangeSpecialistUpOrDown(var SpecialistType: Integer); stdcall;
 begin
@@ -605,7 +606,7 @@ end;
 
 function PatchMapAscii1Ex(Key: Char): Integer; stdcall;
 begin
-  if (PInteger($0062EDF8)^ = 0) or ((Key = 'c') and (Civ2.Game.MultiType = 0)) then
+  if (Civ2.LockCityWindow^ = 0) or ((Key = 'c') and (Civ2.Game.MultiType = 0)) then
     Result := $00412058
   else
     Result := $00412015;
@@ -621,7 +622,7 @@ end;
 
 function PatchMapKey1Ex(Key: Integer): Integer; stdcall;
 begin
-  if (PInteger($0062EDF8)^ = 0) or ((Key = $43) and (Civ2.Game.MultiType = 0)) then
+  if (Civ2.LockCityWindow^ = 0) or ((Civ2.Game.MultiType = 0) and ((Key = $43) or (Key = $100))) then
     Result := $004127EB
   else
     Result := $0041279C;
@@ -819,7 +820,7 @@ begin
   // CityGlobalsEx: Remember total tiles resources before additional multiplications
   WriteMemory(HProcess, $004E970A, [OP_JMP], @PatchCalcCityGlobalsResources);
 
-  // CityGlobalsEx: Remeber Trade Route Level
+  // CityGlobalsEx: Remember Trade Route Level
   WriteMemory(HProcess, $004EAB58, [OP_JMP], @PatchCalcCityEconomicsTradeRouteLevel);
   // Draw Trade Route Level
   WriteMemory(HProcess, $00507AC5, [OP_JMP], @PatchDrawCityWindowUnitsPresent);
@@ -873,7 +874,6 @@ begin
   WriteMemory(HProcess, $0050C3FB, [OP_CALL], @FocusCityWindowIfNotHidden);
   // Q_CitywinCityButtonRename_sub_50B74E - Rename City dialog
   WriteMemory(HProcess, $0050B99A, [OP_CALL], @FocusCityWindowIfNotHidden);
-
 end;
 
 initialization

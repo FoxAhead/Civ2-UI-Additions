@@ -28,6 +28,7 @@ var
 
 procedure PatchDrawUnitAfterEx(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer); stdcall;
 var
+  Unit1: PUnit;
   Canvas: TCanvasEx;
   UnitType: Byte;
   TextOut: string;
@@ -53,15 +54,33 @@ begin
     Canvas.FontShadowColor := Canvas.ColorFromIndex(10); // Black
     Canvas.MoveTo(Left + ScaleByZoom(32, Zoom), Top + ScaleByZoom(32, Zoom));
     Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER, @DrawPort.ClientRectangle);
-    Canvas.Free;
+    Canvas.Free();
   end;
 
   // Debug: unit index
-  {Canvas := TCanvasEx.Create(DrawPort);
-  TextOut := IntToStr(UnitIndex);
-  Canvas.MoveTo(Left + ScaleByZoom(32, Zoom), Top + ScaleByZoom(16, Zoom));
+  {Unit1 := @Civ2.Units[UnitIndex];
+  Canvas := TCanvasEx.Create(DrawPort);
+  TextOut := Format('%.04x', [UnitIndex]);
+  Canvas.Brush.Style := bsClear;
+  Canvas.Font.Size := ScaleByZoom(8, Zoom);
+  if Canvas.Font.Size > 7 then
+    Canvas.Font.Name := 'Arial'
+  else
+    Canvas.Font.Name := 'Small Fonts';
+
+  Canvas.FontShadows := SHADOW_ALL;
+  Canvas.Font.Color := Canvas.ColorFromIndex(41);
+  Canvas.FontShadowColor := Canvas.ColorFromIndex(10); // Black
+
+  Canvas.MoveTo(Left + ScaleByZoom(32, Zoom), Top + ScaleByZoom(08, Zoom));
   Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER);
-  Canvas.Free;}
+
+  TextOut := Format('%.04x,%.04x', [Unit1.PrevInStack, Unit1.NextInStack]);
+  Canvas.MoveTo(Left + ScaleByZoom(32, Zoom), Top + ScaleByZoom(20, Zoom));
+  Canvas.TextOutWithShadows(TextOut, 0, 0, DT_CENTER or DT_VCENTER);
+
+  Canvas.Free();}
+
   Civ2.ResetSpriteZoom();                 // Restored 0x0056C5E8
 end;
 
@@ -254,4 +273,3 @@ initialization
   TUiaPatchDrawUnit.RegisterMe();
 
 end.
-

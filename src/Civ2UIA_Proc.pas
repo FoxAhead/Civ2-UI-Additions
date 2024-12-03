@@ -55,9 +55,13 @@ function GetTradeConnectionLevel(aCity, i: Integer): Integer;
 
 //procedure UpdateCityWindowExResMap(DX, DY: Integer);
 
+function GetCaravanDeliveryRevenue(aUnitIndex: Integer; aCityIndex: Integer): Integer;
+
 function GetCallerChain(): PCallerChain; register;
 
 function GetCallersString(): string;
+
+procedure PopupCaravanDeliveryRevenues(CivIndex: Integer);
 
 implementation
 
@@ -198,27 +202,36 @@ end;
 // 0x00000020 - 'Never' when Turns <= 0
 // 0x00000100 - Add 'Every' if Turns > 0 (for science)
 function ConvertTurnsToString(Turns: Integer; Options: Cardinal): string;
+var
+  N1, N2, N3: Byte;
 begin
   Result := '';
+  N1 := Options and $F;
+  N2 := Options shr 4 and $F;
+  N3 := Options shr 8 and $F;
   if Turns > 0 then
   begin
-    if Options and $01 <> 0 then
-      Result := Format('%s: %d', [GetLabelString(44), Turns]) // 'Turns'
-    else if Options and $02 <> 0 then
-      Result := Format('%d %s', [Turns, GetLabelString(44 + Integer(Turns = 1))]) // 'Turns' / 'Turn'
+    case N1 of
+      1:
+        Result := Format('%s: %d', [GetLabelString(44), Turns]); // 'Turns'
+      2:
+        Result := Format('%d %s', [Turns, GetLabelString(44 + Integer(Turns = 1))]); // 'Turns' / 'Turn'
     else
       Result := IntToStr(Turns);
-    if Options and $100 <> 0 then
+    end;
+    if N3 = 1 then
       Result := GetLabelString(44) + ' ' + Result; // 'Every'
   end
   else
   begin
-    if Options and $10 <> 0 then
-      Result := ''
-    else if Options and $20 <> 0 then
-      Result := GetLabelString(498)       // 'Never'
+    case N2 of
+      1:
+        Result := '';
+      2:
+        Result := GetLabelString(498);    // 'Never'
     else
       Result := IntToStr(Turns);
+    end;
   end;
 end;
 
@@ -262,12 +275,7 @@ begin
   end;
   vPartner := Civ2.Cities[aCity].TradePartner[i];
   vTrade := (Civ2.Cities[vPartner].BaseTrade + Civ2.Cities[aCity].BaseTrade + 4) shr 3;
-  Result := Civ2.PFFindConnection(
-    Civ2.Cities[aCity].Owner,
-    Civ2.Cities[aCity].X,
-    Civ2.Cities[aCity].Y,
-    Civ2.Cities[vPartner].X,
-    Civ2.Cities[vPartner].Y);
+  Result := Civ2.PFFindConnection(Civ2.Cities[aCity].Owner, Civ2.Cities[aCity].X, Civ2.Cities[aCity].Y, Civ2.Cities[vPartner].X, Civ2.Cities[vPartner].Y);
   if Civ2.CityHasImprovement(aCity, $20) then // Airport
   begin
     if Civ2.CityHasImprovement(vPartner, $20) then // Airport
@@ -286,12 +294,12 @@ begin
   end;
 end;
 
-{
-procedure GetCaravanDeliveryRevenue(aUnitIndex: Integer; aCityIndex: Integer);
+function GetCaravanDeliveryRevenue(aUnitIndex: Integer; aCityIndex: Integer): Integer;
 var
   vFreight: Integer;
   vCivIndexF, vCivIndexT, vCityIndexF, vRevenue, vMassIndexT, vMassIndexF, vCommodity, vDemandBonus, vAdvanceCost, vMaxRevenue, vRandomMin: Integer;
   i: Integer;
+  v11: Integer;
 begin
   with Civ2 do
   begin
@@ -301,13 +309,13 @@ begin
     vCivIndexT := Cities[aCityIndex].Owner;
 
     if (Units[aUnitIndex].HomeCity = $FF) then
-      vCityIndexF := $FFFFFFFF
+      vCityIndexF := -1
     else
       vCityIndexF := Units[aUnitIndex].HomeCity;
 
     if (vCityIndexF < 0) then
     begin
-      vCityIndexF := sub_4023C9(Units[aUnitIndex].X, Units[aUnitIndex].Y, vCivIndexF, $FFFFFFFF, $FFFFFFFF);
+      vCityIndexF := FindNearestCity(Units[aUnitIndex].X, Units[aUnitIndex].Y, vCivIndexF, -1, -1);
       if (vCityIndexF < 0) then
         vCityIndexF := 0;
     end;
@@ -339,11 +347,11 @@ begin
       vFreight := 1;
     end;
 
-    v11 := j_Q_PFFindConnection_sub_488A45(vCivIndexF, Cities[aCityIndex].X, Cities[aCityIndex].Y, Cities[vCityIndexF].X, Cities[vCityIndexF].Y);
+    v11 := PFFindConnection(vCivIndexF, Cities[aCityIndex].X, Cities[aCityIndex].Y, Cities[vCityIndexF].X, Cities[vCityIndexF].Y);
 
-    if j_Q_CityHasImprovement_sub_43D20A(aCityIndex, $20) then
+    if CityHasImprovement(aCityIndex, $20) then
     begin
-      if j_Q_CityHasImprovement_sub_43D20A(vCityIndexF, $20) then
+      if CityHasImprovement(vCityIndexF, $20) then
       begin
         if (vMassIndexF = vMassIndexT) then
           Inc(v11)
@@ -352,10 +360,10 @@ begin
       end;
     end;
 
-    if j_Q_CityHasImprovement_sub_43D20A(aCityIndex, $19) then
+    if CityHasImprovement(aCityIndex, $19) then
       Inc(v11);
 
-    if j_Q_CityHasImprovement_sub_43D20A(vCityIndexF, $19) then
+    if CityHasImprovement(vCityIndexF, $19) then
       Inc(v11);
 
     vRevenue := vRevenue + (vRevenue * v11) shr 1;
@@ -383,22 +391,22 @@ begin
       end;
     end;
 
-    if (Game.Turn < 200) and not j_Q_CivHasTech_sub_4BD9F0(vCivIndexF, $26) and not j_Q_CivHasTech_sub_4BD9F0(vCivIndexF, $39) then
+    if (Game.Turn < 200) and not CivHasTech(vCivIndexF, $26) and not CivHasTech(vCivIndexF, $39) then
       vRevenue := vRevenue * 2;
 
-    if j_Q_CivHasTech_sub_4BD9F0(vCivIndexF, $43) then
+    if CivHasTech(vCivIndexF, $43) then
       vRevenue := vRevenue - (vRevenue div 3);
 
-    if j_Q_CivHasTech_sub_4BD9F0(vCivIndexF, $1E) then
+    if CivHasTech(vCivIndexF, $1E) then
       vRevenue := vRevenue - (vRevenue div 3);
 
     vRandomMin := Random(10) + 200;
-    vAdvanceCost := j_Q_GetAdvanceCost_sub_4C2788(vCivIndexF);
-    vMaxRevenue := j_Q_Clamp_sub_5ADFA0(2 * vAdvanceCost div 3, vRandomMin, 30000);
-    vRevenue := j_Q_Clamp_sub_5ADFA0(vRevenue, 0, vMaxRevenue);
+    vAdvanceCost := GetAdvanceCost(vCivIndexF);
+    vMaxRevenue := Clamp(2 * vAdvanceCost div 3, vRandomMin, 30000);
+    vRevenue := Clamp(vRevenue, 0, vMaxRevenue);
+    Result := vRevenue;
   end;
 end;
-}
 
 function GetCallerChain(): PCallerChain; register;
 asm
@@ -415,6 +423,61 @@ begin
     Result := Format('%.6x %s', [Integer(CallerChain.Caller), Result]);
     CallerChain := CallerChain.Prev;
   until Cardinal(CallerChain.Caller) > $30000000;
+end;
+
+procedure PopupCaravanDeliveryRevenues(CivIndex: Integer);
+var
+  Commodity: Integer;
+  Unit1: PUnit;
+  City: PCity;
+  Dlg: TDialogWindow;
+  i, k: Integer;
+  Text, Text1, Text2: string;
+  Revenue: Integer;
+  Uncovered, Demands: Boolean;
+  Size: Integer;
+begin
+  with Civ2 do
+  begin
+    if (UnitSelected^) and (Game.ActiveUnitIndex >= 0) then
+    begin
+      Unit1 := @Units[Game.ActiveUnitIndex];
+      Commodity := Unit1.Counter;
+      if (Unit1.ID <> 0) and (Unit1.HomeCity <> $FF) and (Unit1.CivIndex = CivIndex) and (Unit1.Orders = -1) and (UnitTypes[Unit1.UnitType].Role = 7) and (Commodity >= 0) then
+      begin
+        Dlg_InitWithHeap(@Dlg, $4000);
+        DlgParams_SetString(0, Commodities[Commodity]);
+        Dlg_LoadGAMESimpleL0(@Dlg, 'SUPPLYSHOW', CIV2_DLG_SORTEDLISTBOX);
+        for i := 0 to Game.TotalCities - 1 do
+        begin
+          City := @Cities[i];
+          Uncovered := (City.Owner = CivIndex) or CityHasImprovement(i, 1) or Game.RevealMap;
+          if (City.ID <> 0) and (i <> Unit1.HomeCity) and (Uncovered or (City.RevealedSize[CivIndex] <> 0)) then
+          begin
+            Text1 := '';
+            Text2 := '';
+            Demands := False;
+            Revenue := GetCaravanDeliveryRevenue(Game.ActiveUnitIndex, i);
+            if Uncovered or (City.RevealedSize[CivIndex] = 0) then
+              Size := City.Size
+            else
+              Size := City.RevealedSize[CivIndex];
+            if City.Owner <> CivIndex then
+              Text1 := GetNationAdjectiveText(City.Owner) + ', ';
+            for k := 0 to 2 do
+              if City.DemandedTradeItem[k] = Commodity then
+                Demands := True;
+            if Demands then
+              Text2 := Format(' %s %s', [GetLabelString($57), GetStringInList(Commodities[Commodity])]);
+            Text := Format('%s (%s%d)%s|+%d #648860:1##648860:2#', [City.Name, Text1, Size, Text2, Revenue]);
+            Dlg_AddListboxItem(@Dlg, PChar(Text), i, 0);
+          end;
+        end;
+        Dlg_CreateAndWait(@Dlg, 0);
+        Dlg_CleanupHeap(@Dlg);
+      end;
+    end;
+  end;
 end;
 
 end.

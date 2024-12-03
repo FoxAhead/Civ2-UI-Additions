@@ -25,7 +25,8 @@ uses
   Civ2Types,
   Civ2Proc,
   Civ2UIA_Types,
-  Civ2UIA_CanvasEx;
+  Civ2UIA_CanvasEx,
+  Civ2UIA_Proc;
 
 type
   TMouseDrag = record
@@ -442,7 +443,7 @@ begin
         HotKeysList.Append(HotKey);
         Break;
       end;
-      inc(j);
+      Inc(j);
     end;
   end;
   HotKeysList.Free();
@@ -464,7 +465,7 @@ var
   RightPart, Bar: PChar;
   X, DY: Integer;
   R: TRect;
-  IsSprite: boolean;
+  IsSprite: Boolean;
   SLT, SLS: TStringList;
   i: Integer;
   Sprite: PSprite;
@@ -541,7 +542,7 @@ var
   i, j: Integer;
   WaitClosing: Boolean;
   Sprites: Integer;
-  Text1: array[0..1024] of char;
+  Text1: array[0..1024] of Char;
 begin
   Text1[0] := #00;
   WaitClosing := False;
@@ -770,6 +771,41 @@ asm
     ret
 end;
 
+procedure PatchDrawPortLoadGIF(); register;
+asm
+    // EBX should contain offset to variable 'i'
+    mov   ecx, [eax]
+    shl   ecx, 8
+    cmp   ecx, $04F92100
+    jnz   @@LABEL_BAD_GCE
+    cmp   byte ptr[eax + 8], $2C
+    jnz   @@LABEL_BAD_GCE
+    add   [ebp + ebx], 8
+    xor   ecx, ecx // Set ZF = 1, so next JZ will jump
+
+@@LABEL_BAD_GCE:
+end;
+
+function PatchMapAsciiEx(Key: Char): Integer; stdcall;
+begin
+  Result := 0;
+  case Key of
+    'G':
+      PopupCaravanDeliveryRevenues(Civ2.HumanCivIndex^);
+  else
+    Result := 1;
+  end;
+end;
+
+procedure PatchMapAscii(); register;
+asm
+    push  [ebp - $8] // v1
+    call  PatchMapAsciiEx
+    mov   [ebp - $4], eax
+    push  $004123B5
+    ret
+end;
+
 { TUiaPatchCommon }
 
 procedure TUiaPatchCommon.Attach(HProcess: Cardinal);
@@ -777,7 +813,7 @@ begin
   WriteMemory(HProcess, $005EB465, [], @PatchWindowProcCommon);
   WriteMemory(HProcess, $005EACDE, [], @PatchWindowProc1);
 
-// Show Gold coin in Foreign Minister dialog
+  // Show Gold coin in Foreign Minister dialog
   WriteMemory(HProcess, $00430D71, [OP_JMP], @PatchShowDialogForeignMinisterGold);
 
   // Draw sprites in listbox item text
@@ -812,6 +848,12 @@ begin
   // Set Char and KeyDown2 procs for advisors
   WriteMemory(HProcess, $0042ABB4, [OP_JMP], @PatchAdvisorWindowPrepareAfter);
 
+  // Fix GIF loaders crashing on GIF Graphics Control Extension (it can be added by some image editors like Aseprite)
+  WriteMemory(HProcess, $005BF3A0, [$BB, $E8, $FF, $FF, $FF, OP_CALL], @PatchDrawPortLoadGIF); // LoadImageGIF
+  WriteMemory(HProcess, $005BF7BF, [$BB, $F4, $FF, $FF, $FF, OP_CALL], @PatchDrawPortLoadGIF); // LoadResGIFS
+
+  // Custom keys handling
+  WriteMemory(HProcess, $00412348, [OP_NOP, OP_NOP, OP_JMP], @PatchMapAscii);
 end;
 
 initialization

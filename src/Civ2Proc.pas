@@ -41,6 +41,7 @@ type
     Improvements: ^TImprovements;
     Leaders: ^TLeaders;
     LoadedTxtSectionName: PChar;
+    LockCityWindow: PInteger;
     MenuBar: PMenuBar;
     MainWindowInfo: PWindowInfo1;
     MapCivData: PMapCivData;
@@ -152,6 +153,7 @@ begin
   Improvements               := Pointer($0064C488);
   Leaders                    := Pointer($006554F8);
   LoadedTxtSectionName       := Pointer($006CECB0);
+  LockCityWindow             := Pointer($0062EDF8);  
   MenuBar                    := Pointer($006A64F8);
   MainWindowInfo             := Pointer($006553D8);
   MapCivData                 := Pointer($006365C0);
@@ -180,9 +182,6 @@ begin
   SprRes                     := Pointer($00644F00);
   SprResS                    := Pointer($00645068);
   SprUnits                   := Pointer($00641848);
-//  if ANewUnitsAreaAddress <> nil then
-//    Units                    := ANewUnitsAreaAddress
-//  else
   Units                      := Pointer($006560F0);
   UnitSelected               := Pointer($006D1DA8);
   UnitTypes                  := Pointer($0064B1B8);

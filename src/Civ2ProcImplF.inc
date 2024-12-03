@@ -31,6 +31,7 @@
 @Distance                                    := Pointer($0040377E);
 @DlgParams_SetNumber                         := Pointer($00402FE5);
 @DlgParams_SetString                         := Pointer($0040267B);
+@DlgParams_SetStringText                     := Pointer($00401E29);
 @Dlg_AddListboxItem                          := PThisCall($00402D0B);
 @Dlg_CleanupHeap                             := PThisCall($004017EE);
 @Dlg_CreateAndWait                           := PThisCall($00401118);
@@ -42,6 +43,7 @@
 @Dlg_LoadGAMESimpleL0F0                      := PThisCall($00403B25);
 @Dlg_LoadPopup                               := PThisCall($0040314D);
 @Dlg_LoadSimple                              := PThisCall($00403B8E);
+@Dlg_Setup                                   := PThisCall($004018A2);
 @DrawCitySprite                              := Pointer($00402A45);
 @DrawFrame                                   := Pointer($00401DB1);
 @DrawPort_BmpAttach                          := PThisCall($005C01C1);
@@ -55,6 +57,7 @@
 @DrawStringRightCurrDrawPort2                := Pointer($00403607);
 @DrawUnit                                    := Pointer($00402C4D);
 @ExtractSprite64x48                          := Pointer($0044AC07);
+@FindNearestCity                             := Pointer($004023C9);
 @FontInfo_GetHeightWithExLeading             := PThisCall($00403819);
 @FontInfo_GetTextExtentX                     := PThisCall($00402B21);
 @FontInfo_Recreate                           := PThisCall($004027B1);
@@ -62,6 +65,7 @@
 @GetAdvanceCost                              := Pointer($004030E9);
 @GetCityIndexAtXY                            := Pointer($00403AF8);
 @GetCivColor1                                := Pointer($00401F8C);
+@GetNationAdjectiveText                      := Pointer($004023D8);
 @GetNextUnitInStack                          := Pointer($00402E23);
 @GetResourceInCityTile                       := Pointer($00403968);
 @GetSpecialist                               := Pointer($004013C0);
@@ -79,6 +83,7 @@
 @ListItemProcLButtonUp                       := Pointer($005A3CCA);
 @MSInitGraf                                  := Pointer($005E35B0);
 @MapGetCivData                               := Pointer($00403823);
+@MapGetMassIndex                             := Pointer($00401F50);
 @MapGetOwnership                             := Pointer($004029BE);
 @MapGetSquare                                := Pointer($00401BB3);
 @MapGetSquareCityRadii                       := Pointer($00403A67);
@@ -95,7 +100,10 @@
 @MciNotifySequencer                          := Pointer($005DE6BD);
 @MenuBar_AddMenu                             := PThisCall($0040117C);
 @MenuBar_AddSubMenu                          := PThisCall($00402D10);
+@MenuBar_CreateMenu                          := PThisCall($00402095);
+@MenuBar_EnableSubMenu                       := PThisCall($00401CC6);
 @MenuBar_GetSubMenu                          := PThisCall($004039EF);
+@MenuBar_ModifyMenuText                      := PThisCall($00403602);
 @NextLinePixelAddress                        := PThisCall($005C5610);
 @OutputDebugSmedsLogI                        := Pointer($005D2279);
 @PFFindConnection                            := Pointer($00403481);
@@ -103,10 +111,12 @@
 @PFMove                                      := Pointer($004028B0);
 @Palette_GetRGB                              := PThisCall($00402036);
 @Palette_SetRandomID                         := PThisCall($005C6A42);
+@PickUpUnit                                  := Pointer($0040148D);
 @PopupSimpleGAMEWithSprite                   := Pointer($004034A9);
 @PopupWithImprovementSprite                  := Pointer($00403AD0);
 @ProcessOrdersGoTo                           := Pointer($00401145);
 @ProcessUnit                                 := Pointer($00402716);
+@PutDownUnit                                 := Pointer($00401159);
 @RectHeight                                  := Pointer($00403C7E);
 @RectWidth                                   := Pointer($004036BB);
 @ResetSpriteZoom                             := Pointer($004023D3);
