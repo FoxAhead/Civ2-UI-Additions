@@ -806,6 +806,26 @@ asm
     ret
 end;
 
+procedure PatchLoadSaveAfterEx(); stdcall;
+begin
+  Uia.SnowFlakes.Reset();
+end;
+
+procedure PatchLoadSaveAfter(); register;
+asm
+    mov   large fs:0, ecx  // Restored
+    push   eax
+    call  PatchLoadSaveAfterEx
+    pop   eax
+    push  $00478718
+    ret
+end;
+
+procedure PatchInitNewGameParametersAfter(); stdcall;
+begin
+  Uia.SnowFlakes.Reset();
+end;                
+
 { TUiaPatchCommon }
 
 procedure TUiaPatchCommon.Attach(HProcess: Cardinal);
@@ -854,6 +874,13 @@ begin
 
   // Custom keys handling
   WriteMemory(HProcess, $00412348, [OP_NOP, OP_NOP, OP_JMP], @PatchMapAscii);
+
+  // After LoadSave
+  WriteMemory(HProcess, $00478711, [OP_JMP], @PatchLoadSaveAfter);
+
+  // After InitNewGameParameters
+  WriteMemory(HProcess, $004AAEF7, [OP_CALL], @PatchInitNewGameParametersAfter);
+
 end;
 
 initialization

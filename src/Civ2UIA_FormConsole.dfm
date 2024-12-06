@@ -97,6 +97,16 @@ object FormConsole: TFormConsole
     TabOrder = 1
     OnClick = Button1Click
   end
+  object Button2: TButton
+    Left = 1096
+    Top = 0
+    Width = 48
+    Height = 24
+    Anchors = [akTop, akRight]
+    Caption = 'Snow'
+    TabOrder = 2
+    OnClick = Button2Click
+  end
   object Timer1: TTimer
     Interval = 100
     OnTimer = Timer1Timer

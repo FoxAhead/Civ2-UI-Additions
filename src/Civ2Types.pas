@@ -708,22 +708,35 @@ type
 
   TMapWindow = packed record              // Size = 0x3F0
     MSWindow: TMSWindow;
-    Unknown_2D8: Word;                    // + 0x2D8
-    Unknown_2DA: Word;                    // + 0x2DA
-    Unknown_2DC: Word;                    // + 0x2DC
-    Unknown_2DE: Word;                    // + 0x2DE
-    MapCenter: TSmallPoint;               // + 0x2E0
-    MapZoom: Smallint;                    // + 0x2E4
-    Unknown7: Smallint;                   // + 0x2E6
-    MapRect: TRect;                       // + 0x2E8
-    MapHalf: TSize;                       // + 0x2F8
+    Unknown_2D8: Word;                    // 02D8
+    Unknown_2DA: Word;                    // 02DA
+    Unknown_2DC: Word;                    // 02DC
+    Unknown_2DE: Word;                    // 02DE
+    MapCenter: TSmallPoint;               // 02E0
+    MapZoom: Smallint;                    // 02E4
+    Unknown7: Smallint;                   // 02E6
+    MapRect: TRect;                       // 02E8
+    MapHalf: TSize;                       // 02F8
     Unknown8: array[$300..$307] of Byte;
-    MapCellSize: TSize;                   // + 0x308
-    MapCellSize2: TSize;                  // + 0x310  1/2
-    MapCellSize4: TSize;                  // + 0x318  1/4
-    Unknown10: array[1..32] of Integer;
-    DrawInfo2: PDrawInfo;
-    Unknown11: array[1..19] of Integer;
+    MapCellSize: TSize;                   // 0308
+    MapCellSize2: TSize;                  // 0310  1/2
+    MapCellSize4: TSize;                  // 0318  1/4
+    Unknown_320: TSize;                   // 0320
+    ClientSize: TSize;                    // 0328
+    Unknown_330: TSize;                   // 0330
+    //Unknown10: array[1..26] of Integer;
+    //DrawInfo2: PDrawInfo;
+    //Unknown11: array[1..19] of Integer;
+    FontInfo1: TFontInfo;                 // 0338
+    FontInfo2: TFontInfo;                 // 0340
+    PrevFont1Height: Integer;             // 0348
+    PrevFont2Height: Integer;             // 034C
+    Unknown_350: Integer;                 // 0350
+    Unknown_354: Integer;                 // 0354
+    Cursor: Integer;                      // 0358
+    PrevMapZoom: Integer;                 // 035C
+    DrawPortMouse: TDrawPort;             // 0360
+    DrawPortMouse2: TDrawPort;            // 03A8
   end;
 
   TMapWindows = array[0..7] of TMapWindow; // 66C7A8

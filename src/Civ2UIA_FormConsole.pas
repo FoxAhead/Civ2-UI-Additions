@@ -18,10 +18,12 @@ type
     LabelFocus: TLabel;
     Timer1: TTimer;
     LabelCursor: TLabel;
+    Button2: TButton;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
   private
     { Private declarations }
     FMessagesCounter: Integer;
@@ -40,7 +42,8 @@ implementation
 
 uses
   Messages,
-  Civ2Proc;
+  Civ2Proc,
+  UiaMain;
 
 {$R *.dfm}
 
@@ -84,9 +87,11 @@ end;
 procedure TFormConsole.AddToMemo(Text: string);
 begin
   //PostMessage(Memo1.Handle, WM_SETREDRAW, 0, 0);
+  Memo1.Lines.BeginUpdate;
   while Memo1.Lines.Count >= 500 do
     Memo1.Lines.Delete(0);
   Inc(FMessagesCounter);
+  Memo1.Lines.EndUpdate;
   Memo1.Lines.Add(Format('%d. %s', [FMessagesCounter, Text]));
   //Memo1.Text := Trim(Memo1.Text);
   //PostMessage(Memo1.Handle, WM_SETREDRAW, 1, 0);
@@ -97,6 +102,7 @@ var
   R: TRect;
   P: TPoint;
 begin
+  WindowState := wsNormal;
   SendMessage(Memo1.Handle, EM_LINESCROLL, 0, Memo1.Lines.Count);
   if (Civ2 <> nil) and (Civ2.MainWindowInfo.WindowStructure <> nil) then
   begin
@@ -134,6 +140,11 @@ begin
   LabelFocus.Caption := IntToHex(GetFocus(), 8);
   GetCursorPos(P);
   LabelCursor.Caption := IntToHex(WindowFromPoint(P), 8);
+end;
+
+procedure TFormConsole.Button2Click(Sender: TObject);
+begin
+  Uia.SnowFlakes.Switch();
 end;
 
 end.

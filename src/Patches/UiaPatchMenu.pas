@@ -18,6 +18,7 @@ uses
   Windows,
   Civ2Types,
   Civ2Proc,
+  UiaMain,
   UiaPatchArrangeWindows,
   Civ2UIA_FormAbout,
   Civ2UIA_FormSettings,
@@ -31,8 +32,9 @@ const
   IDM_ARRANGE_L                           = $32A;
   IDM_SETTINGS                            = $A01;
   IDM_ABOUT                               = $A02;
-  IDM_TEST                                = $A03;
-  IDM_TEST2                               = $A04;
+  IDM_SWITCH_SNOWFALL                     = $A03;
+  IDM_TEST                                = $A04;
+  IDM_TEST2                               = $A05;
 
 procedure MoveMenu(Menu, Menu1: PMenu; Before: Boolean = False); stdcall;
 var
@@ -94,6 +96,8 @@ begin
   Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, IDM_SETTINGS, '&Settings...', 0);
   Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, 0, nil, 0);
   Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, IDM_ABOUT, '&About...', 0);
+  if Uia.SnowFlakes.IsItTime() then
+    Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, IDM_SWITCH_SNOWFALL, '&Switch snowfall', 0);
   //Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, IDM_TEST, '&Test...', 0);
   //Civ2.MenuBar_AddSubMenu(Civ2.MenuBar, $A, IDM_TEST2, '&Test2...', 0);
   //
@@ -179,6 +183,8 @@ begin
         ShowFormAbout()
       else
         TFormConsole.Open();
+    IDM_SWITCH_SNOWFALL:
+      Uia.SnowFlakes.Switch();
     //IDM_TEST:
       //ShowFormTest();
     //IDM_TEST2:

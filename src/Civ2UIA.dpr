@@ -59,7 +59,8 @@ uses
   UiaPatchUnitsLimit in 'Patches\UiaPatchUnitsLimit.pas',
   UiaPatchUnitsListPopup in 'Patches\UiaPatchUnitsListPopup.pas',
   UiaSettings in 'UiaSettings.pas',
-  Tests in 'Tests.pas';
+  Tests in 'Tests.pas',
+  Civ2UIA_SnowFlakes in 'Civ2UIA_SnowFlakes.pas';
 
 {$R *.res}
 

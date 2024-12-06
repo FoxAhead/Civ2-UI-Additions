@@ -9,13 +9,15 @@ uses
 
 type
   PShortIntArray = ^TShortIntArray;
-               
+
   TShortIntArray = array[0..32767] of ShortInt;
 
   TCiv2 = class
   private
   protected
   public
+    AdjDX: PShortIntArray;
+    AdjDY: PShortIntArray;
     AdvisorWindow: PAdvisorWindow;
     CDRoot: PChar;
     ChText: PChar;
@@ -37,6 +39,8 @@ type
     FontTimes16: PFontInfo;
     FontTimes18: PFontInfo;
     Game: PGame;
+    HModules: PIntegerArray;
+    HModulesCount: PInteger;
     HumanCivIndex: PInteger;
     Improvements: ^TImprovements;
     Leaders: ^TLeaders;
@@ -128,6 +132,8 @@ begin
 {(*}
 
   // Variables
+  AdjDX                      := Pointer($0062833C);
+  AdjDY                      := Pointer($00628344);
   AdvisorWindow              := Pointer($0063EB10);
   CDRoot                     := Pointer($006AB680);
   ChText                     := Pointer($00679640);
@@ -149,11 +155,13 @@ begin
   FontTimes16                := Pointer($006AB1A0);
   FontTimes18                := Pointer($0063EAC0);
   Game                       := Pointer($00655AE8);
+  HModules                   := Pointer($006E4F60);
+  HModulesCount              := Pointer($006387CC);  
   HumanCivIndex              := Pointer($006D1DA0);
   Improvements               := Pointer($0064C488);
   Leaders                    := Pointer($006554F8);
   LoadedTxtSectionName       := Pointer($006CECB0);
-  LockCityWindow             := Pointer($0062EDF8);  
+  LockCityWindow             := Pointer($0062EDF8);
   MenuBar                    := Pointer($006A64F8);
   MainWindowInfo             := Pointer($006553D8);
   MapCivData                 := Pointer($006365C0);
@@ -161,10 +169,10 @@ begin
   MapHeader                  := Pointer($006D1160);
   MapWindow                  := Pointer($0066C7A8);
   MapWindows                 := Pointer($0066C7A8);
-  MciInfo                    := Pointer($006389D4);  
+  MciInfo                    := Pointer($006389D4);
   Palette                    := Pointer($006A8C00);
   PathCivilizationDirectory  := Pointer($006AB600);
-  PathWorking                := Pointer($0064BB08);  
+  PathWorking                := Pointer($0064BB08);
   PFDX                       := Pointer($00628350);
   PFDY                       := Pointer($00628360);
   PFStopX                    := Pointer($00673FA0);
@@ -232,4 +240,3 @@ finalization
   Civ2.Free();
 
 end.
-

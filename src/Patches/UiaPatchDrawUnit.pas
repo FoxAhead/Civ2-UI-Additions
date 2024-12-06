@@ -3,13 +3,17 @@ unit UiaPatchDrawUnit;
 interface
 
 uses
-  UiaPatch;
+  UiaPatch,
+  Civ2Types;
 
 type
   TUiaPatchDrawUnit = class(TUiaPatch)
   public
     procedure Attach(HProcess: Cardinal); override;
   end;
+
+var
+  UnitSpriteSentry: array[0..63] of TSprite;
 
 implementation
 
@@ -20,11 +24,7 @@ uses
   Windows,
   Civ2UIA_CanvasEx,
   Civ2UIA_Proc,
-  Civ2Types,
   Civ2Proc;
-
-var
-  UnitSpriteSentry: array[0..63] of TSprite;
 
 procedure PatchDrawUnitAfterEx(DrawPort: PDrawPort; UnitIndex, A3, Left, Top, Zoom, WithoutFortress: Integer); stdcall;
 var
@@ -103,7 +103,7 @@ var
   i, j, k, l, m: Integer;
   ColorIndex: Integer;
   MinIndex, MaxIndex: Integer;
-  RGB1, RGB2: RGBQuad;
+  RGB1: RGBQuad;
   X, Y: Integer;
   RGBs: array[0..255] of RGBQuad;
   Pixel: COLORREF;
@@ -130,7 +130,9 @@ begin
   for i := 0 to 62 do
   begin
     Sprite := @UnitSpriteSentry[i];
-    Height := RectHeight(Sprite.Rectangle2);
+    SpriteConvertToGray(Sprite);
+
+    {Height := RectHeight(Sprite.Rectangle2);
     MinGray := 31;
     MaxGray := 0;
     SumGray := 0;
@@ -191,7 +193,7 @@ begin
         end;
         Inc(Pxl);
       end;
-    end;
+    end;}
   end;
 
   Civ2.DrawPort_ResetWH(DrawPort, 0, 0);

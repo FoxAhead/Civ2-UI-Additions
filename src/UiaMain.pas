@@ -9,6 +9,7 @@ uses
   UiaSettings,
   Civ2UIA_PathLine,
   Civ2UIA_QuickInfo,
+  Civ2UIA_SnowFlakes,
   Civ2UIA_MapMessages,
   Civ2UIA_MapOverlay;
 
@@ -40,6 +41,7 @@ type
   public
     Settings: TUiaSettings;
     MapMessages: TMapMessages;
+    SnowFlakes: TSnowFlakes;
     MapOverlay: TMapOverlay;
     ModuleNameString: string;
     VersionString: string;
@@ -78,8 +80,10 @@ begin
   GetModuleVersion();
 
   MapMessages := TMapMessages.Create();
+  SnowFlakes := TSnowFlakes.Create();
   MapOverlay := TMapOverlay.Create();
   MapOverlay.AddModule(TPathLine.Create());
+  MapOverlay.AddModule(SnowFlakes);
   MapOverlay.AddModule(TQuickInfo.Create());
   MapOverlay.AddModule(MapMessages);
 

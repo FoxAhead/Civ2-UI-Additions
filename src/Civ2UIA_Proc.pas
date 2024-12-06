@@ -4,7 +4,9 @@ interface
 
 uses
   Windows,
-  Civ2UIA_Types;
+  Civ2UIA_Types,
+  Civ2Types,
+  Civ2Proc;
 
 type
   TCityBuildInfo = record
@@ -63,14 +65,14 @@ function GetCallersString(): string;
 
 procedure PopupCaravanDeliveryRevenues(CivIndex: Integer);
 
+procedure SpriteConvertToGray(Sprite: PSprite);
+
 implementation
 
 uses
   Math,
   Messages,
-  SysUtils,
-  Civ2Types,
-  Civ2Proc;
+  SysUtils;
 
 procedure SendMessageToLoader(WParam: Integer; LParam: Integer); stdcall;
 var
@@ -476,6 +478,85 @@ begin
         Dlg_CreateAndWait(@Dlg, 0);
         Dlg_CleanupHeap(@Dlg);
       end;
+    end;
+  end;
+end;
+
+procedure SpriteConvertToGray(Sprite: PSprite);
+var
+  j, k: Integer;
+  MinIndex, MaxIndex: Integer;
+  RGB1, RGB2: RGBQuad;
+  RGBs: array[0..255] of RGBQuad;
+  Gray, MinGray, MaxGray: Integer;
+  Delta, MidGray2, MinGray2, MaxGray2: Integer;
+  GrayK1, GrayK2: Double;
+  Height, Len: Integer;
+  Pxl: PByte;
+  SumGray, CountGray: Integer;
+  MidGray: Double;
+begin
+  Height := RectHeight(Sprite.Rectangle2);
+  MinGray := 31;
+  MaxGray := 0;
+  SumGray := 0;
+  CountGray := 0;
+  // First pass
+  Pxl := Sprite.pMem;
+  for j := 0 to Height - 1 do
+  begin
+    Inc(Pxl, 4);
+    Len := PInteger(Pxl)^;
+    Inc(Pxl, 4);
+    for k := 0 to Len - 1 do
+    begin
+      if (Pxl^ >= 10) and (Pxl^ <= 245) then
+      begin
+        Civ2.Palette_GetRGB(Civ2.Palette, Pxl^, RGB1.rgbRed, RGB1.rgbGreen, RGB1.rgbBlue);
+        //RGB1 := RGBs[Pxl^];
+        Gray := (RGB1.rgbBlue + RGB1.rgbGreen + RGB1.rgbRed) * 31 div 765;
+        Inc(SumGray, Gray);
+        Inc(CountGray);
+        MinGray := Min(MinGray, Gray);
+        MaxGray := Max(MaxGray, Gray);
+        Pxl^ := Gray + 10;
+      end;
+      Inc(Pxl);
+    end;
+  end;
+  if CountGray <> 0 then
+    MidGray := SumGray / CountGray
+  else
+    MidGray := (MinGray + MaxGray) div 2;
+  Delta := 4;
+  MidGray2 := 16;
+  MinGray2 := MidGray2 - Delta;
+  MaxGray2 := MidGray2 + Delta;
+  GrayK1 := 0;
+  GrayK2 := 0;
+  if MidGray <> MinGray then
+    GrayK1 := (MidGray2 - MinGray2) / (MidGray - MinGray);
+  if MaxGray <> MidGray then
+    GrayK2 := (MaxGray2 - MidGray2) / (MaxGray - MidGray);
+  // Second pass
+  Pxl := Sprite.pMem;
+  for j := 0 to Height - 1 do
+  begin
+    Inc(Pxl, 4);
+    Len := PInteger(Pxl)^;
+    Inc(Pxl, 4);
+    for k := 0 to Len - 1 do
+    begin
+      if (Pxl^ >= 10) and (Pxl^ <= 245) then
+      begin
+        Gray := Pxl^ - 10;
+        if Gray < MidGray then
+          Gray := Trunc(MidGray2 - (MidGray - Gray) * GrayK1)
+        else
+          Gray := Trunc(MidGray2 + (Gray - MidGray) * GrayK2);
+        Pxl^ := Gray + 10;
+      end;
+      Inc(Pxl);
     end;
   end;
 end;

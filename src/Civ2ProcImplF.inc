@@ -50,6 +50,8 @@
 @DrawPort_BmpDetach                          := PThisCall($005C02E0);
 @DrawPort_GetPixel                           := PThisCall($005C0BF2);
 @DrawPort_GetPixelAddress                    := PThisCall($005C19D3);
+@DrawPort_Init                               := PThisCall($005BD630);
+@DrawPort_LoadResGIFS                        := PThisCall($005BF5E1);
 @DrawPort_Locked                             := PThisCall($005C54F0);
 @DrawPort_ResetWH                            := PThisCall($005BD65C);
 @DrawPort_UpdateDIBColorTableFromPaletteSafe := PThisCall($005C0D12);
@@ -88,6 +90,7 @@
 @MapGetSquare                                := Pointer($00401BB3);
 @MapGetSquareCityRadii                       := Pointer($00403A67);
 @MapSquareIsVisibleTo                        := Pointer($00403C24);
+@MapTerrainIsOcean                           := Pointer($00401F6E);
 @MapUpdateKnownTerrainFeatures               := Pointer($00402928);
 @MapWindow_CenterView                        := PThisCall($00403404);
 @MapWindow_MapToWindow                       := PThisCall($004018DE);
@@ -109,6 +112,8 @@
 @PFFindConnection                            := Pointer($00403481);
 @PFFindUnitDir                               := Pointer($00402FA9);
 @PFMove                                      := Pointer($004028B0);
+@Palette_Create                              := PThisCall($005C64DA);
+@Palette_Dispose                             := PThisCall($005C656B);
 @Palette_GetRGB                              := PThisCall($00402036);
 @Palette_SetRandomID                         := PThisCall($005C6A42);
 @PickUpUnit                                  := Pointer($0040148D);
@@ -144,9 +149,11 @@
 @ShowAdvisorWonders                          := Pointer($00402194);
 @ShowDialogForeignMinister                   := Pointer($00403BED);
 @ShowTaxRate                                 := Pointer($00402C43);
+@Sprite_ChangeColor                          := PThisCall($005CF467);
 @Sprite_CopyToPortNC                         := PThisCall($005CEF31);
 @Sprite_CopyToSprite                         := PThisCall($005CF23F);
 @Sprite_Dispose                              := PThisCall($005CDF50);
+@Sprite_ExtractB                             := PThisCall($005CEDAD);
 @TileBg                                      := Pointer($00402C9D);
 @UnitCanMove                                 := Pointer($0040273E);
 @UpdateAdvisorCityStatus                     := Pointer($004029F5);

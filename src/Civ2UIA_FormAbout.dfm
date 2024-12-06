@@ -74,7 +74,7 @@ object FormAbout: TFormAbout
       Top = 168
       Width = 24
       Height = 13
-      Caption = '2022'
+      Caption = '2024'
     end
     object lbl0016: TLabel
       Left = 92
