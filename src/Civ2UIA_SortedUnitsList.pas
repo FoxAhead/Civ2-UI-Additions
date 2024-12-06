@@ -15,7 +15,6 @@ type
     constructor Create(MapPoint: TPoint; Unique: Boolean = False); reintroduce; overload;
     procedure Distinct();
   published
-
   end;
 
 implementation
@@ -55,8 +54,8 @@ constructor TSortedUnitsList.Create(CityIndex: Integer; Unique: Boolean);
 var
   i: Integer;
 begin
-  inherited Create(Civ2.Units, SizeOf(TUnit), Civ2.GameParameters.TotalUnits);
-  for i := 0 to Civ2.GameParameters^.TotalUnits - 1 do
+  inherited Create(Civ2.Units, SizeOf(TUnit), Civ2.Game.TotalUnits);
+  for i := 0 to Civ2.Game.TotalUnits - 1 do
   begin
     if (Civ2.Units[i].ID > 0) and (Civ2.Units[i].HomeCity = CityIndex) then
     begin
@@ -72,8 +71,8 @@ constructor TSortedUnitsList.Create(MapPoint: TPoint; Unique: Boolean);
 var
   i: Integer;
 begin
-  inherited Create(Civ2.Units, SizeOf(TUnit), Civ2.GameParameters.TotalUnits);
-  for i := 0 to Civ2.GameParameters^.TotalUnits - 1 do
+  inherited Create(Civ2.Units, SizeOf(TUnit), Civ2.Game.TotalUnits);
+  for i := 0 to Civ2.Game.TotalUnits - 1 do
   begin
     if (Civ2.Units[i].ID > 0) and (Civ2.Units[i].X = MapPoint.X) and (Civ2.Units[i].Y = MapPoint.Y) then
     begin
@@ -104,3 +103,4 @@ begin
 end;
 
 end.
+

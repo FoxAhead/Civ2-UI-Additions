@@ -5,7 +5,6 @@ interface
 uses
   Civ2Types,
   Civ2UIA_MapOverlayModule,
-  Classes,
   Types;
 
 type
@@ -46,8 +45,7 @@ uses
   Windows,
   Civ2Proc,
   Civ2UIA_CanvasEx,
-  Civ2UIA_Proc,
-  Civ2UIA_Types;
+  Civ2UIA_Proc;
 
 { TPathLine }
 
@@ -68,14 +66,12 @@ end;
 
 procedure TPathLine.SetFromCursor;
 var
-  KeyState: SHORT;
   MousePoint: TPoint;
   WindowHandle: HWND;
   NewUnitIndex: Integer;
   NewCityIndex: Integer;
   NewStartPoint: TPoint;
   NewStopPoint: TPoint;
-  i: Integer;
   Unit1: PUnit;
 begin
   NewUnitIndex := -1;
@@ -86,19 +82,19 @@ begin
   begin
     GetCursorPos(MousePoint);
     WindowHandle := WindowFromPoint(MousePoint);
-    if WindowHandle = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure.HWindow then
+    if WindowHandle = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow then
     begin
       ScreenToClient(WindowHandle, MousePoint);
-      Civ2.ScreenToMap(NewStopPoint.X, NewStopPoint.Y, MousePoint.X, MousePoint.Y);
-      if Civ2.MapSquareIsVisibleTo(NewStopPoint.X, NewStopPoint.Y, Civ2.HumanCivIndex^) or Civ2.GameParameters.RevealMap then
+      Civ2.MapWindow_ScreenToMap(Civ2.MapWindow, NewStopPoint.X, NewStopPoint.Y, MousePoint.X, MousePoint.Y);
+      if Civ2.MapSquareIsVisibleTo(NewStopPoint.X, NewStopPoint.Y, Civ2.HumanCivIndex^) or Civ2.Game.RevealMap then
       begin
         NewStartPoint := Point(Civ2.CursorX^, Civ2.CursorY^);
-        if (Civ2.UnitSelected^) and (Civ2.GameParameters.ActiveUnitIndex >= 0) then
+        if (Civ2.UnitSelected^) and (Civ2.Game.ActiveUnitIndex >= 0) then
         begin
-          Unit1 := @Civ2.Units[Civ2.GameParameters.ActiveUnitIndex];
+          Unit1 := @Civ2.Units[Civ2.Game.ActiveUnitIndex];
           if (Unit1.ID <> 0) and (Unit1.CivIndex = Civ2.HumanCivIndex^) and (Unit1.Orders = -1) then
           begin
-            NewUnitIndex := Civ2.GameParameters.ActiveUnitIndex;
+            NewUnitIndex := Civ2.Game.ActiveUnitIndex;
           end;
         end
         else
@@ -152,16 +148,16 @@ begin
       CopyMemory(SavedMapData, Civ2.MapData^, Size);
       for i := 0 to Civ2.MapHeader.Area - 1 do
       begin
-        Civ2.MapData^^[i].Improvements := (Civ2.MapData^^[i].Improvements or $FE) and Civ2.MapCivData^[CivIndex][i];
+        Civ2.MapData^^[i].TerrainFeatures := (Civ2.MapData^^[i].TerrainFeatures or $FE) and Civ2.MapCivData^[CivIndex][i];
       end;
-      for i := 0 to Civ2.GameParameters.TotalUnits - 1 do
+      for i := 0 to Civ2.Game.TotalUnits - 1 do
       begin
         Unit1 := @Civ2.Units[i];
         if (Unit1.ID <> 0) and ((Unit1.Visibility and (1 shl CivIndex)) = 0) then
         begin
           MapSquare := Civ2.MapGetSquare(Unit1.X, Unit1.Y);
-          if (MapSquare.Improvements and 2) = 0 then
-            MapSquare.Improvements := MapSquare.Improvements and $FE;
+          if (MapSquare.TerrainFeatures and 2) = 0 then
+            MapSquare.TerrainFeatures := MapSquare.TerrainFeatures and $FE;
         end;
       end;
 
@@ -183,11 +179,11 @@ begin
         Dir := Civ2.PFFindUnitDir(FUnitIndex);
         if (Dir < 0) or (Dir = 8) then
           Break;
-        X := Civ2.WrapMapX(X + Civ2.PFDX^[Dir]);
+        X := Civ2.MapWrapX(X + Civ2.PFDX^[Dir]);
         Y := Y + Civ2.PFDY^[Dir];
         if not Civ2.IsInMapBounds(X, Y) then
           Break;
-        if not (Civ2.MapSquareIsVisibleTo(X, Y, CivIndex) or Civ2.GameParameters.RevealMap) then
+        if not (Civ2.MapSquareIsVisibleTo(X, Y, CivIndex) or Civ2.Game.RevealMap) then
           Break;
         FNodes[0][FCount[0]] := Point(X, Y);
         Inc(FCount[0]);
@@ -232,11 +228,11 @@ begin
           Dir := Civ2.PFMove(X, Y, $63);
           if (Dir < 0) or (Dir = 8) then
             Break;
-          X := Civ2.WrapMapX(X + Civ2.PFDX^[Dir]);
+          X := Civ2.MapWrapX(X + Civ2.PFDX^[Dir]);
           Y := Y + Civ2.PFDY^[Dir];
           if not Civ2.IsInMapBounds(X, Y) then
             Break;
-          if not (Civ2.MapSquareIsVisibleTo(X, Y, CivIndex) or Civ2.GameParameters.RevealMap) then
+          if not (Civ2.MapSquareIsVisibleTo(X, Y, CivIndex) or Civ2.Game.RevealMap) then
             Break;
           FNodes[i][FCount[i]] := Point(X, Y);
           Inc(FCount[i]);
@@ -258,6 +254,7 @@ var
   i, j: Integer;
   ScreenPoint: TPoint;
   DX, DY: Integer;
+  Distance: Integer;
 begin
   for i := 0 to FLines - 1 do
   begin
@@ -269,11 +266,11 @@ begin
       else
         Canvas.Pen.Color := Canvas.ColorFromIndex(175);
       Canvas.Pen.Width := ScaleByZoom(2, Civ2.MapWindow.MapZoom + 1);
-      Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1, FStartPoint.Y + 1);
+      Civ2.MapWindow_MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1, FStartPoint.Y + 1);
       Canvas.PenPos := ScreenPoint;
       for j := 0 to FCount[i] - 1 do
       begin
-        Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, FNodes[i][j].X + 1, FNodes[i][j].Y + 1);
+        Civ2.MapWindow_MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FNodes[i][j].X + 1, FNodes[i][j].Y + 1);
         DX := Abs(Canvas.PenPos.X - ScreenPoint.X);
         if DX <= Civ2.MapWindow.MapCellSize.cx then
           Canvas.LineTo(ScreenPoint.X, ScreenPoint.Y)
@@ -289,6 +286,60 @@ begin
       Canvas.Free();
     end;
   end;
+
+  //  // Debug CitySpiral or Distance
+  //  if FCityIndex >= 0 then
+  //  begin
+  //    for i := 0 to 47 do
+  //    begin
+  //      Canvas := TCanvasEx.Create(DrawPort);
+  //      Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1 + Civ2.CitySpiralDX[i], FStartPoint.Y + 1 + Civ2.CitySpiralDY[i]);
+  //      Canvas.PenPos := ScreenPoint;
+  //      Canvas.Font.Size := 11;
+  //      Canvas.Brush.Style := bsClear;
+  //      Canvas.Font.Style := [fsBold];
+  //      Canvas.SetTextColors(41, 10);
+  //      Canvas.FontShadows := SHADOW_BR;
+  //      Distance := Civ2.Distance(FStartPoint.X, FStartPoint.Y, FStartPoint.X + Civ2.CitySpiralDX[i], FStartPoint.Y + Civ2.CitySpiralDY[i]);
+  //      //Canvas.TextOutWithShadows(IntToStr(i), 0, 0, DT_CENTER + DT_VCENTER);
+  //      Canvas.TextOutWithShadows(IntToStr(Distance), 0, 0, DT_CENTER + DT_VCENTER);
+  //      Canvas.Free();
+  //    end;
+  //  end;
+    //    // Debug CityDXDY
+    //    if FCityIndex >= 0 then
+    //    begin
+    //      for i := 0 to 23 do
+    //      begin
+    //        Canvas := TCanvasEx.Create(DrawPort);
+    //        Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1 + Civ2.CityDX[i], FStartPoint.Y + 1 + Civ2.CityDY[i]);
+    //        Canvas.PenPos := ScreenPoint;
+    //        Canvas.Font.Size := ScaleByZoom(11, Civ2.MapWindow.MapZoom);
+    //        Canvas.Brush.Style := bsClear;
+    //        Canvas.Font.Style := [fsBold];
+    //        Canvas.SetTextColors(41, 10);
+    //        Canvas.FontShadows := SHADOW_BR;
+    //        Canvas.TextOutWithShadows(IntToStr(i), 0, 0, DT_CENTER + DT_VCENTER);
+    //        Canvas.Free();
+    //      end;
+    //    end;
+    //    // Debug PFDXDY
+    //    if FCityIndex >= 0 then
+    //    begin
+    //      for i := 0 to 8 do
+    //      begin
+    //        Canvas := TCanvasEx.Create(DrawPort);
+    //        Civ2.MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, FStartPoint.X + 1 + Civ2.PFDX[i], FStartPoint.Y + 1 + Civ2.PFDY[i]);
+    //        Canvas.PenPos := ScreenPoint;
+    //        Canvas.Font.Size := ScaleByZoom(11, Civ2.MapWindow.MapZoom);
+    //        Canvas.Brush.Style := bsClear;
+    //        Canvas.Font.Style := [fsBold];
+    //        Canvas.SetTextColors(41, 10);
+    //        Canvas.FontShadows := SHADOW_BR;
+    //        Canvas.TextOutWithShadows(IntToStr(i), 0, 0, DT_CENTER + DT_VCENTER);
+    //        Canvas.Free();
+    //      end;
+    //    end;
 end;
 
 procedure TPathLine.SetStartPoint(const Value: TPoint);

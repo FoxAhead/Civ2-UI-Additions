@@ -1,4 +1,4 @@
-unit Civ2UIA_c2p;
+unit UiaPatchCPUUsage;
 
 {
   civ2patch
@@ -7,19 +7,22 @@ unit Civ2UIA_c2p;
 
 interface
 
-procedure C2Patches(HProcess: THandle);
-procedure C2PatchIdleCpu(HProcess: THandle);
+uses
+  UiaPatch;
+
+type
+  TUiaPatchCPUUsage = class(TUiaPatch)
+  public
+    function Active(): Boolean; override;
+    procedure Attach(HProcess: Cardinal); override;
+  end;
 
 implementation
 
 uses
   Math,
   MMSystem,
-  SysUtils,
-  Windows,
-  Civ2UIA_Options,
-  Civ2UIA_Proc,
-  Civ2UIA_Types;
+  Windows;
 
 var
   g_dwMessageWaitTime: DWORD = 1;
@@ -36,13 +39,13 @@ var
   g_dTimerStart: Double;
   g_bTimerHighResolution: Boolean = False;
 
-procedure C2PatchInitializeOptions();
+procedure C2PatchInitializeOptions(MessagesPurgeIntervalMs, MessageProcessingTimeThresholdMs, MessageWaitTimeThresholdMs, MessageWaitTimeMinMs, MessageWaitTimeMaxMs: Cardinal);
 begin
-  g_dMessagesPurgeInterval := UIAOPtions^.MessagesPurgeIntervalMs * 1000.0;
-  g_dMessageProcessingTimeThreshold := UIAOPtions^.MessageProcessingTimeThresholdMs * 1000.0;
-  g_dMessageWaitTimeThreshold := UIAOPtions^.MessageWaitTimeThresholdMs * 1000.0;
-  g_dwMessageWaitTimeMin := UIAOPtions^.MessageWaitTimeMinMs;
-  g_dwMessageWaitTimeMax := UIAOPtions^.MessageWaitTimeMaxMs;
+  g_dMessagesPurgeInterval := MessagesPurgeIntervalMs * 1000.0;
+  g_dMessageProcessingTimeThreshold := MessageProcessingTimeThresholdMs * 1000.0;
+  g_dMessageWaitTimeThreshold := MessageWaitTimeThresholdMs * 1000.0;
+  g_dwMessageWaitTimeMin := MessageWaitTimeMinMs;
+  g_dwMessageWaitTimeMax := MessageWaitTimeMaxMs;
   g_dwMessageWaitTime := g_dwMessageWaitTimeMin;
   g_dwMessageWaitTimeInc := Max(1, Trunc((g_dwMessageWaitTimeMax - g_dwMessageWaitTimeMin) / 10));
 end;
@@ -146,7 +149,7 @@ begin
     end;
 
     // Disable message purge if set to 0.
-    if Not SameValue(g_dMessagesPurgeInterval, 0.0) then
+    if not SameValue(g_dMessagesPurgeInterval, 0.0) then
     begin
       // Prime last purge time.
       if SameValue(g_dLastMessagePurgeTime, 0.0) or (dBeginTime < g_dLastMessagePurgeTime) then
@@ -176,49 +179,22 @@ begin
   Result := PeekMessage(lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
 end;
 
-{procedure C2PatchHostileAi(HProcess: THandle);
-begin
-  WriteMemory(HProcess, $00561FC9, [$90, $90, $90, $90, $90, $90, $90, $90]);
-end;}
+{ TUiaPatchCPUUsage }
 
-procedure C2PatchTimeLimit(HProcess: THandle);
+function TUiaPatchCPUUsage.Active: Boolean;
 begin
-  WriteMemory(HProcess, $0048B069, WordRec(UIAOPtions^.RetirementWarningYear).Bytes);
-  WriteMemory(HProcess, $0048B2AD, WordRec(UIAOPtions^.RetirementYear).Bytes);
-  WriteMemory(HProcess, $0048B0BB, WordRec(UIAOPtions^.RetirementYear).Bytes);
+  Result := UIAOPtions().CpuUsageOn
 end;
 
-procedure C2PatchPopulationLimit(HProcess: THandle);
+procedure TUiaPatchCPUUsage.Attach(HProcess: Cardinal);
 begin
-  // Original = 0x00007D00
-  WriteMemory(HProcess, $0043CD74, LongRec(UIAOPtions^.PopulationLimit).Bytes);
-  WriteMemory(HProcess, $0043CD81, LongRec(UIAOPtions^.PopulationLimit).Bytes);
-end;
-
-procedure C2PatchGoldLimit(HProcess: THandle);
-begin
-  WriteMemory(HProcess, $00489608, LongRec(UIAOPtions^.GoldLimit).Bytes);
-  WriteMemory(HProcess, $0048962A, LongRec(UIAOPtions^.GoldLimit).Bytes);
-  // And more
-  WriteMemory(HProcess, $004FAA28, LongRec(UIAOPtions^.GoldLimit).Bytes);
-  WriteMemory(HProcess, $004FAA5A, LongRec(UIAOPtions^.GoldLimit).Bytes);
-  WriteMemory(HProcess, $0054E586, LongRec(UIAOPtions^.GoldLimit).Bytes);
-  WriteMemory(HProcess, $00556200, LongRec(UIAOPtions^.GoldLimit).Bytes);
-  WriteMemory(HProcess, $0055620D, LongRec(UIAOPtions^.GoldLimit).Bytes);
-  // Text limit of an edit control (Menu - Cheat - Change Money)
-  WriteMemory(HProcess, $0051D787, [$0A], nil);
-end;
-
-procedure C2PatchMapTilesLimit(HProcess: THandle);
-begin
-  WriteMemory(HProcess, $0041D6B7, WordRec(UIAOPtions^.MapXLimit).Bytes);
-  WriteMemory(HProcess, $0041D6DE, WordRec(UIAOPtions^.MapYLimit).Bytes);
-  WriteMemory(HProcess, $0041D6FF, WordRec(UIAOPtions^.MapSizeLimit).Bytes);
-end;
-
-procedure C2PatchIdleCpu(HProcess: THandle);
-begin
-  C2PatchInitializeOptions();
+  C2PatchInitializeOptions(
+    UIAOPtions.MessagesPurgeIntervalMs,
+    UIAOPtions.MessageProcessingTimeThresholdMs,
+    UIAOPtions.MessageWaitTimeThresholdMs,
+    UIAOPtions.MessageWaitTimeMinMs,
+    UIAOPtions.MessageWaitTimeMaxMs
+    );
   C2PatchInitializeTimer();
   WriteMemory(HProcess, $005BBA64, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
   WriteMemory(HProcess, $005BBB91, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
@@ -226,19 +202,7 @@ begin
   WriteMemory(HProcess, $005BD31D, [OP_NOP, OP_CALL], @C2PatchPeekMessageEx);
 end;
 
-procedure C2Patches(HProcess: THandle);
-begin
-  {if UIAOPtions^.HostileAiOn then
-    C2PatchHostileAi(HProcess);}
-  if UIAOPtions^.RetirementYearOn then
-    C2PatchTimeLimit(HProcess);
-  if UIAOPtions^.PopulationLimitOn then
-    C2PatchPopulationLimit(HProcess);
-  if UIAOPtions^.GoldLimitOn then
-    C2PatchGoldLimit(HProcess);
-  if UIAOPtions^.MapSizeLimitOn then
-    C2PatchMapTilesLimit(HProcess);
-end;
+initialization
+  TUiaPatchCPUUsage.RegisterMe();
 
 end.
-

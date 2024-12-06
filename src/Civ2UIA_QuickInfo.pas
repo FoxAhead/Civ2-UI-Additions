@@ -3,7 +3,6 @@ unit Civ2UIA_QuickInfo;
 interface
 
 uses
-  Types,
   Civ2Types,
   Windows,
   Civ2UIA_CanvasEx,
@@ -48,14 +47,14 @@ type
 implementation
 
 uses
-  Civ2UIA_Types,
-  Civ2UIA_Global,
   Civ2UIA_Proc,
   Civ2Proc,
+  //UiaPatchCityWindow,
   Graphics,
   Classes,
   Math,
-  SysUtils;
+  SysUtils,
+  UiaMain;
 
 { TQuickInfo }
 
@@ -81,7 +80,7 @@ var
 begin
   if (FQuickInfoParts <> 0) then
   begin
-    Civ2.MapToWindow(ScreenPoint.X, ScreenPoint.Y, MapPoint.X + 2, MapPoint.Y);
+    Civ2.MapWindow_MapToWindow(Civ2.MapWindow, ScreenPoint.X, ScreenPoint.Y, MapPoint.X + 2, MapPoint.Y);
     R := Bounds(ScreenPoint.X, ScreenPoint.Y - FHeight, FWidth, FHeight + 24);
     // Move Rect into viewport
     DX := DrawPort.ClientRectangle.Right - R.Right;
@@ -114,16 +113,16 @@ begin
   begin
     GetCursorPos(MousePoint);
     WindowHandle := WindowFromPoint(MousePoint);
-    if WindowHandle = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowStructure.HWindow then
+    if WindowHandle = Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow then
     begin
       ScreenToClient(WindowHandle, MousePoint);
-      Civ2.ScreenToMap(NewMapPoint.X, NewMapPoint.Y, MousePoint.X, MousePoint.Y);
+      Civ2.MapWindow_ScreenToMap(Civ2.MapWindow, NewMapPoint.X, NewMapPoint.Y, MousePoint.X, MousePoint.Y);
       // City
       NewCityIndex := Civ2.GetCityIndexAtXY(NewMapPoint.X, NewMapPoint.Y);
       if (NewCityIndex >= 0) then
       begin
         if (Civ2.Cities[NewCityIndex].Owner = Civ2.HumanCivIndex^)
-          or (Civ2.GameParameters.RevealMap)
+          or (Civ2.Game.RevealMap)
           or (Civ2.Cities[NewCityIndex].Attributes and $400000 <> 0) then
         begin
           NewQuickInfoParts := 1 or 2;
@@ -138,11 +137,11 @@ begin
       // Units Present
       if (NewQuickInfoParts and 2 = 0) then
       begin
-        for i := 0 to Civ2.GameParameters.TotalUnits - 1 do
+        for i := 0 to Civ2.Game.TotalUnits - 1 do
         begin
           Unit1 := @Civ2.Units[i];
           if (Unit1.ID <> 0) and (Unit1.X = NewMapPoint.X) and (Unit1.Y = NewMapPoint.Y) then
-            if (Unit1.CivIndex = Civ2.HumanCivIndex^) or (Civ2.GameParameters.RevealMap) then
+            if (Unit1.CivIndex = Civ2.HumanCivIndex^) or (Civ2.Game.RevealMap) then
             begin
               NewQuickInfoParts := NewQuickInfoParts or 2;
               Break;
@@ -162,13 +161,15 @@ var
   i: Integer;
   ColorGray: Integer;
 begin
-  Civ2.DrawPort_Reset(@FDrawPort, RectWidth(FRect), RectHeight(FRect));
-  Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.Palette);
-
+  Civ2.DrawPort_ResetWH(@FDrawPort, RectWidth(FRect), RectHeight(FRect));
+  if FDrawPort.ColorDepth = 1 then
+    //Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.MapWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.Palette);
+    Civ2.SetDIBColorTableFromPalette(FDrawPort.DrawInfo, Civ2.Palette);
+                
   if FBgTile.DrawInfo = nil then
   begin
     BgTile := PDrawPort($00640990);
-    Civ2.DrawPort_Reset(@FBgTile, BgTile.Width, BgTile.Height);
+    Civ2.DrawPort_ResetWH(@FBgTile, BgTile.Width, BgTile.Height);
     Civ2.CopyToPort(BgTile, @FBgTile, 0, 0, 0, 0, BgTile.Width, BgTile.Height);
     for i := 0 to FBgTile.DrawInfo.BmWidth4 * FBgTile.DrawInfo.Height - 1 do
     begin
@@ -230,7 +231,7 @@ begin
     for i := 0 to SortedUnitsList.Count - 1 do
     begin
       UnitType := PUnit(SortedUnitsList[i]).UnitType;
-      Canvas.CopySprite(@PSprites($641848)^[UnitType], -SpriteDX, 0).PenSave;
+      Canvas.CopySprite(@Civ2.SprUnits[UnitType], -SpriteDX, 0).PenSave;
       Canvas.TextOutWithShadows(IntToStr(SortedUnitsList.TypesCount[UnitType]), -DX, DY, DT_CENTER or DT_BOTTOM).PenBR;
       Bottom := Canvas.PenPos.Y;
       Canvas.PenRestore;
@@ -246,7 +247,7 @@ var
   ColorFrame, ColorShadow, ColorText: TColor;
   City: PCity;
   i, j: Integer;
-  TextOut: string;
+  TextOut, TextOut2: string;
   R: TRect;
   DX, DY: Integer;
   StringIndex: Integer;
@@ -260,6 +261,9 @@ var
   FoodDelta: Integer;
   FoodDeltaString: string;
   TradeString: string;
+  CityBuildInfo: TCityBuildInfo;
+  TurnsToBuildString: string;
+  TradeConnectionLevel: Integer;
 begin
   SetFromCursor();
   if FChanged then
@@ -277,7 +281,7 @@ begin
       Canvas.PenOrigin := Point(3, 3);
       Canvas.PenReset();
       Canvas.LineHeight := 18;
-      Canvas.Font.Handle := CopyFont(Civ2.TimesFontInfo^.Handle^^);
+      Canvas.Font.Handle := CopyFont(Civ2.FontTimes14b.FontDataHandle);
       //Canvas.Font.Name := 'Arial';
       Canvas.Font.Size := 11;
       Canvas.Brush.Style := bsClear;
@@ -300,12 +304,12 @@ begin
 
         // Draw city values
         Canvas.SetSpriteZoom(0);
-        Canvas.TextOutWithShadows(Format('%d%s', [City.TotalFood, FoodDeltaString])).CopySprite(@PSprites($644F00)^[1], 1, 2).PenDX(3);
-        Canvas.TextOutWithShadows(IntToStr(City.TotalShield)).CopySprite(@PSprites($644F00)^[3], -1, 2).PenDX(1);
-        Canvas.TextOutWithShadows(TradeString).CopySprite(@PSprites($644F00)^[5], 1, 2).PenDX(3);
-        Canvas.TextOutWithShadows(IntToStr(City.Tax)).CopySprite(@PSprites($648860)^[1], 0, 2).PenDX(3);
-        Canvas.TextOutWithShadows(IntToStr(Civ2.CityGlobals.Lux)).CopySprite(@PSprites($648860)^[0], -1, 1).PenDX(1);
-        Canvas.TextOutWithShadows(IntToStr(City.Science)).CopySprite(@PSprites($648860)^[2], -2, 2);
+        Canvas.TextOutWithShadows(Format('%d%s', [City.TotalFood, FoodDeltaString])).CopySprite(@Civ2.SprRes[1], 1, 2).PenDX(3);
+        Canvas.TextOutWithShadows(IntToStr(City.TotalShield)).CopySprite(@Civ2.SprRes[3], -1, 2).PenDX(1);
+        Canvas.TextOutWithShadows(TradeString).CopySprite(@Civ2.SprRes[5], 1, 2).PenDX(3);
+        Canvas.TextOutWithShadows(IntToStr(City.Tax)).CopySprite(@Civ2.SprEco[1], 0, 2).PenDX(3);
+        Canvas.TextOutWithShadows(IntToStr(Civ2.CityGlobals.Lux)).CopySprite(@Civ2.SprEco[0], -1, 1).PenDX(1);
+        Canvas.TextOutWithShadows(IntToStr(City.Science)).CopySprite(@Civ2.SprEco[2], -2, 2);
         Canvas.PenBR;
 
         // Main city improvements
@@ -331,7 +335,7 @@ begin
         // Wonders
         WondersCount := 0;
         for i := 0 to 27 do
-          if Civ2.WonderCity[i] = FCityIndex then
+          if Civ2.Game.WonderCities[i] = FCityIndex then
             Inc(WondersCount);
         if WondersCount > 0 then
         begin
@@ -340,7 +344,7 @@ begin
           WondersCount := Ceil(WondersCount / ((WondersCount + MaxWondersInRow - 1) div MaxWondersInRow));
           for i := 0 to 27 do
           begin
-            if Civ2.WonderCity[i] = FCityIndex then
+            if Civ2.Game.WonderCities[i] = FCityIndex then
             begin
               Canvas.CopySprite(@PSprites($645160)^[i + 39], 2, 2);
               Inc(j);
@@ -366,18 +370,22 @@ begin
           StringIndex := Civ2.Improvements[-City.Building].StringIndex;
           Cost := Civ2.Improvements[-City.Building].Cost;
           Canvas.CopySprite(@PSprites($645160)^[-City.Building], 4, 3).PenDY(1);
+          DX := 2;
           DY := 0;
         end
         else
         begin
           StringIndex := Civ2.UnitTypes[City.Building].StringIndex;
           Cost := Civ2.UnitTypes[City.Building].Cost;
-          Canvas.CopySprite(@PSprites($641848)^[City.Building], 0, 0).PenDX(-4).PenDY(7);
+          Canvas.CopySprite(@Civ2.SprUnits[City.Building], 0, 0).PenDX(-4).PenDY(7);
+          DX := 0;
           DY := 2;
         end;
         Canvas.Font.Style := [];
-        TextOut := ' ' + string(Civ2.GetStringInList(StringIndex)) + Format(' (%d/%d)', [City.BuildProgress, Cost * Civ2.Cosmic.RowsInShieldBox]);
-        Canvas.TextOutWithShadows(TextOut).PenBR.PenDY(DY);
+        GetCityBuildInfo(FCityIndex, CityBuildInfo);
+        TurnsToBuildString := ConvertTurnsToString(CityBuildInfo.TurnsToBuild, $20);
+        TextOut := Format('%s (%d+%d/%d) %s', [Civ2.GetStringInList(StringIndex), City.BuildProgress, CityBuildInfo.Production, CityBuildInfo.RealCost, TurnsToBuildString]);
+        Canvas.TextOutWithShadows(TextOut, DX).PenBR.PenDY(DY);
       end;
 
       if FQuickInfoParts and 2 <> 0 then
@@ -433,13 +441,19 @@ begin
               if TradeItem < 0 then
               begin
                 TextOut := TextOut + GetLabelString($C0) + ': -1'; // Food Supplies
-                Canvas.TextOutWithShadows(TextOut).CopySprite(@PSprites($645068)^[0], 2, 3).PenBR;
+                Canvas.TextOutWithShadows(TextOut).CopySprite(@Civ2.SprResS[0], 2, 3).PenBR;
               end
               else
               begin
                 TextOut := TextOut + string(Civ2.GetStringInList(Civ2.Commodities[TradeItem]));
                 TextOut := TextOut + Format(': +%d', [Civ2.CityGlobals.TradeRevenue[i]]);
-                Canvas.TextOutWithShadows(TextOut).CopySprite(@PSprites($645068)^[2], 2, 3).PenBR;
+                Canvas.TextOutWithShadows(TextOut).CopySprite(@Civ2.SprResS[2], 2, 3);
+                TradeConnectionLevel := Uia.CityGlobalsEx.TradeRouteLevel[i];
+                for j := 1 to TradeConnectionLevel do
+                begin
+                  Canvas.TextOutWithShadows('+');
+                end;
+                Canvas.PenBR;
               end;
             end;
           end;

@@ -6,8 +6,7 @@ uses
   Classes,
   Controls,
   Forms,
-  StdCtrls,
-  CheckLst;
+  StdCtrls;
 
 type
   TFormSettings = class(TForm)
@@ -64,15 +63,14 @@ procedure ShowFormSettings;
 implementation
 
 uses
-  Messages,
+  
   SysUtils,
   Windows,
-  Civ2UIA_Global,
-  Civ2UIA_Proc,
+  UiaMain,
+  
   Civ2Types,
   Civ2Proc,
-  Civ2UIA_FormStrings,
-  Civ2UIA_Ex;
+  Civ2UIA_FormStrings;
 
 {$R *.dfm}
 
@@ -84,7 +82,8 @@ begin
   SetWindowLong(FormSettings.Handle, GWL_HWNDPARENT, Civ2.MainWindowInfo.WindowStructure.HWindow);
   FormSettings.ShowModal();
   FormSettings.Free();
-  Ex.SaveSettingsFile();
+  Uia.Settings.Save();
+  //Ex.SaveSettingsFile();
 end;
 
 procedure TFormSettings.FormCreate(Sender: TObject);
@@ -107,8 +106,8 @@ procedure TFormSettings.ScrollBar1Change(Sender: TObject);
 begin
   if not FChangeEventActive then
     Exit;
-  UIASettings.ColorExposure := ScrollBar1.Position / 20;
-  UIASettings.ColorGamma := ScrollBar2.Position / 20;
+  Uia.Settings.Dat.ColorExposure := ScrollBar1.Position / 20;
+  Uia.Settings.Dat.ColorGamma := ScrollBar2.Position / 20;
   SetControls();
 end;
 
@@ -116,16 +115,20 @@ procedure TFormSettings.PropagatePaletteChanges;
 var
   HWindow: HWND;
   GraphicsInfo: PGraphicsInfo;
+  Palette: PPalette;
 begin
   GraphicsInfo := @Civ2.MapWindow.MSWindow.GraphicsInfo;
-  Civ2.Palette_SetRandomID(GraphicsInfo.WindowInfo.Palette);
-  Civ2.UpdateDIBColorTableFromPalette(@GraphicsInfo.DrawPort, GraphicsInfo.WindowInfo.Palette);
+  Palette := GraphicsInfo.WindowInfo.WindowInfo1.Palette;
+  if Palette = nil then
+    Palette := Civ2.Palette;
+  Civ2.Palette_SetRandomID(Palette);
+  Civ2.DrawPort_UpdateDIBColorTableFromPaletteSafe(@GraphicsInfo.DrawPort, Palette);
   // Also recreate main window brush for background
-  Civ2.RecreateBrush(Civ2.MainWindowInfo, $9E);
+  Civ2.WindowInfo1_RecreateBrush(Civ2.MainWindowInfo, $9E);
   // Also set new palette for map overlay - to be consistent with the game look
-  Ex.MapOverlay.SetDIBColorTableFromPalette(GraphicsInfo.WindowInfo.Palette);
+  Uia.MapOverlay.SetDIBColorTableFromPalette(Palette);
   // Redraw main window with all subwindows
-  HWindow := GetParent(GraphicsInfo.WindowInfo.WindowStructure^.HWindow);
+  HWindow := GetParent(GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure^.HWindow);
   RedrawWindow(HWindow, nil, 0, RDW_INVALIDATE + RDW_UPDATENOW + RDW_ALLCHILDREN);
 end;
 
@@ -141,16 +144,16 @@ var
 begin
   FChangeEventActive := False;
   // Color correction
-  ScrollBar1.Position := Trunc(UIASettings.ColorExposure * 20);
-  ScrollBar2.Position := Trunc(UIASettings.ColorGamma * 20);
-  LabelExposure.Caption := FloatToStr(UIASettings.ColorExposure);
-  LabelGamma.Caption := FloatToStr(UIASettings.ColorGamma);
+  ScrollBar1.Position := Trunc(Uia.Settings.Dat.ColorExposure * 20);
+  ScrollBar2.Position := Trunc(Uia.Settings.Dat.ColorGamma * 20);
+  LabelExposure.Caption := FloatToStr(Uia.Settings.Dat.ColorExposure);
+  LabelGamma.Caption := FloatToStr(Uia.Settings.Dat.ColorGamma);
   // Flags
   for i := 0 to GroupBoxFlags.ControlCount - 1 do
   begin
     if GroupBoxFlags.Controls[i] is TCheckBox then
     begin
-      TCheckBox(GroupBoxFlags.Controls[i]).Checked := Ex.SettingsFlagSet(GroupBoxFlags.Controls[i].Tag);
+      TCheckBox(GroupBoxFlags.Controls[i]).Checked := Uia.Settings.DatFlagSet(GroupBoxFlags.Controls[i].Tag);
     end;
   end;
   FChangeEventActive := True;
@@ -159,8 +162,8 @@ end;
 
 procedure TFormSettings.SetColor(Exposure, Gamma: Double);
 begin
-  UIASettings.ColorExposure := Exposure;
-  UIASettings.ColorGamma := Gamma;
+  Uia.Settings.Dat.ColorExposure := Exposure;
+  Uia.Settings.Dat.ColorGamma := Gamma;
   SetControls();
 end;
 
@@ -182,16 +185,16 @@ var
 begin
   FormStrings := TFormStrings.Create(Self);
   SetWindowLong(FormStrings.Handle, GWL_HWNDPARENT, Self.Handle);
-  FormStrings.Memo1.Lines.Assign(Ex.SuppressPopupList);
+  FormStrings.Memo1.Lines.Assign(Uia.Settings.SuppressPopupList);
   FormStrings.ShowModal();
   for i := 0 to FormStrings.Memo1.Lines.Count - 1 do
     FormStrings.Memo1.Lines[i] := UpperCase(FormStrings.Memo1.Lines[i]);
-  Ex.SuppressPopupList.Assign(FormStrings.Memo1.Lines);
+  Uia.Settings.SuppressPopupList.Assign(FormStrings.Memo1.Lines);
   FormStrings.Free();
-  for i := Ex.SuppressPopupList.Count - 1 downto 0 do
+  for i := Uia.Settings.SuppressPopupList.Count - 1 downto 0 do
   begin
-    if Ex.SuppressPopupList[i] = '' then
-      Ex.SuppressPopupList.Delete(i);
+    if Uia.Settings.SuppressPopupList[i] = '' then
+      Uia.Settings.SuppressPopupList.Delete(i);
   end;
 end;
 
@@ -200,7 +203,7 @@ var
   Tag: Integer;
 begin
   Tag := TComponent(Sender).Tag;
-  Ex.SetSettingsFlag(Tag, TCheckBox(Sender).Checked);
+  Uia.Settings.SetDatFlag(Tag, TCheckBox(Sender).Checked);
 end;
 
 procedure TFormSettings.FormDestroy(Sender: TObject);

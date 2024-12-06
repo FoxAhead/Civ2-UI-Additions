@@ -8,10 +8,8 @@ implementation
 
 uses
   Civ2UIA_Types,
-  Civ2UIA_Global,
   Civ2UIA_Proc,
-  Civ2UIA_MapMessage,
-  Civ2UIA_Ex,
+  Civ2UIA_FormConsole,
   SysUtils,
   Classes,
   Windows;
@@ -57,17 +55,22 @@ end;
 
 function PatchSetFocus(HWindow: HWND): Integer; stdcall;
 var
+  CallerChain: PCallerChain;
   CallerAddress: Integer;
   OriginalAddress: Integer;
+  Text: string;
 begin
-  asm
-    mov   eax, [ebp + 4]
-    mov   CallerAddress, eax
-  end;
-  SendMessageToLoader(1, 0);
-  SendMessageToLoader(CallerAddress, HWindow);
+  CallerChain := HookGetCallerChain();
+  CallerAddress := Integer(CallerChain.Caller);
+  //  SendMessageToLoader(1, 0);
+  //  SendMessageToLoader(CallerAddress, HWindow);
+  Text := '';
+  repeat
+    Text := Format('%.6x %s', [Integer(CallerChain.Caller), Text]);
+    CallerChain := CallerChain.Prev;
+  until Cardinal(CallerChain.Caller) > $1000000;
+  TFormConsole.Log(Format('SetFocus(%.8x): %s', [HWindow, Text]));
   OriginalAddress := OriginalAddresses[1];
-  Ex.MapMessages.Add(TMapMessage.Create(Format('%.6x SetFocus(%.8x)', [CallerAddress, HWindow])));
   asm
     push  HWindow
     mov   eax, OriginalAddress
@@ -88,7 +91,7 @@ begin
   SendMessageToLoader(2, 0);
   SendMessageToLoader(CallerAddress, HWindow);
   OriginalAddress := OriginalAddresses[2];
-  Ex.MapMessages.Add(TMapMessage.Create(Format('%.6x DestroyWindow(%.8x)', [CallerAddress, HWindow])));
+  TFormConsole.Log(Format('%.6x DestroyWindow(%.8x)', [CallerAddress, HWindow]));
   asm
     push  HWindow
     mov   eax, OriginalAddress
@@ -357,7 +360,7 @@ begin
     shl   ecx, 2
     leave
     pop   edx
-    add   esp, ecx 
+    add   esp, ecx
     push  edx
     ret
   end;
@@ -386,7 +389,7 @@ begin
   HookListAddrOriginal := TList.Create();
   HookListAddrPatched := TList.Create();
   HookListParamsCount := TList.Create();
-  //HookFunction(1, HProcess, $006E7D94, @PatchSetFocus);
+  HookFunction(1, HProcess, $006E7D94, @PatchSetFocus, 1);
   //HookFunction(2, HProcess, $006E7E1C, @PatchDestroyWindow);
   //HookFunction(3, HProcess, $006E7E24, @PatchShowWindow, 2);
   //HookFunction(4, HProcess, $006E7DB8, @PatchHookSetWindowPos); - Never Used!

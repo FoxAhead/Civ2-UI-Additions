@@ -25,7 +25,7 @@ U=0
 V=1
 W=0
 X=1
-Y=0
+Y=2
 Z=1
 ShowHints=0
 ShowWarnings=1
@@ -33,7 +33,7 @@ UnitAliases=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=
 NamespacePrefix=
 SymbolDeprecated=1
 SymbolLibrary=1
-SymbolPlatform=1
+SymbolPlatform=0
 UnitLibrary=1
 UnitPlatform=1
 UnitDeprecated=1
@@ -87,17 +87,17 @@ DebugInfo=0
 RemoteSymbols=0
 MinStackSize=16384
 MaxStackSize=1048576
-ImageBase=4194304
+ImageBase=536870912
 ExeDescription=
 [Directories]
-OutputDir=
-UnitOutputDir=
+OutputDir=bin
+UnitOutputDir=dcu
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=
+SearchPath=D:\Delphi\Civ2 UI Additions\src;D:\Delphi\Civ2 UI Additions\src\Patches
 Packages=vclx;vcl;rtl;VclSmp;dsnapcon;dsnap;dbrtl;vcldb;bdertl;vcldbx;ibxpress;teeui;teedb;tee;dss;visualclx;visualdbclx;vclactnband;adortl
 Conditionals=
-DebugSourceDirs=
+DebugSourceDirs=D:\Delphi\Civ2 UI Additions\src;D:\Delphi\Civ2 UI Additions\src\Patches
 UsePackages=0
 [Parameters]
 RunParams=
@@ -113,9 +113,9 @@ RootDir=
 IncludeVerInfo=1
 AutoIncBuild=1
 MajorVer=1
-MinorVer=20
-Release=3
-Build=770
+MinorVer=21
+Release=0
+Build=2676
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=
 FileDescription=
-FileVersion=1.20.3.770
+FileVersion=1.21.0.2676
 InternalName=
 LegalCopyright=
 LegalTrademarks=
@@ -134,6 +134,18 @@ OriginalFilename=
 ProductName=
 ProductVersion=1.0.0.0
 Comments=
+[HistoryLists\hlDebugSourcePath]
+Count=1
+Item0=D:\Delphi\Civ2 UI Additions\src;D:\Delphi\Civ2 UI Additions\src\Patches
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
+[HistoryLists\hlSearchPath]
+Count=1
+Item0=D:\Delphi\Civ2 UI Additions\src;D:\Delphi\Civ2 UI Additions\src\Patches
+[HistoryLists\hlUnitOutputDirectory]
+Count=1
+Item0=dcu
+[HistoryLists\hlOutputDirectorry]
+Count=1
+Item0=bin

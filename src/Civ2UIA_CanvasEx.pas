@@ -1,12 +1,25 @@
 unit Civ2UIA_CanvasEx;
 
 interface
+
 uses
   Graphics,
   Windows,
   Civ2Types;
-type
 
+const
+  SHADOW_NONE                             = $00;
+  SHADOW_TL                               = $01;
+  SHADOW_T_                               = $02;
+  SHADOW_TR                               = $04;
+  SHADOW__L                               = $08;
+  SHADOW__R                               = $10;
+  SHADOW_BL                               = $20;
+  SHADOW_B_                               = $40;
+  SHADOW_BR                               = $80;
+  SHADOW_ALL                              = $FF;
+
+type
   TCanvasEx = class(TCanvas)
   private
     FSavedDC: HDC;
@@ -16,7 +29,6 @@ type
     procedure SetMaxPen(const Value: TPoint);
 
   protected
-
   public
     FontShadows: Cardinal;
     FontShadowColor: TColor;
@@ -25,11 +37,12 @@ type
     constructor Create(DC: HDC); reintroduce; overload;
     constructor Create(DrawPort: PDrawPort); reintroduce; overload;
     destructor Destroy; override;
-    function ColorFromIndex(Index: Integer): TColor;
+    function ColorFromIndex(Index: Integer): TColor; // Index = Palette index + 10
     function SetTextColors(MainColorIndex, ShadowColorIndex: Integer): TCanvasEx;
     function SetSpriteZoom(Zoom: Integer): TCanvasEx;
     function CopySprite(Sprite: PSprite; DX: Integer = 0; DY: Integer = 0): TCanvasEx;
-    function TextOutWithShadows(const Text: string; DX: Integer = 0; DY: Integer = 0; Align: Cardinal = DT_LEFT): TCanvasEx;
+    function TextOutWithShadows(const Text: string; DX: Integer = 0; DY: Integer = 0; Align: Cardinal = DT_LEFT; Rect: PRect = nil): TCanvasEx; overload;
+    procedure TextOutRect(X, Y: Integer; const Text: string; Rect: PRect);
     function PenReset(): TCanvasEx;
     function PenX(X: Integer): TCanvasEx;
     function PenY(Y: Integer): TCanvasEx;
@@ -39,16 +52,15 @@ type
     function PenBR(): TCanvasEx;
     function PenSave(): TCanvasEx;
     function PenRestore(): TCanvasEx;
+    procedure CopyFont(SourceFontDataHandle: HGLOBAL);
     property MaxPen: TPoint read FMaxPen write SetMaxPen;
   published
-
   end;
 
 implementation
 
 uses
   Civ2Proc,
-  Civ2UIA_Types,
   Civ2UIA_Proc;
 
 { TCanvasEx }
@@ -80,8 +92,10 @@ function TCanvasEx.ColorFromIndex(Index: Integer): TColor;
 var
   RGBQuad: Cardinal;
 begin
-  GetDIBColorTable(Self.Handle, Index, 1, RGBQuad);
-  Result := TColor(FastSwap(RGBQuad) shr 8);
+  if GetDIBColorTable(Self.Handle, Index, 1, RGBQuad) > 0 then
+    Result := TColor(FastSwap(RGBQuad) shr 8)
+  else
+    Result := clRed;
 end;
 
 function TCanvasEx.SetTextColors(MainColorIndex, ShadowColorIndex: Integer): TCanvasEx;
@@ -96,7 +110,7 @@ var
   Numerator, Denominator: Integer;
   A1, A2: Integer;
 begin
-  Civ2.GetSpriteZoom(Numerator, Denominator);
+  Civ2.GetSpriteRatios(Numerator, Denominator);
   A1 := Numerator shl 16 div Denominator;
   A2 := (Zoom + 8) shl 13;
   if A1 <> A2 then
@@ -112,13 +126,13 @@ var
 begin
   if FDrawPort <> nil then
   begin
-    Civ2.CopySprite(Sprite, @R, FDrawPort, PenPos.X + DX, PenPos.Y + DY);
+    Civ2.Sprite_CopyToPortNC(Sprite, @R, FDrawPort, PenPos.X + DX, PenPos.Y + DY);
     PenDX(RectWidth(R) + DX);
   end;
   Result := Self;
 end;
 
-function TCanvasEx.TextOutWithShadows(const Text: string; DX, DY: Integer; Align: Cardinal): TCanvasEx;
+function TCanvasEx.TextOutWithShadows(const Text: string; DX, DY: Integer; Align: Cardinal; Rect: PRect): TCanvasEx;
 var
   FontMainColor: TColor;
   P: TPoint;
@@ -149,7 +163,7 @@ begin
         if (SX = 0) and (SY = 0) then
           Continue;
         if (FontShadows1 and 1) = 1 then
-          TextOut(P.X + SX + DX + OffsetX, P.Y + SY + DY + OffsetY, Text);
+          TextOutRect(P.X + SX + DX + OffsetX, P.Y + SY + DY + OffsetY, Text, Rect);
         FontShadows1 := FontShadows1 shr 1;
         if FontShadows1 = 0 then
           Break;
@@ -157,9 +171,20 @@ begin
     end;
   end;
   Font.Color := FontMainColor;
-  TextOut(P.X + DX + OffsetX, P.Y + DY + OffsetY, Text);
+  TextOutRect(P.X + DX + OffsetX, P.Y + DY + OffsetY, Text, Rect);
   MaxPen := PenPos;
   Result := Self;
+end;
+
+procedure TCanvasEx.TextOutRect(X, Y: Integer; const Text: string; Rect: PRect);
+begin
+  if Rect <> nil then
+  begin
+    TextRect(Rect^, X, Y, Text);
+    MoveTo(X + TextWidth(Text), Y);
+  end
+  else
+    TextOut(X, Y, Text);
 end;
 
 function TCanvasEx.PenReset: TCanvasEx;
@@ -206,7 +231,10 @@ end;
 
 function TCanvasEx.PenBR: TCanvasEx;
 begin
-  MoveTo(PenOrigin.X, PenPos.Y + LineHeight);
+  if LineHeight <> 0 then
+    MoveTo(PenOrigin.X, PenPos.Y + LineHeight)
+  else
+    MoveTo(PenOrigin.X, PenPos.Y + TextHeight('8'));
   MaxPen := PenPos;
   Result := Self;
 end;
@@ -229,6 +257,18 @@ begin
     FMaxPen.X := Value.X;
   if Value.Y > FMaxPen.Y then
     FMaxPen.Y := Value.Y;
+end;
+
+procedure TCanvasEx.CopyFont(SourceFontDataHandle: HGLOBAL);
+var
+  LogFont: TLogFont;
+  FontData: PFontData;
+begin
+  ZeroMemory(@LogFont, SizeOf(LogFont));
+  FontData := GlobalLock(SourceFontDataHandle);
+  GetObject(FontData.FontHandle, SizeOf(LogFont), @LogFont);
+  GlobalUnlock(SourceFontDataHandle);
+  Font.Handle := CreateFontIndirect(LogFont);
 end;
 
 end.
