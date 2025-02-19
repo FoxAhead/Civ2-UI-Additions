@@ -2431,8 +2431,9 @@ var
   UnitsLimit800, UnitsLimit801, UnitsLimit802, UnitsLimit79C, UnitsLimit7F8: Word;
   UnitsLimit801x20: Cardinal;
 begin
-  GetMem(NewUnitsAreaAddress, (UIAOPtions^.iUnitsLimit + 2) * SizeOf(TUnit));
-  ZeroMemory(NewUnitsAreaAddress, (UIAOPtions^.iUnitsLimit + 2) * SizeOf(TUnit));
+  GetMem(NewUnitsAreaAddress, (UIAOPtions^.iUnitsLimit + 3) * SizeOf(TUnit));
+  ZeroMemory(NewUnitsAreaAddress, (UIAOPtions^.iUnitsLimit + 3) * SizeOf(TUnit));
+  Inc(PUnit(NewUnitsAreaAddress), 1);
   Diff := Integer(NewUnitsAreaAddress) - Integer(Civ2.Units);
   Civ2.Units := NewUnitsAreaAddress;
   for i := Low(GUnitLimitPatchAddr) to High(GUnitLimitPatchAddr) do
