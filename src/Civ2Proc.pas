@@ -96,27 +96,35 @@ uses
   Civ2UIA_FormConsole;
 
 type
-  TThisCallStubs = packed record
+  TThisCallThunk = packed record
     Part1: Byte;
     Part2: Cardinal;
     Address: Cardinal;
     Part3: Byte;
   end;
 
+const
+  MAX_THISCALL_THUNKS                     = 255;
+
+type
+  TThisCallThunks = array[0..MAX_THISCALL_THUNKS] of TThisCallThunk;
+
+  PThisCallThunks = ^TThisCallThunks;
+
 var
-  ThisCallStubs: array[0..255] of TThisCallStubs;
-  ThisCallStubsIndex: Integer = 0;
+  ThisCallThunksIndex: Integer = 0;
+  ThisCallThunks: PThisCallThunks;
 
 function PThisCall(Address: Cardinal): Pointer;
 begin
-  if ThisCallStubsIndex > 255 then
-    raise Exception.Create('Maximum ThisCallStubsIndex reached');
-  ThisCallStubs[ThisCallStubsIndex].Part1 := $59; // pop     ecx
-  ThisCallStubs[ThisCallStubsIndex].Part2 := $68240C87; // xchg    ecx, [esp]
-  ThisCallStubs[ThisCallStubsIndex].Address := Address; // push    Address
-  ThisCallStubs[ThisCallStubsIndex].Part3 := $C3; // ret
-  Result := @ThisCallStubs[ThisCallStubsIndex];
-  Inc(ThisCallStubsIndex);
+  if ThisCallThunksIndex > MAX_THISCALL_THUNKS then
+    raise Exception.Create('Maximum ThisCallThunksIndex reached');
+  ThisCallThunks[ThisCallThunksIndex].Part1 := $59; // pop     ecx
+  ThisCallThunks[ThisCallThunksIndex].Part2 := $68240C87; // xchg    ecx, [esp]
+  ThisCallThunks[ThisCallThunksIndex].Address := Address; // push    Address
+  ThisCallThunks[ThisCallThunksIndex].Part3 := $C3; // ret
+  Result := @ThisCallThunks[ThisCallThunksIndex];
+  Inc(ThisCallThunksIndex);
 end;
 
 { TCiv2 }
@@ -127,6 +135,9 @@ begin
     raise Exception.Create('TCiv2 is already created');
 
   inherited;
+
+  ThisCallThunks := VirtualAlloc(nil, SizeOf(ThisCallThunks), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+
   // For inline ASM all TCiv2 fileds can be referenced directly only inside TCiv2 class, and as Self.FieldName
   // Important: by default EAX register contains Self reference
 {(*}
@@ -156,7 +167,7 @@ begin
   FontTimes18                := Pointer($0063EAC0);
   Game                       := Pointer($00655AE8);
   HModules                   := Pointer($006E4F60);
-  HModulesCount              := Pointer($006387CC);  
+  HModulesCount              := Pointer($006387CC);
   HumanCivIndex              := Pointer($006D1DA0);
   Improvements               := Pointer($0064C488);
   Leaders                    := Pointer($006554F8);
@@ -229,7 +240,7 @@ end;
 
 destructor TCiv2.Destroy;
 begin
-
+  VirtualFree(ThisCallThunks, 0, MEM_RELEASE);
   inherited;
 end;
 

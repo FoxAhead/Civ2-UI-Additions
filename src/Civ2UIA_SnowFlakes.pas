@@ -232,7 +232,7 @@ begin
 
   Dec(Civ2.HModulesCount^);
   Civ2.Palette_Dispose(@Palette);
-  Enabled := IsItTime();
+  Enabled := IsItTime() and not FileExists('Civ2UIANoSanta.txt');
 end;
 
 function TSnowFlakes.IsItTime: Boolean;
