@@ -207,7 +207,7 @@ asm
     ret
 end;
 
-procedure PatchCreateDialogShowListEx(Dialog: PDialogWindow);
+procedure PatchCreateDialogShowListEx(Dialog: PDialogWindow); stdcall;
 var
   IsResizableDialog: Boolean;
   i: Integer;
