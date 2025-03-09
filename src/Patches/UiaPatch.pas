@@ -56,14 +56,17 @@ var
   Offset: Integer;
 begin
   SizeOP := SizeOf(Opcodes);
-  if SizeOP > 0 then
+  if SizeOP > 0 then begin
     WriteProcessMemory(HProcess, Pointer(Address), @Opcodes, SizeOP, BytesWritten);
+    Uia.MemWatchDog.MarkAddr(Address, SizeOP);
+  end;
   if ProcAddress <> nil then
   begin
     Offset := Integer(ProcAddress);
     if not Abs then
       Offset := Offset - Address - 4 - SizeOP;
     WriteProcessMemory(HProcess, Pointer(Address + SizeOP), @Offset, 4, BytesWritten);
+    Uia.MemWatchDog.MarkAddr(Address + SizeOP, 4);
   end;
 end;
 

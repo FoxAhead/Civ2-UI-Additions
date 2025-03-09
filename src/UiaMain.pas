@@ -7,6 +7,7 @@ uses
   Windows,
   Civ2Types,
   UiaSettings,
+  MemWatchDog,
   Civ2UIA_PathLine,
   Civ2UIA_QuickInfo,
   Civ2UIA_SnowFlakes,
@@ -46,6 +47,7 @@ type
     ModuleNameString: string;
     VersionString: string;
     CityGlobalsEx: TCityGlobalsEx;
+    MemWatchDog: TMemWatchDog;
     constructor Create;
     destructor Destroy; override;
     procedure AttachPatches(HProcess: THandle);
@@ -109,6 +111,7 @@ var
   i: Integer;
   Patch: TUiaPatch;
 begin
+  MemWatchDog := TMemWatchDog.Create($00401000, $006E80E0, False, True);
   for i := 0 to Patches.Count - 1 do
   begin
     Patch := TUiaPatch(Patches[i].Create());
@@ -121,6 +124,7 @@ begin
       TFormConsole.Log(Patch.ClassName + ' NOT Active');
     Patch.Free();
   end;
+  MemWatchDog.Free();
 end;
 
 procedure TUia.GetModuleVersion();
