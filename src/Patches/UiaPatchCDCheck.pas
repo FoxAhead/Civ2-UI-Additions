@@ -76,7 +76,7 @@ begin
   TFormConsole.Log('CDRoot: ' + Civ2.CDRoot);
 end;
 
-{ TUiaPatch64Bit }
+{ TUiaPatchCDCheck }
 
 function TUiaPatchCDCheck.Active: Boolean;
 begin

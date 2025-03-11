@@ -2440,7 +2440,7 @@ begin
   begin
     ReadProcessMemory(HProcess, Pointer(GUnitLimitPatchAddr[i]), @UnitsArrayOffset, 4, BytesRead);
     UnitsArrayOffset := Integer(UnitsArrayOffset) + Diff;
-    WriteProcessMemory(HProcess, Pointer(GUnitLimitPatchAddr[i]), @UnitsArrayOffset, 4, BytesWritten);
+    WriteMemory(HProcess, GUnitLimitPatchAddr[i], LongRec(UnitsArrayOffset).Bytes);
   end;
   UnitsLimit800 := UIAOPtions^.iUnitsLimit; //0x800
   UnitsLimit801 := UIAOPtions^.iUnitsLimit + 1; //0x801

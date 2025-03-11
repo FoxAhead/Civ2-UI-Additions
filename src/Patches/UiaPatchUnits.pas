@@ -25,9 +25,9 @@ procedure PatchResetEngineersOrderEx(ThisWorker, AlreadyWorker: Integer); stdcal
 var
   X, Y: Word;
 begin
+  Civ2.Units[AlreadyWorker].Counter := 0; // Restored
   if not Uia.Settings.DatFlagSet(1) then
     Exit;
-  Civ2.Units[AlreadyWorker].Counter := 0; // Restored
   X := Civ2.Units[ThisWorker].X;
   Y := Civ2.Units[ThisWorker].Y;
   Civ2.PickUpUnit(ThisWorker, 0);
@@ -286,7 +286,7 @@ end;
 procedure TUiaPatchUnits.Attach(HProcess: Cardinal);
 begin
   // (1) Reset Engineer's order after passing its work to coworker
-  WriteMemory(HProcess, $004C4528, [OP_JMP], @PatchResetEngineersOrder);
+  WriteMemory(HProcess, $004C4522, [OP_JMP], @PatchResetEngineersOrder);
   // (2) Don't break unit movement
   WriteMemory(HProcess, $00402112, [OP_JMP], @PatchBreakUnitMoving);
   // (3) Reset Units wait flag after activating
