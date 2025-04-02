@@ -447,7 +447,7 @@ begin
       Commodity := Unit1.Counter;
       if (Unit1.ID <> 0) and (Unit1.HomeCity <> $FF) and (Unit1.CivIndex = CivIndex) and (Unit1.Orders = -1) and (UnitTypes[Unit1.UnitType].Role = 7) and (Commodity >= 0) then
       begin
-        Dlg_InitWithHeap(@Dlg, $4000);
+        Dlg_InitWithHeap(@Dlg, $8000);
         DlgParams_SetString(0, Commodities[Commodity]);
         Dlg_LoadGAMESimpleL0(@Dlg, 'SUPPLYSHOW', CIV2_DLG_SORTEDLISTBOX);
         for i := 0 to Game.TotalCities - 1 do

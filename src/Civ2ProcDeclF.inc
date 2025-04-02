@@ -38,7 +38,7 @@ Dlg_CreateAndWait: function(This: PDialogWindow; Timeout: Integer): Integer; std
 Dlg_CreateDialog: procedure(This: PDialogWindow); stdcall;
 Dlg_DrawListboxItemTextPart: procedure(This: PDialogWindow; Text: PChar; XLeft, YTop, Selected, Disabled: Integer); stdcall;
 Dlg_DrawTextLine: function(This: PDialogWindow; Text: PChar; XLeft, YTop, A5: Integer): Integer; stdcall;
-Dlg_InitWithHeap: function(This: PDialogWindow; HeapAllocSize: Smallint): PDialogWindow; stdcall;
+Dlg_InitWithHeap: function(This: PDialogWindow; HeapAllocSize: Word): PDialogWindow; stdcall;
 Dlg_LoadGAMESimpleL0: function(This: PDialogWindow; SectionName: PChar; Flags: Integer): Integer; stdcall;
 Dlg_LoadGAMESimpleL0F0: function(This: PDialogWindow; SectionName: PChar): Integer; stdcall;
 Dlg_LoadPopup: function(This: PDialogWindow; FileName, SectionName: PChar; Length: Integer; Text: PChar; A6: PGraphicsInfo; A3: PDrawPort; Rect: PRect; Flags: Integer): Integer; stdcall;
