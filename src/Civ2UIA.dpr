@@ -42,6 +42,7 @@ uses
   UiaPatchCommon in 'Patches\UiaPatchCommon.pas',
   UiaPatchCPUUsage in 'Patches\UiaPatchCPUUsage.pas',
   UiaPatchDllGif in 'Patches\UiaPatchDllGif.pas',
+  UiaPatchDlg in 'Patches\UiaPatchDlg.pas',
   UiaPatchDrawUnit in 'Patches\UiaPatchDrawUnit.pas',
   UiaPatchLimits in 'Patches\UiaPatchLimits.pas',
   UiaPatchMapWindow in 'Patches\UiaPatchMapWindow.pas',

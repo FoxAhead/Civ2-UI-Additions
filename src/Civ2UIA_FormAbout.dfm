@@ -82,7 +82,7 @@ object FormAbout: TFormAbout
       Width = 230
       Height = 13
       Cursor = crHandPoint
-      Caption = 'https://forums.civfanatics.com/threads/623515/'
+      Caption = 'https://forums.civfanatics.com/threads/697565/'
       Color = clBtnFace
       Font.Charset = DEFAULT_CHARSET
       Font.Color = clBlue

@@ -146,7 +146,7 @@ and patches that affect some game rules and limitations:
 All features can be switched in 'Options...' dialog.
 
 ## Requirements
-Game version Multiplayer Gold Edition 5.4.0f (Patch 3) is supported only.
+Game version Multiplayer Gold Edition 5.4.0f (Patch 3) is supported only (`CIV2.EXE` file size should be 2489344 bytes, preferably unmodified).
 
 ## Using
  1. Unzip files `Civ2UIALauncher.exe` and `Civ2UIA.dll` to game's folder
@@ -159,4 +159,4 @@ You can create shortcut to start game immediately. All selected paths are saved 
 
 [Download](https://github.com/FoxAhead/Civ2-UI-Additions/releases)
 
-[CivFanatics topic](https://forums.civfanatics.com/threads/623515/)
+[CivFanatics topic](https://forums.civfanatics.com/threads/697565/)
