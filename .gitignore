@@ -71,3 +71,6 @@ Civ2UIALauncher.ini
 
 # GExperts
 *.gex
+
+src/bin/
+src/dcu/

@@ -16,6 +16,7 @@ implementation
 uses
   Windows,
   Civ2Types,
+  Civ2Proc,
   UiaMain;
 
 const
@@ -52,13 +53,34 @@ asm
     ret
 end;
 
+procedure PatchMapKey1Ex(Dir: Integer); stdcall;
+begin
+  if Dir >= 0 then
+    if Civ2.UnitSelected^ then
+    begin
+      if (Civ2.Game.ActiveUnitIndex >= 0) and (Civ2.Game.ActiveUnitIndex < Civ2.Game.TotalUnits) then
+        if Civ2.Units[Civ2.Game.ActiveUnitIndex].ID <> 0 then
+          Civ2.MoveUnit(Civ2.Game.ActiveUnitIndex, Dir, 3);
+    end
+    else
+      Civ2.MoveCursor(Dir);
+end;
+
+procedure PatchMapKey1(); register;
+asm
+    push  [ebp - $04] // aDir
+    call  PatchMapKey1Ex
+    push  $00413189
+    ret
+end;
+
 { TUiaPatchMapWindow}
 
 procedure TUiaPatchMapWindow.Attach(HProcess: Cardinal);
 begin
   // Map Overlay
   WriteMemory(HProcess, $005C0A2F, [OP_CALL], @PatchCopyToScreenBitBlt);
-  
+
   // Extend vertical map overscroll
   WriteMemory(HProcess, $0047A2F2, [OP_JMP], @PatchCalcMapRectTop);
 
@@ -73,10 +95,12 @@ begin
   WriteMemory(HProcess, $0047B279 + 3, [LowMapZoom]);
   WriteMemory(HProcess, $0047B572 + 3, [LowMapZoom]);
   WriteMemory(HProcess, $0047B794 + 3, [LowMapZoom]);
-  
+
+  // Allow to move white cursor even without active unit
+  WriteMemory(HProcess, $00413105, [OP_JMP], @PatchMapKey1);
 end;
 
 initialization
   TUiaPatchMapWindow.RegisterMe();
 
-end.              
+end.

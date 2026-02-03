@@ -107,6 +107,8 @@
 @MenuBar_EnableSubMenu                       := PThisCall($00401CC6);
 @MenuBar_GetSubMenu                          := PThisCall($004039EF);
 @MenuBar_ModifyMenuText                      := PThisCall($00403602);
+@MoveCursor                                  := Pointer($00402FC2);
+@MoveUnit                                    := Pointer($00402829);
 @NextLinePixelAddress                        := PThisCall($005C5610);
 @OutputDebugSmedsLogI                        := Pointer($005D2279);
 @PFFindConnection                            := Pointer($00403481);

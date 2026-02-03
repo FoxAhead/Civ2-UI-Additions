@@ -1044,7 +1044,7 @@ type
     word_655B10: Word;
     word_655B12: Word;
     PeaceTurns: Word;
-    TotalUnits: Word;
+    TotalUnits: Smallint;
     TotalCities: Word;
     word_655B1A: Word;
     word_655B1C: Word;
