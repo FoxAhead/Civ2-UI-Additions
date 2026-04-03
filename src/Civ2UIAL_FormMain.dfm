@@ -17,6 +17,7 @@ object Form1: TForm1
   KeyPreview = True
   OldCreateOrder = False
   Position = poScreenCenter
+  Scaled = False
   ShowHint = True
   OnClose = FormClose
   OnCreate = FormCreate
@@ -55,10 +56,10 @@ object Form1: TForm1
   object LabelAuthor: TLabel
     Left = 8
     Top = 272
-    Width = 75
+    Width = 48
     Height = 13
     Anchors = [akLeft, akBottom]
-    Caption = '2022 FoxAhead'
+    Caption = 'FoxAhead'
     Enabled = False
   end
   object LabelGitHub: TLabel
@@ -120,14 +121,16 @@ object Form1: TForm1
         'CPU usage and patches that affect '
       'some game rules and limitations.'
       'Features can be switched in '#39'Options...'#39' dialog.'
-      ''
       
         'This launcher will search for CIV2.EXE and Civ2UIA.dll in its cu' +
         'rrent folder and try to set all paths '
       'automatically.'
       
-        'You can create shortcut to start game immediately. All selected ' +
+        'You can Create shortcut to start game immediately. All selected ' +
         'paths are saved in shortcut.'
+      
+        'You can Create EXE - copy of the CIV2.EXE with patched-in parame' +
+        'ters to run it without launcher.'
       
         'Game version Multiplayer Gold Edition 5.4.0f (Patch 3) is suppor' +
         'ted only.')
@@ -162,15 +165,15 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     ReadOnly = True
-    TabOrder = 6
+    TabOrder = 7
   end
   object ButtonStart: TButton
-    Left = 300
+    Left = 332
     Top = 268
-    Width = 101
+    Width = 77
     Height = 25
     Hint = 'Close this screen and start game'
-    Anchors = [akBottom]
+    Anchors = [akLeft, akBottom]
     Caption = 'Play'
     Default = True
     Font.Charset = DEFAULT_CHARSET
@@ -198,7 +201,7 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     ReadOnly = True
-    TabOrder = 7
+    TabOrder = 8
   end
   object ButtonBrowseDll: TButton
     Tag = 1
@@ -211,24 +214,34 @@ object Form1: TForm1
     OnClick = ButtonBrowseDllClick
   end
   object ButtonShortcut: TButton
-    Left = 192
+    Left = 148
     Top = 268
-    Width = 101
+    Width = 93
     Height = 25
-    Anchors = [akBottom]
+    Anchors = [akLeft, akBottom]
     Caption = 'Create shortcut...'
     TabOrder = 5
     OnClick = ButtonShortcutClick
   end
   object ButtonOptions: TButton
-    Left = 120
+    Left = 64
     Top = 268
-    Width = 65
+    Width = 77
     Height = 25
-    Anchors = [akBottom]
+    Anchors = [akLeft, akBottom]
     Caption = 'Options...'
     TabOrder = 4
     OnClick = ButtonOptionsClick
+  end
+  object ButtonCreateExe: TButton
+    Left = 248
+    Top = 268
+    Width = 77
+    Height = 25
+    Anchors = [akLeft, akBottom]
+    Caption = 'Create EXE...'
+    TabOrder = 6
+    OnClick = ButtonCreateExeClick
   end
   object OpenDialogExe: TOpenDialog
     Filter = '*.exe|*.exe'
@@ -254,5 +267,12 @@ object Form1: TForm1
     OnTimer = Timer1Timer
     Left = 404
     Top = 64
+  end
+  object SaveDialogExe: TSaveDialog
+    FileName = 'Civ2UIA.exe'
+    Filter = '*.exe|*.exe'
+    Options = [ofOverwritePrompt, ofHideReadOnly, ofPathMustExist, ofEnableSizing]
+    Left = 272
+    Top = 192
   end
 end

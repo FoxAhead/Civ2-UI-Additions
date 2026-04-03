@@ -58,6 +58,8 @@ function IsSilentLaunch(): Boolean;
 
 procedure CreateLnk(FileName, Path, WorkingDirectory, Description, Arguments: string);
 
+procedure CreateExe(FileName: string);
+
 procedure LoadFormOptionsFromXML();
 
 procedure Log(Str: string);
@@ -86,6 +88,7 @@ uses
   TlHelp32,
   XMLDoc,
   XMLIntf,
+  Types,
   Windows,
   Variants;
 
@@ -346,9 +349,7 @@ begin
     if (ProcessInformation.hProcess <> 0) then
       TerminateProcess(ProcessInformation.hProcess, 1);
     raise;
-
   end;
-
 end;
 
 function Check(): Boolean;
@@ -406,6 +407,56 @@ begin
   CoUninitialize();
 end;
 
+procedure CreateExe(FileName: string);
+const
+  CODE: array[0..33] of Byte = (
+    $BE, $00, $00, $00, $00,              // MOV   ESI, OFFSET  {Options}
+    $BF, $F0, $60, $65, $00,              // MOV   EDI,  0x006560F0
+    $B9, $00, $00, $00, $00,              // MOV   ECX,  {SizeOf(Options)}
+    $F3, $A4,                             // REP   MOVSB
+    $68, $00, $00, $00, $00,              // PUSH  OFFSET  {DllName}
+    $FF, $15, $30, $7C, $6E, $00,         // CALL  LoadLibraryA
+    $68, $90, $6E, $5F, $00,              // PUSH  OFFSET start
+    $C3                                   // RET
+    );
+  OFFSET_CODE = $00216290;
+  OFFSET_OPTIONS = OFFSET_CODE + SizeOf(CODE);
+  OFFSET_DLLNAME = OFFSET_OPTIONS + SizeOf(Options);
+var
+  Mode: Word;
+  FileStream: TFileStream;
+  FileBuffer: TByteDynArray;
+begin
+  try
+    Check();
+    LoadOptionsFromINI();
+    // Load
+    FileStream := TFileStream.Create(ExeName, fmOpenRead or fmShareDenyNone);
+    SetLength(FileBuffer, FileStream.Size);
+    FileStream.Read(Pointer(FileBuffer)^, FileStream.Size);
+    FileStream.Free;
+    // Patch
+    PInteger(@FileBuffer[$A8])^ := OFFSET_CODE + $C00;
+    System.Move(Options, FileBuffer[OFFSET_OPTIONS], SizeOf(Options));
+    StrPLCopy(PAnsiChar(@FileBuffer[OFFSET_DLLNAME]), DllName, 255);
+    PInteger(@CODE[1])^ := OFFSET_OPTIONS + $00400C00;
+    PInteger(@CODE[11])^ := SizeOf(Options);
+    PInteger(@CODE[18])^ := OFFSET_DLLNAME + $00400C00;
+    System.Move(CODE, FileBuffer[OFFSET_CODE], SizeOf(CODE));
+    // Save
+    if FileExists(FileName) then
+      Mode := fmOpenWrite or fmShareDenyWrite
+    else
+      Mode := fmCreate or fmShareDenyWrite;
+    FileStream := TFileStream.Create(FileName, Mode);
+    FileStream.Write(Pointer(FileBuffer)^, Length(FileBuffer));
+    FileStream.Free;
+  except
+    on E: Exception do
+      Log('Error: ' + E.message);
+  end;
+end;
+
 procedure SetFileNameIfExist(var Variable: string; FileName: string);
 begin
   if FileExists(FileName) then
@@ -453,7 +504,6 @@ begin
       SaveOptionsToINI();
     except
     end;
-
   end;
   FormOptions.Free;
 end;
@@ -476,7 +526,6 @@ begin
       TVarData(SubItems[N].Value).VType := varInteger;
     end;
   end;
-
 end;
 
 procedure FormOptionsAddItems(Nodes: IXMLNodeList; ParentIndex: Integer = -1);
@@ -646,3 +695,4 @@ begin
 end;
 
 end.
+

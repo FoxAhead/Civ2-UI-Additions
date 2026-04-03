@@ -34,6 +34,8 @@ type
     LabelDebug: TLabel;
     Timer1: TTimer;
     ButtonOptions: TButton;
+    ButtonCreateExe: TButton;
+    SaveDialogExe: TSaveDialog;
     procedure ButtonBrowseExeClick(Sender: TObject);
     procedure ButtonBrowseDllClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -45,6 +47,7 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure ButtonOptionsClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure ButtonCreateExeClick(Sender: TObject);
   private
     MessagesCounter: Integer;
     DebugLayout: Boolean;
@@ -113,7 +116,7 @@ begin
     Visible := False;
     Terminating := CheckLaunchClose();
   end;
-  if not Terminating then 
+  if not Terminating then
   begin
     Visible := True;
     Application.ShowMainForm := True;
@@ -161,6 +164,18 @@ begin
   end;
 end;
 
+procedure TForm1.ButtonCreateExeClick(Sender: TObject);
+begin
+  if ExeName = '' then begin
+    Log('Choose game exe file first (click Game - Browse)');
+    Exit;
+  end;
+  if SaveDialogExe.Execute() then
+  begin
+    CreateExe(SaveDialogExe.FileName);
+  end;
+end;
+
 procedure TForm1.LabelGitHubClick(Sender: TObject);
 begin
   ShellExecute(Application.Handle, 'open', 'https://github.com/FoxAhead/Civ2-UI-Additions', nil, nil, SW_SHOW);
@@ -191,7 +206,7 @@ procedure TForm1.AdjustFormLayout;
 var
   Civ2Running: Boolean;
   I: Integer;
-  NewDebugLayout: Bool;
+  NewDebugLayout: Boolean;
 begin
   Civ2Running := Civ2IsRunning();
   if Civ2Running then
@@ -255,4 +270,3 @@ begin
 end;
 
 end.
-
