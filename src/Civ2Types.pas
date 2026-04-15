@@ -1012,7 +1012,7 @@ type
     word_655AF2: Word;
     TutorialsShown: Word;
     word_655AF6: Word;
-    Turn: Word;
+    Turn: SmallInt;
     Year: Word;
     word_655AFC: Word;
     ActiveUnitIndex: SmallInt;            // Current unit index
@@ -1035,9 +1035,9 @@ type
     // 4 - Emperor
     // 5 - Deity (toughest)
     BarbarianActivity: Byte;
-    TribesLeftInPlay: Byte;
+    ActivePlayers: Byte;
     HumanPlayers: Byte;
-    byte_655B0C: Byte;
+    ActivePlayersOnStart: Byte;
     Enemies: Byte;
     byte_655B0E: Byte;
     byte_655B0F: Byte;
@@ -1066,6 +1066,20 @@ type
     field_139: Char;
     CivsRating: array[0..7] of Byte;
     field_142: array[0..7] of Byte;
+  end;
+
+  TScenarioParameters = packed record     // 0x64BC60
+    Flags: Word;
+    ScenName: array[0..79] of Char;
+    TechParadigm: SmallInt;
+    TurnYearIncrement: SmallInt;
+    StartingYear: SmallInt;
+    MaximumTurns: SmallInt;
+    ObjectivesProtagonist: SmallInt;
+    DecisiveVictoryThreshold: SmallInt;
+    MarginalVictoryThreshold: SmallInt;
+    MarginalDefeatThreshold: SmallInt;
+    DecisiveDefeatThreshold: SmallInt;
   end;
 
   TMapHeader = packed record
@@ -1432,6 +1446,10 @@ type
     NumberOfTracks: Integer;
   end;
 
+  TPowerGraph = packed record
+    Value: array[0..149, 0..7] of Byte;
+  end;
+
 const
   CST_RESOURCES                           = 1;
   CST_CITIZENS                            = 2;
@@ -1439,6 +1457,7 @@ const
   CST_IMPROVEMENTS                        = 4;
   CST_BUILD                               = 5;
   CST_SUPPORTED_UNITS                     = 6;
+  // TDialogWindow.Flags
   CIV2_DLG_HAS_CANCEL_BUTTON              = $00000001;
   CIV2_DLG_CHECKBOXES                     = $00000004;
   CIV2_DLG_CREATED                        = $00000020;
@@ -1451,6 +1470,17 @@ const
   CIV2_DLG_SYSTEMLISTBOX                  = $00040000;
   CIV2_DLG_SORTEDLISTBOX                  = $00800000;
   CIV2_DLG_FORCE_SCROLLBAR_FOR_LISTBOX    = $01000000;
+  // TGame.MapFlags
+  CIV2_MAP_FLAG_SCENARIO_STARTED          = $0008;
+  // TScenarioParameters.Flags
+  CIV2_SCN_FLAG_TOTAL_WAR                 = $0001;
+  CIV2_SCN_FLAG_OBJ_VICTORY               = $0002;
+  CIV2_SCN_FLAG_WONDERS_OBJS              = $0004;
+  CIV2_SCN_FLAG_REVEAL_MAP                = $0008;
+  CIV2_SCN_FLAG_NO_GOVT_SWITCH            = $0010;
+  CIV2_SCN_FLAG_NO_TECH_CONQUEST          = $0020;
+  CIV2_SCN_FLAG_NO_POLLUTION              = $0040;
+  CIV2_SCN_FLAG_WWII_AI_LOGIC             = $8000;
 
 implementation
 

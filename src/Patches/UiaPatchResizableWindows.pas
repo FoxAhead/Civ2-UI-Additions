@@ -203,8 +203,8 @@ begin
   end;
 end;
 
-// Instead of injecting in every UpdateUdisor... function, let's inject in one place after GraphicsInfo_CopyToScreenAndValidate
-// which is called at the end of the UpdateUdisor...
+// Instead of injecting in every UpdateAdvisor... function, let's inject in one place after GraphicsInfo_CopyToScreenAndValidate
+// which is called at the end of the UpdateAdvisor...
 procedure PatchGraphicsInfoCopyToScreenAndValidateW(); register;
 asm
     push  [ebp - $04]
@@ -217,13 +217,15 @@ procedure PatchWindowProcMSWindowWmNcHitTestEx(var HotSpot: LRESULT; WindowStruc
 var
   IsSizableAdvisor: Boolean;
   IsSizableDialog: Boolean;
+  DialogWindowInfo1: PWindowInfo1;
   DialogWindowStructure: PWindowStructure;
 begin
   IsSizableAdvisor := (WindowStructure = Civ2.AdvisorWindow.MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure);
   IsSizableDialog := False;
   if Civ2.CurrPopupInfo^ <> nil then
   begin
-    DialogWindowStructure := Civ2.CurrPopupInfo^^.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure;
+    DialogWindowInfo1 := @Civ2.CurrPopupInfo^^.GraphicsInfo.WindowInfo.WindowInfo1;
+    DialogWindowStructure := DialogWindowInfo1.WindowStructure;
     IsSizableDialog := (WindowStructure = DialogWindowStructure) and (DialogWindowStructure.Sizeable = 1);
   end;
   if IsSizableAdvisor then
@@ -235,8 +237,9 @@ begin
       WindowStructure.CaptionHeight := 0;
     end;
   end;
-  if IsSizableAdvisor and (Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows) or IsSizableDialog then
+  if IsSizableAdvisor and (Civ2.AdvisorWindow.AdvisorType in ResizableAdvisorWindows) or (IsSizableDialog and (DialogWindowInfo1.MinTrackSize.X = 0)) then
   begin
+    // Allow only vertical sizing
     if (HotSpot in [HTLEFT..HTBOTTOMRIGHT]) and (HotSpot <> HTTOP) and (HotSpot <> HTBOTTOM) then
     begin
       HotSpot := HTCLIENT;
@@ -246,11 +249,12 @@ end;
 
 procedure PatchWindowProcMSWindowWmNcHitTest(); register;
 asm
-    push  [ebp - $98]
-    lea   eax, [ebp - $9C]
+    push  [ebp - $98]           // P_WindowStructure windowStructure
+    lea   eax, [ebp - $9C]      // LRESULT hitTestResult
     push  eax
     call  PatchWindowProcMSWindowWmNcHitTestEx
-    cmp   [ebp - $9C], HTCLIENT // if ( v44 == HTCLIENT )
+    // Restore original code
+    cmp   [ebp - $9C], HTCLIENT // if ( windowStructure == HTCLIENT )
     push  $005DCA70
     ret
 end;

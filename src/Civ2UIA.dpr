@@ -48,6 +48,7 @@ uses
   UiaPatchMapWindow in 'Patches\UiaPatchMapWindow.pas',
   UiaPatchMenu in 'Patches\UiaPatchMenu.pas',
   UiaPatchMultiplayer in 'Patches\UiaPatchMultiplayer.pas',
+  UiaPatchPowerGraph in 'Patches\UiaPatchPowerGraph.pas',
   UiaPatchResizableWindows in 'Patches\UiaPatchResizableWindows.pas',
   UiaPatchScienceAdvisor in 'Patches\UiaPatchScienceAdvisor.pas',
   UiaPatchSideBar in 'Patches\UiaPatchSideBar.pas',

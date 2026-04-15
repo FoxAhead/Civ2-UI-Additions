@@ -19,14 +19,20 @@ type
     Timer1: TTimer;
     LabelCursor: TLabel;
     Button2: TButton;
+    Button3: TButton;
+    Button4: TButton;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure FormDestroy(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure Button2Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
+    procedure Button4Click(Sender: TObject);
   private
     { Private declarations }
     FMessagesCounter: Integer;
+    FFocus: HWND;
+    FCursorPos: TPoint;
     class procedure EnsureInstance();
     procedure AddToMemo(Text: string);
   public
@@ -57,7 +63,7 @@ begin
   if FormConsole = nil then
   begin
     FormConsole := TFormConsole.Create(nil);
-    FormConsole.Memo1.Clear();
+    //    FormConsole.Memo1.Clear();
   end;
 end;
 
@@ -135,16 +141,47 @@ end;
 
 procedure TFormConsole.Timer1Timer(Sender: TObject);
 var
+  F: HWND;
   P: TPoint;
 begin
-  LabelFocus.Caption := IntToHex(GetFocus(), 8);
-  GetCursorPos(P);
-  LabelCursor.Caption := IntToHex(WindowFromPoint(P), 8);
+  if not IsWindowVisible(Handle) then
+    Exit;
+  F := GetFocus;
+  if FFocus <> F then
+  begin
+    FFocus := F;
+    LabelFocus.Caption := IntToHex(F, 8)
+  end;
+  if GetCursorPos(P) then
+    if (FCursorPos.X <> P.X) or (FCursorPos.Y <> P.Y) then
+    begin
+      FCursorPos := P;
+      LabelCursor.Caption := IntToHex(WindowFromPoint(P), 8);
+    end;
 end;
 
 procedure TFormConsole.Button2Click(Sender: TObject);
 begin
   Uia.SnowFlakes.Switch();
+end;
+
+procedure TFormConsole.Button3Click(Sender: TObject);
+var
+  i, j: Integer;
+begin
+  //  for i := 0 to 149 do
+  //  begin
+  //    for j := 0 to 7 do
+  //    begin
+  //      Civ2.PowerGraph.Value[i][j] := i + j * 10; // * 255 * j div 7 div 149;
+  //    end;
+  //  end;
+  Civ2.ShowPowerGraph;
+end;
+
+procedure TFormConsole.Button4Click(Sender: TObject);
+begin
+  Civ2.UpdatePowerRatingsAndContainment;
 end;
 
 end.
