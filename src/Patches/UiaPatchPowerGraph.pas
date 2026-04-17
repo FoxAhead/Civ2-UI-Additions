@@ -14,6 +14,7 @@ type
 implementation
 
 uses
+  Messages,
   Classes,
   Contnrs,
   Graphics,
@@ -28,24 +29,28 @@ uses
   Civ2UIA_FormConsole;
 
 type
-  TPowerGraphWindow = class
+  TPowerGraphWindow = class(TObject)
   public
     MSWindow: PMSWindow;
     FontInfo1: PFontInfo;
     FontInfo2: PFontInfo;
     BgDrawPort: PDrawPort;
     Dialog: PDialogWindow;
+    MouseInClient: Boolean;
     MousePos: TPoint;
     MouseSlot: Integer;
+    HWindow: HWND;
     DrawPort: PDrawPort;
     BufferDrawPort: TDrawPort;
     R: TRect;
     GraphSize: TSize;
-    LabelRightMax: Integer;
+    NationNameRight: Integer;
     LastSlot, MaxSlot, MaxPowerValue: Integer;
+    PrevWindowProc: Pointer;
     class function GetInstance(GraphicsInfo: PGraphicsInfo): TPowerGraphWindow;
     class procedure RemoveInstance(GraphicsInfo: PGraphicsInfo);
     procedure Prepare(MSWindow: PMSWindow; FontInfo1, FontInfo2: PFontInfo; BgDrawPort: PDrawPort; Dialog: PDialogWindow);
+    function WindowProc(hWnd: hWnd; Msg: UINT; wParam: wParam; lParam: lParam): LRESULT;
     procedure Update;
     procedure DrawCurves(Canvas: TCanvasEx; Origin: TPoint; ColorIndex: Integer = -1);
     procedure MouseMove(X, Y: Integer);
@@ -73,15 +78,23 @@ asm
     XOR   eax, eax
 end;
 
+function TestBit(P: Pointer; Index: Integer): Boolean; register;
+asm
+    BT    [EAX], EDX
+    SETC  AL
+end;
+
 function IsScnObjMode: Boolean;
 begin
   Result := (Civ2.Game.MapFlags and CIV2_MAP_FLAG_SCENARIO_STARTED <> 0) and (Civ2.ScenarioParameters.Flags and CIV2_SCN_FLAG_OBJ_VICTORY <> 0);
 end;
 
-function TestBit(P: Pointer; Index: Integer): Boolean; register;
-asm
-    BT    [EAX], EDX
-    SETC  AL
+function GetTurnsPerSlot: Integer;
+begin
+  if IsScnObjMode then
+    Result := 2
+  else
+    Result := 4;
 end;
 
 function IsPlayer(CivIndex: Integer): Boolean;
@@ -91,29 +104,28 @@ end;
 
 function GetSlotAndDivisor(var Slot, Divisor: Integer): Boolean;
 begin
-  Result := False;
-  if (Civ2.Game.MapFlags and CIV2_MAP_FLAG_SCENARIO_STARTED <> 0) and (Civ2.ScenarioParameters.Flags and CIV2_SCN_FLAG_OBJ_VICTORY <> 0) then
-  begin
-    if Civ2.Game.Turn < 75 then
-    begin
-      Slot := (Civ2.Game.Turn div 2) mod 150;
-      Divisor := 1;
-      Result := True;
-    end;
-  end
-  else if Civ2.Game.Turn < 600 then
-  begin
-    Slot := (Civ2.Game.Turn div 4) mod 150;
+  if IsScnObjMode then
+    Divisor := 1
+  else
     Divisor := 8;
-    Result := True;
-  end;
+  Slot := Civ2.Game.Turn div GetTurnsPerSlot;
+  Result := Slot = Clamp(Slot, 0, 149);
 end;
 
-function GetNormalizedScore(Score, Divisor: Integer): Integer;
+function CompressScore(Score: Integer): Integer;
 begin
-  Result := Score div Divisor;
-  if Result > 255 then
-    Result := Floor(128 * (Log2(Result) - 6));
+  if Score <= 255 then
+    Result := Score
+  else
+    Result := Trunc(256 * (Ln(Score) - Ln(256) + 1) + 0.5);
+end;
+
+function DecompressScore(CompressedScore: Integer): Integer;
+begin
+  if CompressedScore <= 255 then
+    Result := CompressedScore
+  else
+    Result := Trunc(256 * Exp(CompressedScore / 256 - 1) + 0.5);
 end;
 
 function ConvertValueToCoord(Value, MaxCoord, MaxValue: Integer): Integer;
@@ -132,23 +144,19 @@ begin
     Result := Coord * (MaxValue + 1) div (MaxCoord + 1);
 end;
 
-function GetTurnsPerSlot: Integer;
-begin
-  if IsScnObjMode then
-    Result := 2
-  else
-    Result := 4;
-end;
-
-function YearStringFromSlot(Slot: Integer): string;
+function YearStringFromTurn(Turn: Integer): string;
 var
-  t, Year: Integer;
+  Year: Integer;
 begin
-  t := Slot * GetTurnsPerSlot;
-  Year := Civ2.ConvertTurnToYear(t + 1);
+  Year := Civ2.ConvertTurnToYear(Turn + 1);
   Civ2.ChText^ := #00;
   Civ2.txtStrcatYear(Year);
   Result := string(Civ2.ChText);
+end;
+
+function YearStringFromSlot(Slot: Integer): string;
+begin
+  Result := YearStringFromTurn(Slot * GetTurnsPerSlot);
 end;
 
 function GetScaledPowerValue(Slot, CivIndex: Integer): Integer;
@@ -163,19 +171,25 @@ end;
 
 procedure PatchUpdatePowerRatingsAndContainmentEx(CivPowerScore: PIntegerArray); stdcall;
 var
-  i, j: Integer;
+  i, c: Integer;
   Slot, Divisor: Integer;
+  NScores, CScores: array[1..7] of Integer;
   Score, MaxScore: Integer;
   Scale, NewScale, DeltaScale: Integer;
+  Count: Integer;
+  InterStart: array[1..7] of Integer;
 begin
   if GetSlotAndDivisor(Slot, Divisor) then
   begin
     Scale := Civ2.PowerGraph.Value[0, 0];
     MaxScore := 0;
-    for i := 1 to 7 do
+    for c := 1 to 7 do
     begin
-      Score := GetNormalizedScore(CivPowerScore[i], Divisor);
-      TFormConsole.Log('CivPowerScore[%d]: %d, Normalized: %d', [i, CivPowerScore[i] div Divisor, Score]);
+      InterStart[c] := $7FFFFFFF;
+      Score := CivPowerScore[c] div Divisor;
+      NScores[c] := Score;
+      Score := CompressScore(NScores[c]);
+      CScores[c] := Score;
       if MaxScore < Score then
         MaxScore := Score;
     end;
@@ -184,22 +198,36 @@ begin
       NewScale := i - 7;
       if NewScale > Scale then
       begin
+        // If this is the first time we scale
         if Scale = 0 then
-        begin
-          // Interpolate saturated values
-        end;
-        DeltaScale := NewScale - Scale;
-        for i := 0 to Slot - 1 do
-          for j := 1 to 7 do
+          // Then search for preceding sturated sequence
+          for c := 1 to 7 do
           begin
-            Civ2.PowerGraph.Value[i, j] := Civ2.PowerGraph.Value[i, j] shr DeltaScale;
+            i := Slot - 1;
+            while (i >= 0) and (Civ2.PowerGraph.Value[i, c] = 255) do
+            begin
+              InterStart[c] := i;
+              Dec(i);
+            end;
+          end;
+        DeltaScale := NewScale - Scale;
+        // Scale previous slots
+        for i := 0 to Slot - 1 do
+          for c := 1 to 7 do
+          begin
+            if i <= InterStart[c] then
+              Civ2.PowerGraph.Value[i, c] := Civ2.PowerGraph.Value[i, c] shr DeltaScale
+            else
+              // Interpolate
+              Civ2.PowerGraph.Value[i, c] := (255 + MulDiv(i - InterStart[c], CScores[c] - 255, Slot - InterStart[c])) shr DeltaScale;
           end;
         Civ2.PowerGraph.Value[0, 0] := NewScale;
         Scale := NewScale;
       end;
     end;
-    for i := 1 to 7 do
-      Civ2.PowerGraph.Value[Slot, i] := GetNormalizedScore(CivPowerScore[i], Divisor) shr Scale;
+    // Store new power values in current slot
+    for c := 1 to 7 do
+      Civ2.PowerGraph.Value[Slot, c] := CScores[c] shr Scale;
   end;
 end;
 
@@ -259,6 +287,18 @@ asm
     ret
 end;
 
+function PatchWindowProc(hWnd: hWnd; Msg: UINT; wParam: wParam; lParam: lParam): LRESULT; stdcall;
+var
+  WindowInfo: PWindowInfo;
+begin
+  Result := 0;
+  WindowInfo := Pointer(GetWindowLongA(hWnd, 4));
+  if WindowInfo <> nil then
+  begin
+    Result := TPowerGraphWindow.GetInstance(Pointer(Cardinal(WindowInfo) - $48)).WindowProc(hWnd, Msg, wParam, lParam);
+  end;
+end;
+
 procedure ProcMouseMove(X, Y: Integer); cdecl;
 begin
   TPowerGraphWindow.GetInstance(Pointer(Cardinal(GetThis) - $58)).MouseMove(X, Y);
@@ -284,14 +324,12 @@ begin
   begin
     Result := TPowerGraphWindow.Create;
     PowerGraphWindows.Add(Key, Result);
-    TFormConsole.Log('CreateInstance: %x', [Cardinal(Key)]);
   end;
 end;
 
 class procedure TPowerGraphWindow.RemoveInstance(GraphicsInfo: PGraphicsInfo);
 begin
   PowerGraphWindows.Remove(Pointer(GraphicsInfo)).Free;
-  TFormConsole.Log('RemoveInstance: %x', [Cardinal(GraphicsInfo)])
 end;
 
 procedure TPowerGraphWindow.Prepare(MSWindow: PMSWindow; FontInfo1, FontInfo2: PFontInfo; BgDrawPort: PDrawPort; Dialog: PDialogWindow);
@@ -301,10 +339,23 @@ begin
   Self.FontInfo2 := FontInfo2;
   Self.BgDrawPort := BgDrawPort;
   Self.Dialog := Dialog;
+  Self.DrawPort := @MSWindow.GraphicsInfo.DrawPort;
+  Self.HWindow := MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowStructure.HWindow;
   Dialog.ClientSize := MSWindow.ClientSize;
   MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.MinTrackSize := Point(616, 320);
   MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowProcs.ProcMouseMove := @ProcMouseMove;
   Civ2.GraphicsInfo_SetUpdateProc(@MSWindow.GraphicsInfo, @UpdateProc);
+  Self.PrevWindowProc := Pointer(SetWindowLong(Self.HWindow, GWL_WNDPROC, Longint(@PatchWindowProc)));
+  TFormConsole.Log('PrevWindowProc: %x', [Integer(Self.PrevWindowProc)]);
+end;
+
+function TPowerGraphWindow.WindowProc(hWnd: hWnd; Msg: UINT; wParam: wParam; lParam: lParam): LRESULT;
+begin
+  case Msg of
+    WM_MOUSELEAVE:
+      MouseMove(-1, -1);
+  end;
+  Result := CallWindowProc(PrevWindowProc, hWnd, Msg, wParam, lParam);
 end;
 
 procedure TPowerGraphWindow.Update;
@@ -314,28 +365,23 @@ var
   R2: TRect;
   TurnsPerSlot: Integer;
   TurnsStep: Integer;
-  //  MaxPowerValue: Integer;
   c, s, i, t: Integer;
-  //  LastSlot: Integer;
   Canvas: TCanvasEx;
   Origin: TPoint;
-  X, Y: Integer;
+  X, Y, DX, DY: Integer;
   CivColor1: Integer;
-  Year: Integer;
   NationName: PChar;
-  DeltaX, DeltaY: Integer;
   Control: PControlInfo;
-  RP: PRect;
+  Text: string;
+  LabelW2, LabelX: Integer;
   LabelRight: Integer;
 begin
-  DrawPort := @MSWindow.GraphicsInfo.DrawPort;
   Civ2.MSWindow_UpdateAreasAndWinButtons(MSWindow);
   Civ2.MSWindow_DrawFrame(MSWindow);
 
-  TFormConsole.Log('DrawPort.Height: %d', [DrawPort.Height]);
-
+  // Copy background image
   Windows.StretchBlt(DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle.Left, DrawPort.ClientRectangle.Top, MSWindow.ClientSize.cx, MSWindow.ClientSize.cy - 38, BgDrawPort.DrawInfo.DeviceContext, 0, 0, 600, 400, SRCCOPY);
-
+  // Fill the rest area with color
   Civ2.SetCurrDrawPort2(DrawPort);
   R2 := MSWindow.RectClient;
   R2.Top := R2.Bottom - 38;
@@ -360,34 +406,36 @@ begin
     for c := 1 to 7 do
       MaxPowerValue := Max(MaxPowerValue, Civ2.PowerGraph.Value[s, c]);
 
-  //  TFormConsole.Log('LastSlot: %d, MaxPowerValue: %d', [LastSlot, MaxPowerValue]);
-
   // Graphs
   Canvas := TCanvasEx.Create(DrawPort);
 
-  // Vertical grid lines
+  // Vertical grid
   Canvas.CopyFont(FontInfo1.FontDataHandle);
   Canvas.Brush.Style := bsClear;
-  Canvas.Pen.Color := Canvas.ColorFromIndex($E);
+  Canvas.Pen.Color := Canvas.ColorFromIndex(16);
   Canvas.FontShadows := SHADOW_BR;
   Canvas.SetTextColors($25, $A);
-
   TurnsStep := TurnsPerSlot * 25 div 2;
-  //  TFormConsole.Log('TurnsStep: %d', [TurnsStep]);
   t := 0;
   while (t <= TurnsPerSlot * MaxSlot) and (t < 600) do
   begin
     s := t div TurnsPerSlot;
     X := R.Left + ConvertValueToCoord(s, GraphSize.cx - 1, MaxSlot);
-    Year := Civ2.ConvertTurnToYear(t + 1);
-    //    TFormConsole.Log('t: %d, s: %d, X: %d, Year: %d', [t, s, X, Year]);
+    // Line
     Canvas.MoveTo(X, R.Top);
     Canvas.LineTo(X, R.Bottom + 2);
+    // Year label
     if t mod (2 * TurnsStep) = 0 then
     begin
-      Civ2.ChText^ := #00;
-      Civ2.txtStrcatYear(Year);
-      Canvas.TextOutWithShadows(string(Civ2.ChText), -HORZ_MARGIN, 0, 0, @DrawPort.ClientRectangle);
+      Text := YearStringFromTurn(t);
+      LabelW2 := Canvas.TextWidth(Text) div 2;
+      DX := 0;
+      if X - LabelW2 < MSWindow.RectClient.Left then
+        DX := MSWindow.RectClient.Left - (X - LabelW2)
+      else if X + LabelW2 > MSWindow.RectClient.Right then
+        DX := MSWindow.RectClient.Right - (X + LabelW2);
+
+      Canvas.TextOutWithShadows(Text, DX, 0, DT_CENTER, @DrawPort.ClientRectangle);
     end;
     Inc(t, TurnsStep);
   end;
@@ -414,8 +462,8 @@ begin
       Civ2.SetFontColorWithShadow(CivColor1, $A, 2, 1);
       NationName := Civ2.GetStringNationPlural(c);
       LabelRight := Civ2.DrawStringCurrDrawPort2(NationName, X, Y);
-      if LabelRightMax < LabelRight then
-        LabelRightMax := LabelRight;
+      if NationNameRight < LabelRight then
+        NationNameRight := LabelRight;
       Inc(Y, 14);
     end;
 
@@ -424,9 +472,8 @@ begin
   if BufferDrawPort.ColorDepth = 1 then
     Civ2.SetDIBColorTableFromPalette(BufferDrawPort.DrawInfo, Civ2.Palette);
   Civ2.CopyToPort(DrawPort, @BufferDrawPort, 0, 0, 0, 0, DrawPort.Width, DrawPort.Height);
-  //  BitBlt(BufferDrawPort.DrawInfo.DeviceContext, 0, 0, DrawPort.DrawInfo.Width, DrawPort.DrawInfo.Height, DrawPort.DrawInfo.DeviceContext, 0, 0, SRCCOPY);
 
-    // Correct controls positions (button)
+  // Correct controls positions (button)
   if Dialog.GraphicsInfo <> nil then
   begin
     Dialog.ClientSize := MSWindow.ClientSize;
@@ -438,7 +485,6 @@ begin
       SetWindowPos(Control.HWindow, 0, X, Y, 0, 0, SWP_NOSIZE);
     end;
   end;
-
 end;
 
 procedure TPowerGraphWindow.DrawCurves(Canvas: TCanvasEx; Origin: TPoint; ColorIndex: Integer);
@@ -465,85 +511,96 @@ end;
 
 procedure TPowerGraphWindow.MouseMove(X, Y: Integer);
 var
+  Tme: TTrackMouseEvent;
   OldMousePos, NewMousePos: TPoint;
-  GraphicsInfo: PGraphicsInfo;
   Canvas: TCanvasEx;
-  MaxCoord, CoordX, CoordX2, Slot: Integer;
+  CoordX2, Slot: Integer;
   Text: string;
   LabelExtent: TSize;
   LabelW2, LabelX, LabelY: Integer;
   c: Integer;
   CivColor1: Integer;
+  UnpackedScore, DecompressedScore: Integer;
 begin
   NewMousePos := Point(X, Y);
   if PointsEqual(MousePos, NewMousePos) then
     Exit;
-  //  TFormConsole.Log('Coords: %d, %d', [X, Y]);
   OldMousePos := MousePos;
   MousePos := NewMousePos;
-  GraphicsInfo := @MSWindow.GraphicsInfo;
-  if PtInRect(R, MousePos) then
+  // Track WM_MOUSELEAVE
+  if (X < 0) and (Y < 0) then
+    MouseInClient := False
+  else if not MouseInClient then
   begin
-    CoordX := X - R.Left;
-    MaxCoord := RectWidth(R) - 1;
-    Slot := ConvertCoordToValue(CoordX, MaxCoord, MaxSlot);
-    if (MouseSlot <> Slot) or (OldMousePos.X <> NewMousePos.X) or (OldMousePos.Y <> NewMousePos.Y) then
+    Tme.cbSize := SizeOf(TTrackMouseEvent);
+    Tme.dwFlags := TME_LEAVE;
+    Tme.hwndTrack := HWindow;
+    TrackMouseEvent(Tme);
+    MouseInClient := True
+  end;
+  // Determine Slot
+  Slot := -1;
+  if PtInRect(MSWindow.RectClient, MousePos) then
+    Slot := ConvertCoordToValue(X - R.Left, GraphSize.cx - 1, MaxSlot);
+
+  if Slot = Clamp(Slot, 0, MaxSlot) then
+  begin
+    CoordX2 := ConvertValueToCoord(Slot, GraphSize.cx - 1, MaxSlot);
+    //      TFormConsole.Log('CoordX: %d, Slot: %d, Year: %d, CoordX2: %d', [CoordX, Slot, Year, CoordX2]);
+    Inc(CoordX2, R.Left);
+
+    Civ2.CopyToPort(@BufferDrawPort, DrawPort, 0, 0, 0, 0, DrawPort.Width, DrawPort.Height);
+
+    Canvas := TCanvasEx.Create(DrawPort);
+
+    // Vertical line
+    Canvas.CopyFont(FontInfo1.FontDataHandle);
+    Canvas.Brush.Style := bsClear;
+    Canvas.Pen.Color := Canvas.ColorFromIndex(26);
+    Canvas.FontShadows := SHADOW_BR;
+    Canvas.SetTextColors($25, $A);
+    Canvas.MoveTo(CoordX2, R.Top);
+    Canvas.LineTo(CoordX2, R.Bottom);
+    // Year
+    Text := YearStringFromSlot(Slot);
+    LabelExtent := Canvas.TextExtent(Text);
+    LabelW2 := LabelExtent.cx div 2;
+    LabelX := Min(Max(X, MSWindow.RectClient.Left + LabelW2 + 2), MSWindow.RectClient.Right - LabelW2 - 2);
+    LabelY := Max(Y, MSWindow.RectClient.Top + LabelExtent.cy);
+    Canvas.MoveTo(LabelX, LabelY);
+    Canvas.TextOutWithShadows(Text, 0, 0, DT_CENTER or DT_BOTTOM, @DrawPort.ClientRectangle);
+    // Values
+    if Slot <= LastSlot then
     begin
-      MouseSlot := Slot;
-      CoordX2 := ConvertValueToCoord(Slot, MaxCoord, MaxSlot);
-      //      TFormConsole.Log('CoordX: %d, MaxCoord: %d, Slot: %d, CoordX2: %d', [CoordX, MaxCoord, Slot, CoordX2]);
-      Inc(CoordX2, R.Left);
-
-      Civ2.CopyToPort(@BufferDrawPort, DrawPort, 0, 0, 0, 0, DrawPort.Width, DrawPort.Height);
-
-      Canvas := TCanvasEx.Create(DrawPort);
-
-      // Vertical line
       Canvas.CopyFont(FontInfo1.FontDataHandle);
       Canvas.Brush.Style := bsClear;
-      Canvas.Pen.Color := Canvas.ColorFromIndex(26);
-      Canvas.FontShadows := SHADOW_BR;
-      Canvas.SetTextColors($25, $A);
-      Canvas.MoveTo(CoordX2, R.Top);
-      Canvas.LineTo(CoordX2, R.Bottom);
-      // Year
-      Text := YearStringFromSlot(Slot);
-      LabelExtent := Canvas.TextExtent(Text);
-      LabelW2 := LabelExtent.cx div 2;
-      LabelX := Min(Max(X, R.Left + LabelW2 + 2), R.Right - LabelW2 - 2);
-      LabelY := Max(Y, R.Top + LabelExtent.cy);
-      Canvas.MoveTo(LabelX, LabelY);
-      Canvas.TextOutWithShadows(Text, 0, 0, DT_CENTER or DT_BOTTOM, @DrawPort.ClientRectangle);
-      // Values
-      if Slot <= LastSlot then
-      begin
-        Canvas.CopyFont(FontInfo1.FontDataHandle);
-        Canvas.Brush.Style := bsClear;
-        LabelX := LabelRightMax + 10;
-        LabelY := R.Top + 1;
-        for c := 1 to 7 do
-          if IsPlayer(c) then
-          begin
-            CivColor1 := Civ2.GetCivColor1(c);
-            Canvas.SetTextColors(CivColor1, $A);
-            Text := IntToStr(GetScaledPowerValue(Slot, c));
-            Canvas.MoveTo(LabelX, LabelY);
-            Canvas.TextOutWithShadows(Text, 0, 0, 0, @DrawPort.ClientRectangle);
-            Inc(LabelY, 14);
-          end;
-      end;
-
-      Canvas.Free;
-
-      Civ2.GraphicsInfo_CopyToScreenAndValidateW(GraphicsInfo);
+      LabelX := NationNameRight + 10;
+      LabelY := R.Top + 1;
+      for c := 1 to 7 do
+        if IsPlayer(c) then
+        begin
+          CivColor1 := Civ2.GetCivColor1(c);
+          Canvas.SetTextColors(CivColor1, $A);
+          UnpackedScore := GetScaledPowerValue(Slot, c);
+          DecompressedScore := DecompressScore(UnpackedScore);
+          //          TFormConsole.Log('UnpackedScore: %d, DecompressedScore: %d', [UnpackedScore, DecompressedScore]);
+          Text := IntToStr(DecompressedScore);
+          Canvas.MoveTo(LabelX, LabelY);
+          Canvas.TextOutWithShadows(Text, 0, 0, 0, @DrawPort.ClientRectangle);
+          Inc(LabelY, 14);
+        end;
     end;
+
+    Canvas.Free;
+
+    Civ2.GraphicsInfo_CopyToScreenAndValidateW(@MSWindow.GraphicsInfo);
   end
   else if MouseSlot >= 0 then
   begin
     Civ2.CopyToPort(@BufferDrawPort, DrawPort, 0, 0, 0, 0, DrawPort.Width, DrawPort.Height);
-    Civ2.GraphicsInfo_CopyToScreenAndValidateW(GraphicsInfo);
-    MouseSlot := -1;
+    Civ2.GraphicsInfo_CopyToScreenAndValidateW(@MSWindow.GraphicsInfo);
   end;
+  MouseSlot := Slot;
 end;
 
 { TUiaPatchPowerGraph }
@@ -559,7 +616,6 @@ begin
   WriteMemory(HProcess, $00431EA1, [OP_JMP], @PatchShowPowerGraph);
   // Free
   WriteMemory(HProcess, $00432544 + 1, [], @PatchShowPowerGraph2);
-
 end;
 
 initialization

@@ -166,21 +166,22 @@ begin
 end;
 
 procedure TFormConsole.Button3Click(Sender: TObject);
+begin
+  Civ2.ShowPowerGraph;
+end;
+
+procedure TFormConsole.Button4Click(Sender: TObject);
 var
   i, j: Integer;
 begin
   //  for i := 0 to 149 do
   //  begin
-  //    for j := 0 to 7 do
+  //    for j := 1 to 7 do
   //    begin
-  //      Civ2.PowerGraph.Value[i][j] := i + j * 10; // * 255 * j div 7 div 149;
+  //      Civ2.PowerGraph.Value[i][j] := Trunc(i * (1.7 - j / 10));
   //    end;
   //  end;
-  Civ2.ShowPowerGraph;
-end;
-
-procedure TFormConsole.Button4Click(Sender: TObject);
-begin
+  //  Civ2.PowerGraph.Value[0, 0] := 3;
   Civ2.UpdatePowerRatingsAndContainment;
 end;
 

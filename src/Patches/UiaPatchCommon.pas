@@ -334,21 +334,21 @@ begin
   end;
 end;
 
-function PatchMessageHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromCommon: Boolean): BOOL; stdcall;
+function PatchMessageHandler(HWindow: HWND; Msg: UINT; WParam: WParam; LParam: LParam; FromWindowProc4: Boolean): BOOL; stdcall;
 begin
   case Msg of
     WM_MOUSEWHEEL:
-      Result := PatchMouseWheelHandler(HWindow, Msg, WParam, LParam, FromCommon);
+      Result := PatchMouseWheelHandler(HWindow, Msg, WParam, LParam, FromWindowProc4);
     WM_MBUTTONDOWN, WM_MBUTTONUP, WM_MOUSEMOVE:
-      Result := PatchMButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
+      Result := PatchMButtonUpHandler(HWindow, Msg, WParam, LParam, FromWindowProc4);
     WM_LBUTTONUP:
-      Result := PatchLButtonUpHandler(HWindow, Msg, WParam, LParam, FromCommon);
+      Result := PatchLButtonUpHandler(HWindow, Msg, WParam, LParam, FromWindowProc4);
   else
     Result := True;                       // Message not handled
   end;
 end;
 
-procedure PatchWindowProcCommon; register;
+procedure PatchWindowProc4; register;
 asm
     push  1
     push  [ebp + $14]
@@ -368,7 +368,7 @@ asm
     ret
 end;
 
-procedure PatchWindowProc1; register;
+procedure PatchWindowProc8; register;
 asm
     push  0
     push  [ebp + $14]
@@ -830,8 +830,8 @@ end;
 
 procedure TUiaPatchCommon.Attach(HProcess: Cardinal);
 begin
-  WriteMemory(HProcess, $005EB465, [], @PatchWindowProcCommon);
-  WriteMemory(HProcess, $005EACDE, [], @PatchWindowProc1);
+  WriteMemory(HProcess, $005EB465, [], @PatchWindowProc4);
+  WriteMemory(HProcess, $005EACDE, [], @PatchWindowProc8);
 
   // Show Gold coin in Foreign Minister dialog
   WriteMemory(HProcess, $00430D71, [OP_JMP], @PatchShowDialogForeignMinisterGold);
