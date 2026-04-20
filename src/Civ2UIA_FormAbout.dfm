@@ -55,7 +55,7 @@ object FormAbout: TFormAbout
       ParentFont = False
     end
     object lbl0027: TLabel
-      Left = 124
+      Left = 92
       Top = 168
       Width = 48
       Height = 13
@@ -68,13 +68,6 @@ object FormAbout: TFormAbout
       Font.Style = [fsUnderline]
       ParentFont = False
       OnClick = lbl0027Click
-    end
-    object lbl0017: TLabel
-      Left = 92
-      Top = 168
-      Width = 24
-      Height = 13
-      Caption = '2024'
     end
     object lbl0016: TLabel
       Left = 92

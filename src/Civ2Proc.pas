@@ -62,8 +62,10 @@ type
     PFStopX: PInteger;
     PFStopY: PInteger;
     PFData: PPFData;
+    PowerGraph: ^TPowerGraph;
     PrevWindowInfo: PWindowInfo;
     RulesCivilizes: ^TRulesCivilizes;
+    ScenarioParameters: ^TScenarioParameters;
     ScreenRectSize: PSize;
     ShieldFontInfo: PFontInfo;
     ShieldLeft: ^TShieldLeft;
@@ -189,8 +191,10 @@ begin
   PFStopX                    := Pointer($00673FA0);
   PFStopY                    := Pointer($00673FA4);
   PFData                     := Pointer($0062D03C);
+  PowerGraph                 := Pointer($00655C38);
   PrevWindowInfo             := Pointer($00637EA4);
   RulesCivilizes             := Pointer($00627680);
+  ScenarioParameters         := Pointer($0064BC60);
   ScreenRectSize             := Pointer($006AB198);
   ShieldFontInfo             := Pointer($006AC090);
   ShieldLeft                 := Pointer($00642C48);

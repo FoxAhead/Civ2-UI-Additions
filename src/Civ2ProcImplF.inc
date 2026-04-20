@@ -23,6 +23,7 @@
 @Clamp                                       := Pointer($00402D56);
 @ClearPopupActive                            := Pointer($005A3C58);
 @ControlInfo_ShowWindowInvalidateRect        := PThisCall($0040169A);
+@ConvertTurnToYear                           := Pointer($00403418);
 @CopyBmp                                     := Pointer($005E4F9B);
 @CopySpriteBmp                               := Pointer($005E518E);
 @CopyToPort                                  := Pointer($00402081);
@@ -59,6 +60,7 @@
 @DrawStringRightCurrDrawPort2                := Pointer($00403607);
 @DrawUnit                                    := Pointer($00402C4D);
 @ExtractSprite64x48                          := Pointer($0044AC07);
+@FillColor                                   := Pointer($004011B8);
 @FindNearestCity                             := Pointer($004023C9);
 @FontInfo_GetHeightWithExLeading             := PThisCall($00403819);
 @FontInfo_GetTextExtentX                     := PThisCall($00402B21);
@@ -73,17 +75,22 @@
 @GetSpecialist                               := Pointer($004013C0);
 @GetSpriteRatios                             := Pointer($005CDA06);
 @GetStringInList                             := Pointer($00403387);
+@GetStringNationPlural                       := Pointer($00402554);
 @GetTopUnitInStack                           := Pointer($00403391);
 @GetUpkeep                                   := Pointer($004014DD);
 @GraphicsInfo_BuildWindowC                   := PThisCall($005BB4AE);
 @GraphicsInfo_BuildWindowCCD2                := PThisCall($005BB80A);
 @GraphicsInfo_CopyToScreenAndValidateW       := PThisCall($004014A1);
+@GraphicsInfo_SetUpdateProc                  := PThisCall($00402E0A);
+@GraphicsInfo_UpdateCopyValidate             := PThisCall($005BB574);
 @Heap_Add                                    := Pointer($0040389B);
 @HumanTurn                                   := Pointer($00402BA8);
 @InitNewGameParameters                       := Pointer($0040284C);
 @IsInMapBounds                               := Pointer($004012D0);
 @ListItemProcLButtonUp                       := Pointer($005A3CCA);
 @MSInitGraf                                  := Pointer($005E35B0);
+@MSWindow_DrawFrame                          := PThisCall($00401104);
+@MSWindow_UpdateAreasAndWinButtons           := PThisCall($00403C83);
 @MapGetCivData                               := Pointer($00403823);
 @MapGetMassIndex                             := Pointer($00401F50);
 @MapGetOwnership                             := Pointer($004029BE);
@@ -135,6 +142,7 @@
 @Scroll_InitControlRange                     := PThisCall($00402121);
 @Scroll_SetPageSize                          := PThisCall($005DB0D0);
 @Scroll_SetPosition                          := PThisCall($004027BB);
+@SetCurrDrawPort2                            := Pointer($00402252);
 @SetCurrFont                                 := Pointer($0040233D);
 @SetDIBColorTableFromPalette                 := Pointer($005E3BDC);
 @SetFocus                                    := Pointer($005C90B0);
@@ -150,6 +158,7 @@
 @ShowAdvisorTrade                            := Pointer($00401EA6);
 @ShowAdvisorWonders                          := Pointer($00402194);
 @ShowDialogForeignMinister                   := Pointer($00403BED);
+@ShowPowerGraph                              := Pointer($0040189D);
 @ShowTaxRate                                 := Pointer($00402C43);
 @Sprite_ChangeColor                          := PThisCall($005CF467);
 @Sprite_CopyToPortNC                         := PThisCall($005CEF31);
@@ -160,6 +169,7 @@
 @UnitCanMove                                 := Pointer($0040273E);
 @UpdateAdvisorCityStatus                     := Pointer($004029F5);
 @UpdateCopyValidateAdvisor                   := Pointer($00402A9A);
+@UpdatePowerRatingsAndContainment            := Pointer($00402D51);
 @WindowInfo1_LoadMainIcon                    := PThisCall($00402662);
 @WindowInfo1_RecreateBrush                   := PThisCall($00402045);
 @WindowInfo1_RestoreWindow                   := PThisCall($00402C7F);
@@ -169,3 +179,4 @@
 @WriteCiv2Dat                                := Pointer($004011AE);
 @txtStrcatInt                                := Pointer($00401ED8);
 @txtStrcatLabelString                        := Pointer($00401BF4);
+@txtStrcatYear                               := Pointer($00403C65);

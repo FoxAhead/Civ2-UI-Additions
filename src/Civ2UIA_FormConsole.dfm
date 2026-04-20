@@ -107,6 +107,25 @@ object FormConsole: TFormConsole
     TabOrder = 2
     OnClick = Button2Click
   end
+  object Button3: TButton
+    Left = 1016
+    Top = 0
+    Width = 68
+    Height = 24
+    Anchors = [akTop, akRight]
+    Caption = 'PowerGraph'
+    TabOrder = 3
+    OnClick = Button3Click
+  end
+  object Button4: TButton
+    Left = 928
+    Top = 0
+    Width = 76
+    Height = 24
+    Caption = 'UpdatePower'
+    TabOrder = 4
+    OnClick = Button4Click
+  end
   object Timer1: TTimer
     Interval = 100
     OnTimer = Timer1Timer
