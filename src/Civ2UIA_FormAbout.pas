@@ -27,7 +27,6 @@ type
     lbl0015: TLabel;
     lbl0016: TLabel;
     lbl0007: TLabel;
-    lbl0017: TLabel;
     lbl0027: TLabel;
     GroupBox1: TGroupBox;
     procedure FormCreate(Sender: TObject);

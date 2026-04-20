@@ -176,7 +176,6 @@ var
   NScores, CScores: array[1..7] of Integer;
   Score, MaxScore: Integer;
   Scale, NewScale, DeltaScale: Integer;
-  Count: Integer;
   InterStart: array[1..7] of Integer;
 begin
   if GetSlotAndDivisor(Slot, Divisor) then
@@ -346,7 +345,6 @@ begin
   MSWindow.GraphicsInfo.WindowInfo.WindowInfo1.WindowProcs.ProcMouseMove := @ProcMouseMove;
   Civ2.GraphicsInfo_SetUpdateProc(@MSWindow.GraphicsInfo, @UpdateProc);
   Self.PrevWindowProc := Pointer(SetWindowLong(Self.HWindow, GWL_WNDPROC, Longint(@PatchWindowProc)));
-  TFormConsole.Log('PrevWindowProc: %x', [Integer(Self.PrevWindowProc)]);
 end;
 
 function TPowerGraphWindow.WindowProc(hWnd: hWnd; Msg: UINT; wParam: wParam; lParam: lParam): LRESULT;
@@ -368,12 +366,12 @@ var
   c, s, i, t: Integer;
   Canvas: TCanvasEx;
   Origin: TPoint;
-  X, Y, DX, DY: Integer;
+  X, Y, DX: Integer;
   CivColor1: Integer;
   NationName: PChar;
   Control: PControlInfo;
   Text: string;
-  LabelW2, LabelX: Integer;
+  LabelW2: Integer;
   LabelRight: Integer;
 begin
   Civ2.MSWindow_UpdateAreasAndWinButtons(MSWindow);
@@ -415,6 +413,7 @@ begin
   Canvas.Pen.Color := Canvas.ColorFromIndex(16);
   Canvas.FontShadows := SHADOW_BR;
   Canvas.SetTextColors($25, $A);
+
   TurnsStep := TurnsPerSlot * 25 div 2;
   t := 0;
   while (t <= TurnsPerSlot * MaxSlot) and (t < 600) do
@@ -546,7 +545,6 @@ begin
   if Slot = Clamp(Slot, 0, MaxSlot) then
   begin
     CoordX2 := ConvertValueToCoord(Slot, GraphSize.cx - 1, MaxSlot);
-    //      TFormConsole.Log('CoordX: %d, Slot: %d, Year: %d, CoordX2: %d', [CoordX, Slot, Year, CoordX2]);
     Inc(CoordX2, R.Left);
 
     Civ2.CopyToPort(@BufferDrawPort, DrawPort, 0, 0, 0, 0, DrawPort.Width, DrawPort.Height);
@@ -583,7 +581,6 @@ begin
           Canvas.SetTextColors(CivColor1, $A);
           UnpackedScore := GetScaledPowerValue(Slot, c);
           DecompressedScore := DecompressScore(UnpackedScore);
-          //          TFormConsole.Log('UnpackedScore: %d, DecompressedScore: %d', [UnpackedScore, DecompressedScore]);
           Text := IntToStr(DecompressedScore);
           Canvas.MoveTo(LabelX, LabelY);
           Canvas.TextOutWithShadows(Text, 0, 0, 0, @DrawPort.ClientRectangle);

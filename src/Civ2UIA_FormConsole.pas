@@ -63,7 +63,7 @@ begin
   if FormConsole = nil then
   begin
     FormConsole := TFormConsole.Create(nil);
-    //    FormConsole.Memo1.Clear();
+    FormConsole.Memo1.Clear();
   end;
 end;
 
