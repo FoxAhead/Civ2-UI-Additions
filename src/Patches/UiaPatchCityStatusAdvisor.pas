@@ -191,7 +191,7 @@ begin
     Civ2.SetCurrFont(Civ2.FontTimes14b);
     Civ2.SetFontColorWithShadow($25, $12, -1, -1);
     Text := Format('%s: %d', [GetLabelString($C5), Cities]); // Cities
-    Civ2.DrawStringRightCurrDrawPort2(PChar(Text), MSWindow.ClientSize.cx - 12, Y1 - 3, 0);
+    Civ2.TxtPortDrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 12, Y1 - 3, 0);
     // SORT ARROWS
     Canvas := TCanvasEx.Create(DrawPort);
     Canvas.Brush.Color := Canvas.ColorFromIndex(34);
@@ -249,7 +249,7 @@ begin
 
       Y2 := Y1 + 9;
       X1 := MSWindow.ClientTopLeft.X + 130;
-      Civ2.DrawStringCurrDrawPort2(City.Name, X1, Y2);
+      Civ2.TxtPortDrawString(City.Name, X1, Y2);
 
       Improvements[0] := 1;               // Palace
       Improvements[1] := 32;              // Airport
@@ -287,7 +287,7 @@ begin
               DX := -1;
             end;
         end;
-        Civ2.DrawStringRightCurrDrawPort2(PChar(Text), X2, Y2, DX);
+        Civ2.TxtPortDrawStringRight(PChar(Text), X2, Y2, DX);
         Civ2.Sprite_CopyToPortNC(@Civ2.SprRes[2 * j + 1], @R, DrawPort, X2, Y2 + 2);
         X2 := X2 + 42;
       end;
@@ -319,10 +319,10 @@ begin
         X2 := X2 + 28;
       end;
       // Build progress
-      X2 := Civ2.DrawStringCurrDrawPort2(PChar(Text), X2, Y2) + 4;
+      X2 := Civ2.TxtPortDrawString(PChar(Text), X2, Y2) + 4;
       Text := Format('%s (%d/%d)', [ConvertTurnsToString(CityBuildInfo.TurnsToBuild, $20), City.BuildProgress, CityBuildInfo.RealCost]);
       Civ2.SetFontColorWithShadow($21, $12, -1, -1);
-      Civ2.DrawStringRightCurrDrawPort2(PChar(Text), MSWindow.ClientSize.cx - 12, Y2, 0);
+      Civ2.TxtPortDrawStringRight(PChar(Text), MSWindow.ClientSize.cx - 12, Y2, 0);
 
       AdvisorWindowEx.MouseOver.Y := -2;
 

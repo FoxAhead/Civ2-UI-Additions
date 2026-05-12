@@ -380,7 +380,7 @@ begin
   // Copy background image
   Windows.StretchBlt(DrawPort.DrawInfo.DeviceContext, DrawPort.ClientRectangle.Left, DrawPort.ClientRectangle.Top, MSWindow.ClientSize.cx, MSWindow.ClientSize.cy - 38, BgDrawPort.DrawInfo.DeviceContext, 0, 0, 600, 400, SRCCOPY);
   // Fill the rest area with color
-  Civ2.SetCurrDrawPort2(DrawPort);
+  Civ2.SetTxtPort(DrawPort);
   R2 := MSWindow.RectClient;
   R2.Top := R2.Bottom - 38;
   Civ2.FillColor(DrawPort, @R2, $14);     // $14
@@ -460,7 +460,7 @@ begin
       CivColor1 := Civ2.GetCivColor1(c);
       Civ2.SetFontColorWithShadow(CivColor1, $A, 2, 1);
       NationName := Civ2.GetStringNationPlural(c);
-      LabelRight := Civ2.DrawStringCurrDrawPort2(NationName, X, Y);
+      LabelRight := Civ2.TxtPortDrawString(NationName, X, Y);
       if NationNameRight < LabelRight then
         NationNameRight := LabelRight;
       Inc(Y, 14);
