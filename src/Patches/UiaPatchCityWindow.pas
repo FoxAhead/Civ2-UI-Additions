@@ -497,7 +497,7 @@ begin
     begin
       StrCat(Civ2.ChText, '+');
     end;
-    Civ2.DrawStringCurrDrawPort2(Civ2.ChText, X, Y);
+    Civ2.TxtPortDrawString(Civ2.ChText, X, Y);
   end;
 end;
 
@@ -606,7 +606,7 @@ end;
 
 function PatchMapAscii1Ex(Key: Char): Integer; stdcall;
 begin
-  if (Civ2.LockCityWindow^ = 0) or ((Key = 'c') and (Civ2.Game.MultiType = 0)) then
+  if (Civ2.LockCityWindow^ = 0) or (((Key = 'b') or (Key = 'c')) and (Civ2.Game.MultiType = 0)) then
     Result := $00412058
   else
     Result := $00412015;
@@ -622,7 +622,7 @@ end;
 
 function PatchMapKey1Ex(Key: Integer): Integer; stdcall;
 begin
-  if (Civ2.LockCityWindow^ = 0) or ((Civ2.Game.MultiType = 0) and ((Key = $43) or (Key = $100))) then
+  if (Civ2.LockCityWindow^ = 0) or ((Civ2.Game.MultiType = 0) and ((Key = $42) or (Key = $43) or (Key = $100))) then
     Result := $004127EB
   else
     Result := $0041279C;

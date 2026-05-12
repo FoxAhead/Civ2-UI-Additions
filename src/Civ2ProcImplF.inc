@@ -5,9 +5,7 @@
 @BmpFillColor                                := Pointer($005E4E60);
 @CDRootFind                                  := Pointer($00402BE9);
 @CalcCityGlobals                             := Pointer($00402603);
-@CalcCityGlobalsTileRes                      := Pointer($0040335F);
 @CheckPaths                                  := Pointer($00401F9B);
-@CityCitizenClicked                          := Pointer($0040204A);
 @CityHasImprovement                          := Pointer($00402C48);
 @CitySprites_GetInfoOfClickedCitySprite      := PThisCall($00403D00);
 @CityWindowExit                              := Pointer($004034E5);
@@ -18,6 +16,7 @@
 @CityWindow_Show                             := PThisCall($00402E78);
 @CityWindow_Update                           := PThisCall($00402833);
 @CityWndProcClose                            := Pointer($00401BAE);
+@CitywinCitizenClicked                       := Pointer($0040204A);
 @CitywinCityButtonChange                     := Pointer($004021D5);
 @CivHasTech                                  := Pointer($00402E7D);
 @Clamp                                       := Pointer($00402D56);
@@ -56,8 +55,6 @@
 @DrawPort_Locked                             := PThisCall($005C54F0);
 @DrawPort_ResetWH                            := PThisCall($005BD65C);
 @DrawPort_UpdateDIBColorTableFromPaletteSafe := PThisCall($005C0D12);
-@DrawStringCurrDrawPort2                     := Pointer($00401E0B);
-@DrawStringRightCurrDrawPort2                := Pointer($00403607);
 @DrawUnit                                    := Pointer($00402C4D);
 @ExtractSprite64x48                          := Pointer($0044AC07);
 @FillColor                                   := Pointer($004011B8);
@@ -128,7 +125,7 @@
 @PickUpUnit                                  := Pointer($0040148D);
 @PopupSimpleGAMEWithSprite                   := Pointer($004034A9);
 @PopupWithImprovementSprite                  := Pointer($00403AD0);
-@ProcessOrdersGoTo                           := Pointer($00401145);
+@ProcessOrderGoTo                            := Pointer($00401145);
 @ProcessUnit                                 := Pointer($00402716);
 @PutDownUnit                                 := Pointer($00401159);
 @RectHeight                                  := Pointer($00403C7E);
@@ -142,13 +139,13 @@
 @Scroll_InitControlRange                     := PThisCall($00402121);
 @Scroll_SetPageSize                          := PThisCall($005DB0D0);
 @Scroll_SetPosition                          := PThisCall($004027BB);
-@SetCurrDrawPort2                            := Pointer($00402252);
 @SetCurrFont                                 := Pointer($0040233D);
 @SetDIBColorTableFromPalette                 := Pointer($005E3BDC);
 @SetFocus                                    := Pointer($005C90B0);
 @SetFontColorWithShadow                      := Pointer($00403BB6);
 @SetSpecialist                               := Pointer($004022C5);
 @SetSpriteZoom                               := Pointer($00403350);
+@SetTxtPort                                  := Pointer($00402252);
 @SetWinRectCityWindow                        := Pointer($00402A6D);
 @SetWorker                                   := Pointer($00401EF1);
 @ShowAdvisorAttitude                         := Pointer($004013F2);
@@ -166,6 +163,8 @@
 @Sprite_Dispose                              := PThisCall($005CDF50);
 @Sprite_ExtractB                             := PThisCall($005CEDAD);
 @TileBg                                      := Pointer($00402C9D);
+@TxtPortDrawString                           := Pointer($00401E0B);
+@TxtPortDrawStringRight                      := Pointer($00403607);
 @UnitCanMove                                 := Pointer($0040273E);
 @UpdateAdvisorCityStatus                     := Pointer($004029F5);
 @UpdateCopyValidateAdvisor                   := Pointer($00402A9A);
@@ -179,4 +178,5 @@
 @WriteCiv2Dat                                := Pointer($004011AE);
 @txtStrcatInt                                := Pointer($00401ED8);
 @txtStrcatLabelString                        := Pointer($00401BF4);
+@txtStrcatSpace                              := Pointer($00401FAF);
 @txtStrcatYear                               := Pointer($00403C65);

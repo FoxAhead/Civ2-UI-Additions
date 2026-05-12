@@ -135,7 +135,7 @@ begin
       if (LOWORD(WParam) and MK_SHIFT) <> 0 then
         CityChangeAllSpecialists(SIndex, Sign(Delta))
       else
-        Civ2.CityCitizenClicked(SIndex);
+        Civ2.CitywinCitizenClicked(SIndex);
       CityWindowEx.ChangeSpecialistDown := False;
       Result := False;
       goto EndOfFunction;
