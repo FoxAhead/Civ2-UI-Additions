@@ -94,16 +94,32 @@ begin
   end;
   Result := Round(dNow - g_dTimerStart);
 end;
-
 function C2PatchPeekMessageEx(var lpMsg: TMsg; hWnd: hWnd; wMsgFilterMin, wMsgFilterMax, wRemoveMsg: UINT): BOOL; stdcall;
 const
   MWMO_INPUTAVAILABLE = $0004;
 var
+  Handle: HMODULE;
+  MsgWaitForMultipleObjectsEx: function(nCount: DWORD; var pHandles; dwMilliseconds, dwWakeMask, dwFlags: DWORD): DWORD; stdcall;
   dBeginTime: Double;
   dNow: Double;
   dwMsgWaitResult: DWORD;
   msg: TMsg;
 begin
+  // Check if MsgWaitForMultipleObjectsEx exists (it does not on Windows 95).
+  Handle := LoadLibrary('user32');
+  if Handle = 0 then
+  begin
+    Result := False;
+    Exit;
+  end;
+  @MsgWaitForMultipleObjectsEx := GetProcAddress(Handle, 'MsgWaitForMultipleObjectsEx');
+  if @MsgWaitForMultipleObjectsEx = nil then
+  begin
+    FreeLibrary(Handle);
+    Result := False;
+    Exit;
+  end;
+
   dBeginTime := C2PatchGetTimerCurrentTime();
   // Civilization 2 uses filter value 957 as a spinning wait.
   if (wMsgFilterMin = 957) then
