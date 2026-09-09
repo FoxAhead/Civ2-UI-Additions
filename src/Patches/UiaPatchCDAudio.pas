@@ -126,6 +126,9 @@ var
 begin
   if Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort.DrawInfo = nil then
     Exit;
+  // Skip the progress bar if we don't have a usable track length
+  if FSMT_To_Frames(MCIPlayLength) <= 0 then
+    Exit;
   TextOut := FSMT_To_String(Position) + ' / ' + FSM_To_String(MCIPlayLength);
   Canvas := TCanvasEx.Create(@Civ2.MapWindow.MSWindow.GraphicsInfo.DrawPort);
   Canvas.Font.Style := [];
