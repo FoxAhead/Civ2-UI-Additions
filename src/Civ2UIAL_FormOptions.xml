@@ -29,7 +29,9 @@ Input wait time is the amount of time to sleep when waiting for user inputs. Hig
 
 Input wait time threshold is the period of time with no user inputs before increasing the sleep time.
 
-Input processing time threshold is the time taken to process user inputs before increasing CPU usage. Lower threshold can reduce input lag during heavy processing.">
+Input processing time threshold is the time taken to process user inputs before increasing CPU usage. Lower threshold can reduce input lag during heavy processing.
+
+This patch doesn't work on Windows 95.">
 				<integer key="MessagesPurgeIntervalMs" name="Purge input buffer interval in milliseconds"/>
 				<integer key="MessageWaitTimeMinMs" name="Minimum input wait time in milliseconds"/>
 				<integer key="MessageWaitTimeMaxMs" name="Maximum input wait time in milliseconds"/>

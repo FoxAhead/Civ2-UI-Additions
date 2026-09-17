@@ -22,6 +22,7 @@ uses
   Types,
   SysUtils,
   Windows,
+  CommCtrl,
   Civ2Types,
   Civ2Proc,
   Civ2UIA_Proc,
@@ -534,7 +535,7 @@ begin
     Tme.cbSize := SizeOf(TTrackMouseEvent);
     Tme.dwFlags := TME_LEAVE;
     Tme.hwndTrack := HWindow;
-    TrackMouseEvent(Tme);
+    _TrackMouseEvent(@Tme);
     MouseInClient := True
   end;
   // Determine Slot
