@@ -45,6 +45,7 @@ begin
         TextLine := TextLine.Next;
       end;
       Uia.MapMessages.Add(Text);
+      Dialog.Flags := Dialog.Flags or CIV2_DLG_CREATED;
       Dialog.PressedButton := $12345678;
     end
   end;
