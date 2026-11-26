@@ -138,7 +138,7 @@ begin
 
   inherited;
 
-  ThisCallThunks := VirtualAlloc(nil, SizeOf(ThisCallThunks), MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+  ThisCallThunks := VirtualAlloc(nil, SizeOf(TThisCallThunks), MEM_COMMIT or MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 
   // For inline ASM all TCiv2 fileds can be referenced directly only inside TCiv2 class, and as Self.FieldName
   // Important: by default EAX register contains Self reference
